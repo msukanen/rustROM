@@ -1,0 +1,5 @@
+{
+    "name": "RustROM Root",
+    "description": "The very basic base of baseness…",
+    "rooms": ["root"]
+}

@@ -1,0 +1,28 @@
+{
+    "title": "RustROM",
+    "description": "RustROM v0",
+    "owner": {
+        "name": "Markku Sukanen",
+        "email": "markku.sukanen@gmail.com"
+    },
+    "admins": [
+        {
+            "login": "msukanen",
+            "aliases": ["C0FFEE ADD1C7"]
+        },
+        {
+            "login": "anikaiful",
+            "aliases": ["Mir Fnar", "Platipish"]
+        }
+    ],
+    "motd": [
+        {"text": "MotD#1: This is a MotD #1"},
+        {"text": "MotD#2: This is a MotD #2"},
+        {"text": "MotD#3: This is a MotD #3"}
+    ],
+    "greeting": "Amidst the mists of mistyria...\n\nWelcome, visitor. Stay a while and... yes, stay a while.",
+    "areas": ["root"],
+    "root": {
+        "area": "root"
+    }
+}
