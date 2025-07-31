@@ -12,10 +12,11 @@ mod game_loop;
 pub(crate) mod world;
 pub(crate) mod traits;
 pub(crate) mod string;
+pub(crate) mod util;
 use game_loop::game_loop;
 
 use crate::player::Player;
-use crate::string::sanitize::sanitize_input;
+use crate::string::sanitize::Sanitizer;
 use crate::world::World;
 
 pub(crate) static DATA_PATH: Lazy<Arc<String>> = Lazy::new(||
@@ -39,7 +40,7 @@ async fn main() {
     // Initialize the logger
     env_logger::init();
 
-    let world = Arc::new(Mutex::new(World::new()));
+    let world = Arc::new(Mutex::new(World::new("rustrom").expect("ERROR: world dead or in fire?!")));
 
     tokio::spawn(game_loop(world.clone()));
 
@@ -89,12 +90,11 @@ async fn main() {
                             break;
                         }
 
-                        let input = sanitize_input(line);
-                        match result {
-                            // If the client sends data …
-                            Ok(0)  |// but is disonnected (0/zero read) or …
-                            Err(_) => {//… an error occured.
-                            },
+                        let input = line.trim().sanitize();
+                        match state {
+                            ClientState::EnteringName => {
+
+                            }
                             _ => {
                                 let trimmed_line = line.trim();
 

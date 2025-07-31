@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use once_cell::sync::Lazy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{DATA_PATH, traits::tickable::Tickable, world::room::{Room, rooms_serialization}};
 
 pub(crate) static AREA_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/areas", *DATA_PATH)));
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Area {
     name: String,
     description: String,
-    #[serde(with = "rooms_serialization")]
+    #[serde(with = "rooms_serialization", skip_serializing_if = "Option::is_none")]
     rooms: Option<Vec<Room>>,
 }
 

@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 pub(crate) mod rooms_serialization {
     use std::fs;
@@ -8,14 +8,18 @@ pub(crate) mod rooms_serialization {
 
     use super::Room;
 
-    pub fn serialize<S: Serializer>(rooms: &Vec<Room>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S: Serializer>(rooms: &Option<Vec<Room>>, serializer: S) -> Result<S::Ok, S::Error>
     where S: Serializer,
     {
-        let room_stems: Vec<String> = rooms.iter().map(|room| {
-            let file_path = format!("{}/{}.room", *AREA_PATH, room.name);
-            room.name.clone()
-        }).collect();
-        room_stems.serialize(serializer)
+        if let Some(rooms) = rooms {
+            let room_stems: Vec<String> = rooms.iter().map(|room| {
+                let file_path = format!("{}/{}.room", *AREA_PATH, room.name);
+                room.name.clone()
+            }).collect();
+            room_stems.serialize(serializer)
+        } else {
+            serializer.serialize_unit()
+        }
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<Vec<Room>>, D::Error>
@@ -35,7 +39,7 @@ pub(crate) mod rooms_serialization {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Room {
     name: String,
     title: String,

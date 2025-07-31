@@ -1,4 +1,19 @@
-/// Sanitize input by removing all e.g. Telnet control characters, etc.
-pub(crate) fn sanitize_input(input: &str) -> String {
-    input.chars().map(|c| c.is_ascii_alphanumeric() || c.is_whitespace()).collect()
+pub(crate) trait Sanitizer {
+    fn sanitize(&self) -> String;
+}
+
+impl Sanitizer for &str {
+    fn sanitize(&self) -> String {
+        self.chars()
+            .filter(|c| !c.is_control())
+            .collect::<String>()
+    }
+}
+
+impl Sanitizer for String {
+    fn sanitize(&self) -> String { self.as_str().sanitize()}
+}
+
+impl Sanitizer for &String {
+    fn sanitize(&self) -> String { self.as_str().sanitize()}
 }
