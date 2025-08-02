@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 pub(crate) mod sanitize;
+pub(crate) mod prompt;
 /// Replaces any non-alphabetic characters in a string with underscores.
 ///
 /// This is useful for creating safe(ish), simple filenames from user input
@@ -27,11 +26,3 @@ pub trait Sluggable {
 impl Sluggable for String { fn slugify(&self) -> String { slugify(self) }}
 impl Sluggable for &String { fn slugify(&self) -> String { slugify(self) }}
 impl Sluggable for &str { fn slugify(&self) -> String { slugify(self) }}
-
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
-pub(crate) enum PromptType {
-    Login,
-    Password,
-    AFK,
-    Custom(String)
-}

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub(crate) mod rooms_serialization {
+pub(crate) mod area_room_serialization {
     use std::fs;
 
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -41,7 +41,7 @@ pub(crate) mod rooms_serialization {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Room {
-    name: String,
+    pub(crate) name: String,
     title: String,
     description: String,
 }

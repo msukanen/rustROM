@@ -1,11 +1,12 @@
 use std::{fmt::Display, path::PathBuf, str::FromStr, sync::Arc};
 
 use argon2::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier};
+use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
-use crate::{mob::gender::Gender, player::access::Access, DATA_PATH};
+use crate::{mob::gender::Gender, player::access::Access, traits::save::DoesSave, DATA_PATH};
 use crate::string::Sluggable;
 
 pub(crate) static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -35,6 +36,7 @@ pub(crate) enum LoadError {
     InvalidLogin,
     Io(std::io::Error),
     Format(serde_json::Error),
+    NoSuchSave,
 }
 
 impl From<std::io::Error> for LoadError {
@@ -60,7 +62,7 @@ impl From<serde_json::Error> for SaveError {
     fn from(value: serde_json::Error) -> Self { Self::Format(value)}
 }
 
-static DUMMY_SAVE: Lazy<Arc<SaveFile>> = Lazy::new(|| Arc::new(SaveFile {
+static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         name: "dummy".into(),
         passwd: "$argon2id$v=19$m=19456,t=2,p=1$Cg...$....".into(),
         gender: Gender::Indeterminate,
@@ -68,14 +70,14 @@ static DUMMY_SAVE: Lazy<Arc<SaveFile>> = Lazy::new(|| Arc::new(SaveFile {
     }));
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
-pub(crate) struct SaveFile {
+pub(crate) struct Player {
     name: String,
     passwd: String,// hashed stuff...
     gender: Gender,
     access: Access,
 }
 
-impl SaveFile {
+impl Player {
     /// Generate a new, blank [SaveFile] skeleton.
     pub fn new<S>(name: S) -> Self
     where S: Display,
@@ -138,7 +140,7 @@ impl SaveFile {
         if !plaintext_passwd.chars().any(|c| c.is_ascii_uppercase()) {return Err(PasswordError::NoUppercase);}
         if !plaintext_passwd.chars().any(|c| c.is_ascii_digit()) {return Err(PasswordError::NoDigit);}
         if !plaintext_passwd.chars().any(|c| c.is_alphanumeric()) {return Err(PasswordError::NoSpecial);}
-        SaveFile::is_passwd_pwned(plaintext_passwd).await
+        Player::is_passwd_pwned(plaintext_passwd).await
     }
 
     /// Set password.
@@ -151,7 +153,7 @@ impl SaveFile {
     pub async fn set_passwd<S>(&mut self, plaintext_passwd: S) -> Result<(), PasswordError>
     where S: Display,
     {
-        SaveFile::validate_passwd(&plaintext_passwd.to_string()).await?;
+        Player::validate_passwd(&plaintext_passwd.to_string()).await?;
         let salt = SaltString::generate(&mut OsRng);
         let pw_hash = Argon2::default()
             .hash_password(plaintext_passwd.to_string().as_bytes(), &salt)?
@@ -186,7 +188,7 @@ impl SaveFile {
     /// 
     /// # Returns
     /// Success?
-    pub fn load(name: &str, plaintext_passwd: &str) -> Result<SaveFile, LoadError> {
+    pub async fn load(name: &str, plaintext_passwd: &str) -> Result<Player, LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let save = match std::fs::read_to_string(&path) {
@@ -194,10 +196,10 @@ impl SaveFile {
             Err(_) => {
                 log::warn!("Attempt to load non-existent save '{}' by '{}'…", filename, name);
                 let _ = DUMMY_SAVE.verify_passwd(plaintext_passwd);
-                return Err(LoadError::InvalidLogin);
+                return Err(LoadError::NoSuchSave);
             }
         };
-        let save: SaveFile = serde_json::from_str(&save)?;
+        let save: Player = serde_json::from_str(&save)?;
         if save.verify_passwd(plaintext_passwd) {
             Ok(save)
         } else {
@@ -205,14 +207,28 @@ impl SaveFile {
             Err(LoadError::InvalidLogin)
         }
     }
+    /// Set access mode.
+    /// 
+    /// # Arguments
+    /// - `access`— new [Access] specs.
+    pub fn set_access(&mut self, access: Access) {
+        self.access = access
+    }
+}
 
-    pub fn save(&self) -> Result<String, SaveError> {
+#[async_trait]
+impl DoesSave for Player {
+    /// Save!
+    /// 
+    /// # Returns
+    /// Success?
+    async fn save(&mut self) -> Result<(), SaveError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, self.name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
-        let json = serde_json::to_string_pretty(self)?;
         let file = std::fs::File::create(path)?;
         let _ = serde_json::to_writer(file, &self)?;
-        Ok(json)
+        log::info!("Saved '{}'.", filename);
+        Ok(())
     }
 }
 
@@ -224,7 +240,7 @@ mod savefile_tests {
 
     #[tokio::test]
     async fn create_new_savefile() {
-        let mut s = SaveFile::new("TestSaveThing");
+        let mut s = Player::new("TestSaveThing");
         let r = s.set_passwd("new password, a very intricate thing");
         assert!(r.await.is_ok());
     }
@@ -234,23 +250,23 @@ mod savefile_tests {
         let _ = env_logger::try_init();
         let mut savefile = (*DUMMY_SAVE.as_ref()).clone();
         let _ = savefile.set_passwd("test word").await;
-        let save_content = savefile.save();
+        let save_content = savefile.save().await;
         debug!("{:?}", save_content);
         assert!(save_content.is_ok());
     }
 
-    #[test]
-    fn load_savefile() {
+    #[tokio::test]
+    async fn load_savefile() {
         let _ = env_logger::try_init();
-        let savefile = SaveFile::load("dummy", "test word");
+        let savefile = Player::load("dummy", "test word").await;
         assert!(savefile.is_ok());
         debug!("{:?}", savefile);
     }
 
-    #[test]
-    fn load_savefile_wrong_pwd() {
+    #[tokio::test]
+    async fn load_savefile_wrong_pwd() {
         let _ = env_logger::try_init();
-        let savefile = SaveFile::load("dummy", "wrong pwd");
+        let savefile = Player::load("dummy", "wrong pwd").await;
         assert!(savefile.is_err());
     }
 }

@@ -23,6 +23,8 @@
     "greeting": "Amidst the mists of mistyria...\n\nWelcome, visitor. Stay a while and... yes, stay a while.",
     "areas": ["root"],
     "root": {
-        "area": "root"
-    }
+        "area": "root",
+        "room": "root"
+    },
+    "prompts": {}
 }

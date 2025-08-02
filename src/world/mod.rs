@@ -1,14 +1,14 @@
-use std::{collections::HashMap, convert::Infallible, fs::read_to_string, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fs::read_to_string, path::PathBuf, str::FromStr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
-use crate::{string::PromptType, traits::tickable::Tickable, util::contact::{AdminInfo, Contact}, world::area::Area, DATA_PATH};
+use crate::{string::prompt::PromptType, traits::tickable::Tickable, util::contact::{AdminInfo, Contact}, world::area::{Area, world_area_serialization}, DATA_PATH};
 pub(crate) mod area;
 pub(crate) mod room;
 
 #[derive(Debug, Deserialize, Serialize)]
-struct MotD {
+pub(crate) struct MotD {
     text: String,
 }
 
@@ -20,29 +20,29 @@ struct WorldEntrance {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct World {
+    #[serde(default)]
     uptime: u64,
     title: String,
     description: String,
     owner: Contact,
     admins: Option<Vec<AdminInfo>>,
-    motd: Option<Vec<MotD>>,
-    greeting: Option<String>,
+    pub motd: Option<Vec<MotD>>,
+    pub greeting: Option<String>,
+    pub welcome_back: Option<String>,
+    pub welcome_new: Option<String>,
+    #[serde(with = "world_area_serialization")]
     areas: Option<Vec<Area>>,
     root: Option<WorldEntrance>,
-    prompts: HashMap<PromptType, String>
+    pub prompts: HashMap<PromptType, String>
 }
 
-pub type SharedWorld = Arc<Mutex<World>>;
+/// Thread-shared world type.
+pub type SharedWorld = Arc<RwLock<World>>;
 
 #[derive(Debug)]
 pub(crate) enum WorldError {
-    Path(Infallible),
     Io(std::io::Error),
     Format(serde_json::Error),
-}
-
-impl From<Infallible> for WorldError {
-    fn from(value: Infallible) -> Self { Self::Path(value)}
 }
 
 impl From<std::io::Error> for WorldError {
@@ -56,10 +56,17 @@ impl From<serde_json::Error> for WorldError {
 impl World {
     pub(crate) fn new(name: &str) -> Result<Self, WorldError> {
         let filename = format!("{}/{}.world", *DATA_PATH, name);
-        let path = PathBuf::from_str(filename.as_str())?;
+        let path = PathBuf::from_str(filename.as_str()).unwrap();
         let content = read_to_string(path)?;
         let world: World = serde_json::from_str(&content)?;
         Ok(world)
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn do_busy_stuff(&self) {
+        use std::time::Duration;
+
+        tokio::time::sleep(Duration::from_secs(5)).await;
     }
 }
 
@@ -71,5 +78,36 @@ impl Tickable for World {
                 area.tick(self.uptime);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod world_tests {
+    use std::time::Duration;
+
+    use log::debug;
+
+    use crate::game_loop::game_loop;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn busy_world() {
+        let _ = env_logger::try_init();
+        let world = Arc::new(RwLock::new(World::new("rustrom").expect("ERROR: world dead or in fire?!")));
+
+        tokio::spawn(game_loop(world.clone()));
+        {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            debug!("Enter guard...");
+            {
+                let w = world.write().await;
+                w.do_busy_stuff().await;
+                debug!("Exit guard...");
+            }
+            debug!("Waited busy stuff...");
+            tokio::time::sleep(Duration::from_secs(10)).await;
+        }
+        debug!("Lazing about.");
     }
 }
