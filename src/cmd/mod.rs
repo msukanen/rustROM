@@ -3,10 +3,11 @@ use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf, sync::broadcast};
 
 use crate::{player::save::Player, tell_user, world::SharedWorld, ClientState};
 
-//--- pub mod all the commands ---
-pub(crate) mod quit;
-pub(crate) mod say;
-pub(crate) mod set;
+//--- 'mod' all the commands ---
+mod quit;
+mod say;
+mod set;
+mod look;
 
 /// Command context for all the commands to chew on.
 pub struct CommandCtx<'a> {
@@ -28,6 +29,15 @@ pub trait Command: Send + Sync {
 include!(concat!(env!("OUT_DIR"), "/commands.rs"));
 
 /// Parses the player's input and executes the corresponding command.
+/// 
+/// # Arguments
+/// - `player`— [Player], obviously.
+/// - `world`— reference to the world itself. Seldom used, but one never knows…
+/// - `tx`— global broadcast channel.
+/// - `input`— whatever the user typed…
+/// - `writer`— channel to deliver text to the user.
+/// - `prompt`— prompt to show after command execution.
+///             This may get overridden by specific commands.
 pub async fn parse_and_execute<'a>(
     player: Player,
     world: &'a SharedWorld,
@@ -54,6 +64,8 @@ pub async fn parse_and_execute<'a>(
     }
 }
 
+/// Quip to user about "unknown" command.  This is also used to mask
+/// admin-only commands behind obscurity.
 #[macro_export]
 macro_rules! tell_unknown_command {
     ($ctx:expr) => {
@@ -61,6 +73,8 @@ macro_rules! tell_unknown_command {
     };
 }
 
+/// Shorthand for returning from a variety of commands into 'playing'
+/// state of existence.
 #[macro_export]
 macro_rules! resume_game {
     ($ctx:expr) => {
