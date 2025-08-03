@@ -24,7 +24,7 @@
     "areas": ["root"],
     "root": {
         "area": "root",
-        "room": "root"
+        "room": "rooty"
     },
     "prompts": {}
 }
