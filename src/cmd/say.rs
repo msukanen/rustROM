@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, ClientState};
+use crate::{cmd::{Command, CommandCtx}, mob::core::IsMob, tell_user, ClientState};
 
 pub(crate) struct SayCommand;
 
@@ -12,7 +12,7 @@ impl Command for SayCommand {
             ctx.tx.send(msg).unwrap();
         }
 
-        ctx.writer.write_all(ctx.prompt.as_bytes()).await.unwrap();
+        tell_user!(ctx.writer, ctx.prompt);
         ClientState::Playing(ctx.player.clone())
     }
 }

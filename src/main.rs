@@ -16,6 +16,7 @@ pub(crate) mod util;
 mod cmd;
 use game_loop::game_loop;
 
+use crate::mob::core::IsMob;
 use crate::player::access::Access;
 use crate::player::save::{LoadError, Player};
 use crate::string::prompt::PromptType;
@@ -106,7 +107,7 @@ async fn main() {
                     log::info!("Player '{}' logging out.", player.name());
                     let _ = player.save().await;
                     if !abrupt_dc {
-                        writer.write_all(b"Goodbye!\n").await.unwrap();
+                        tell_user!(writer, "Goodbye! See you soon again!\n");
                     }
                     break;
                 }

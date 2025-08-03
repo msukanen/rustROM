@@ -12,6 +12,7 @@ pub(crate) enum Access {
 }
 
 impl Access {
+    /// Check if has builder rights.
     pub fn is_builder(&self) -> bool {
         match self {
             Self::Admin   |
@@ -21,6 +22,7 @@ impl Access {
         }
     }
 
+    /// Check if is marked as an event host.
     pub fn is_event_host(&self) -> bool {
         match self {
             Self::Admin => true,
@@ -29,7 +31,16 @@ impl Access {
         }
     }
 
+    /// Get a clean slate default [Access::Player].
     pub fn default() -> Self {
         Self::Player { builder: false, event_host: false }
+    }
+
+    /// Check if has full admin rights.
+    pub fn is_admin(&self) -> bool {
+        match self {
+            Self::Admin => true,
+            _ => false
+        }
     }
 }

@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
-use crate::{mob::gender::Gender, player::access::Access, traits::save::DoesSave, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender}, player::access::Access, traits::save::DoesSave, DATA_PATH};
 use crate::string::Sluggable;
 
 pub(crate) static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -74,7 +74,7 @@ pub(crate) struct Player {
     name: String,
     passwd: String,// hashed stuff...
     gender: Gender,
-    access: Access,
+    pub access: Access,
 }
 
 impl Player {
@@ -88,10 +88,6 @@ impl Player {
             gender: Gender::Indeterminate,
             access: Access::default(),
         }
-    }
-
-    pub fn name<'a>(&'a self) -> &'a str {
-        &self.name
     }
 
     /// Check pwd pwnage status via HIBP.
@@ -229,6 +225,12 @@ impl DoesSave for Player {
         let _ = serde_json::to_writer(file, &self)?;
         log::info!("Saved '{}'.", filename);
         Ok(())
+    }
+}
+
+impl IsMob for Player {
+    fn name<'a>(&'a self) -> &'a str {
+        &self.name
     }
 }
 

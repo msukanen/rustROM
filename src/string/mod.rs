@@ -23,6 +23,12 @@ pub trait Sluggable {
     fn slugify(&self) -> String;
 }
 
-impl Sluggable for String { fn slugify(&self) -> String { slugify(self) }}
-impl Sluggable for &String { fn slugify(&self) -> String { slugify(self) }}
-impl Sluggable for &str { fn slugify(&self) -> String { slugify(self) }}
+impl Sluggable for String {
+    #[inline]
+    fn slugify(&self) -> String { slugify(self) }}
+impl Sluggable for &String {
+    #[inline]
+    fn slugify(&self) -> String { slugify(self) }}
+impl Sluggable for &str {
+    #[inline]
+    fn slugify(&self) -> String { slugify(self) }}
