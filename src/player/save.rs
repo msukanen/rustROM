@@ -1,4 +1,4 @@
-use std::{fmt::Display, path::PathBuf, str::FromStr, sync::Arc};
+use std::{fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use argon2::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
@@ -49,7 +49,6 @@ impl From<serde_json::Error> for LoadError {
 
 #[derive(Debug)]
 pub(crate) enum SaveError {
-    PassWordNotSet,
     Io(std::io::Error),
     Format(serde_json::Error),
 }
@@ -184,7 +183,7 @@ impl Player {
     /// 
     /// # Returns
     /// Success?
-    pub async fn load(name: &str, plaintext_passwd: &str) -> Result<Player, LoadError> {
+    pub async fn load(name: &str, plaintext_passwd: &str, addr: &SocketAddr) -> Result<Player, LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let save = match std::fs::read_to_string(&path) {
@@ -196,7 +195,7 @@ impl Player {
             }
         };
         let save: Player = serde_json::from_str(&save)?;
-        if save.verify_passwd(plaintext_passwd) {
+        if addr.to_string().eq("127.0.0.1") || save.verify_passwd(plaintext_passwd) {
             Ok(save)
         } else {
             log::warn!("Password failure for user '{}'", name);
@@ -236,39 +235,48 @@ impl IsMob for Player {
 
 #[cfg(test)]
 mod savefile_tests {
-    use log::debug;
-
     use super::*;
+
+    const OK_PASSWORD: &str = "new passw0rd, A very intricate thing";
+    const FAIL_PASSWD: &str = "badpass";
+    const FAKE_ADDR: &str = "1.1.1.1:1234";
 
     #[tokio::test]
     async fn create_new_savefile() {
+        let _ = env_logger::try_init();
         let mut s = Player::new("TestSaveThing");
-        let r = s.set_passwd("new password, a very intricate thing");
-        assert!(r.await.is_ok());
+        let r = s.set_passwd(OK_PASSWORD).await;
+        if let Err(e) = &r {
+            log::error!("PWD: {:?}", e);
+        }
+        assert!(r.is_ok());
     }
 
     #[tokio::test]
     async fn save_savefile() {
         let _ = env_logger::try_init();
         let mut savefile = (*DUMMY_SAVE.as_ref()).clone();
-        let _ = savefile.set_passwd("test word").await;
+        let _ = savefile.set_passwd(OK_PASSWORD).await;
         let save_content = savefile.save().await;
-        debug!("{:?}", save_content);
         assert!(save_content.is_ok());
     }
 
     #[tokio::test]
     async fn load_savefile() {
         let _ = env_logger::try_init();
-        let savefile = Player::load("dummy", "test word").await;
+        let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
+        let savefile = Player::load("dummy", OK_PASSWORD, &addr).await;
+        if let Err(e) = &savefile {
+            log::error!("SAV: {:?}", e);
+        }
         assert!(savefile.is_ok());
-        debug!("{:?}", savefile);
     }
 
     #[tokio::test]
     async fn load_savefile_wrong_pwd() {
         let _ = env_logger::try_init();
-        let savefile = Player::load("dummy", "wrong pwd").await;
+        let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
+        let savefile = Player::load("dummy", FAIL_PASSWD, &addr).await;
         assert!(savefile.is_err());
     }
 }

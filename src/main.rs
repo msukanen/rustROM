@@ -105,7 +105,9 @@ async fn main() {
                 // Check if player is logging out...
                 if let ClientState::Logout(mut player) = state {
                     log::info!("Player '{}' logging out.", player.name());
-                    let _ = player.save().await;
+                    if let Err(e) = player.save().await {
+                        log::error!("Error saving '{}'! {:?}", player.name(), e);
+                    }
                     if !abrupt_dc {
                         tell_user!(writer, "Goodbye! See you soon again!\n");
                     }
@@ -148,7 +150,7 @@ async fn main() {
                                 }
                             },
                             ClientState::EnteringPassword1{ name } => {
-                                match Player::load(&name, &input).await {
+                                match Player::load(&name, &input, &addr).await {
                                     Ok(save) => {
                                         log::info!("'{}' successfully logged in.", name);
                                         let (msg, p) = {
