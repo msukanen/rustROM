@@ -69,10 +69,11 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         location: WorldEntrance::default(),
     }));
 
+/// Player data lives here!
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub(crate) struct Player {
     name: String,
-    passwd: String,// hashed stuff...
+    passwd: String,// argon2 hash
     gender: Gender,
     pub access: Access,
     pub location: WorldEntrance,
@@ -160,6 +161,10 @@ impl Player {
         Ok(())
     }
 
+    /// Verify given password vs stored password.
+    /// 
+    /// # Arguments
+    /// - `plaintext_passwd`— some passwordlike thing.
     pub fn verify_passwd<S>(&self, plaintext_passwd: S) -> bool
     where S: Display,
     {
@@ -183,9 +188,6 @@ impl Player {
     /// # Arguments
     /// - `name`— name of character to load.
     /// - `plaintext_passwd`— password.
-    /// 
-    /// # Returns
-    /// Success?
     pub async fn load(name: &str, plaintext_passwd: &str, addr: &SocketAddr) -> Result<Player, LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();

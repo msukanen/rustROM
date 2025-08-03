@@ -14,7 +14,7 @@ use std::{collections::HashMap, fs::read_to_string, path::PathBuf, str::FromStr,
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{string::prompt::PromptType, traits::tickable::Tickable, util::contact::{AdminInfo, Contact}, world::area::{Area, world_area_serialization}, DATA_PATH};
+use crate::{string::prompt::PromptType, traits::tickable::Tickable, util::contact::{AdminInfo, Contact}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
 pub(crate) mod area;
 pub(crate) mod room;
 
@@ -23,10 +23,13 @@ pub(crate) struct MotD {
     text: String,
 }
 
+/// World entrance.
+/// 
+/// Used for locating e.g. players, mobs, rooms themselves, etc.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub(crate) struct WorldEntrance {
-    area: String,
-    room: String,
+    pub(crate) area: String,
+    pub(crate) room: String,
 }
 
 impl WorldEntrance {
@@ -39,10 +42,13 @@ impl WorldEntrance {
     }
 }
 
+/// The World itself…
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct World {
     #[serde(default)]
     uptime: u64,
+    #[serde(skip)]
+    filename: String,
     title: String,
     description: String,
     owner: Contact,
@@ -52,8 +58,8 @@ pub(crate) struct World {
     pub welcome_back: Option<String>,
     pub welcome_new: Option<String>,
     #[serde(with = "world_area_serialization")]
-    areas: Option<Vec<Area>>,
-    root: Option<WorldEntrance>,
+    areas: HashMap<String, Area>,
+    root: WorldEntrance,
     pub prompts: HashMap<PromptType, String>
 }
 
@@ -75,6 +81,10 @@ impl From<serde_json::Error> for WorldError {
 }
 
 impl World {
+    /// A brand new world (loaded from a file, of course).
+    /// 
+    /// # Arguments
+    /// - `name`— stem-name of the world. Designates the storage medium (without filename extension, etc.).
     pub(crate) fn new(name: &str) -> Result<Self, WorldError> {
         let filename = format!("{}/{}.world", *DATA_PATH, name);
         let path = PathBuf::from_str(filename.as_str()).unwrap();
@@ -89,29 +99,60 @@ impl World {
 
         tokio::time::sleep(Duration::from_secs(5)).await;
     }
+
+    /// Finds a specific area of the world.
+    pub(crate) fn find_area(&self, name: &str) -> Option<&Area> {
+        self.areas.get(name)
+    }
+
+    /// Finds a room within a specific area of the world.
+    pub(crate) fn find_room(&self, area_name: &str, room_name: &str) -> Option<&Room> {
+        self.find_area(area_name)
+            .and_then(|area| {
+                area.find_room(room_name)
+            })
+    }
+
+    /// Validate the integrity of the loaded world data.
+    #[must_use = "This result must be checked to ensure world integrity."]
+    pub(crate) fn validate(self) -> Result<Self, String> {
+        // See that the root area and room actually exist.
+        if let Some(area) = self.find_area(&self.root.area) {
+            if let Some(_) = area.find_room(&self.root.room) {
+                // TODO: other sorts of validation?
+                Ok(self)
+            } else {
+                Err(format!(
+                    "Validation error: root room '{}' defined in '{}' does not exist.",
+                    self.root.room, self.filename
+                ))
+            }
+        } else {
+            Err(format!(
+                "Validation error: root area '{}' defined in '{}' does not exist.",
+                self.root.area, self.filename
+            ))
+        }
+    }
 }
 
 impl Tickable for World {
     fn tick(&mut self, uptime: u64) {
         self.uptime = uptime;
-        if let Some(areas) = &mut self.areas {
-            for area in areas.iter_mut() {
-                area.tick(self.uptime);
-            }
+        for (_, area) in &mut self.areas.iter_mut() {
+            area.tick(self.uptime);
         }
     }
 }
 
 #[cfg(test)]
 mod world_tests {
+    use super::*;
     use std::time::Duration;
-
     use log::debug;
-
     use crate::game_loop::game_loop;
 
-    use super::*;
-
+    /// Let's see how the threads react to the core world being super busy with global locks.
     #[tokio::test]
     async fn busy_world() {
         let _ = env_logger::try_init();
