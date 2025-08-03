@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 
-use crate::{mob::{core::IsMob, gender::Gender}, player::access::Access, traits::save::DoesSave, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender}, player::access::Access, traits::save::DoesSave, world::WorldEntrance, DATA_PATH};
 use crate::string::Sluggable;
 
 pub(crate) static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -65,7 +65,8 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         name: "dummy".into(),
         passwd: "$argon2id$v=19$m=19456,t=2,p=1$Cg...$....".into(),
         gender: Gender::Indeterminate,
-        access: Access::Dummy
+        access: Access::Dummy,
+        location: WorldEntrance::default(),
     }));
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -74,6 +75,7 @@ pub(crate) struct Player {
     passwd: String,// hashed stuff...
     gender: Gender,
     pub access: Access,
+    pub location: WorldEntrance,
 }
 
 impl Player {
@@ -86,6 +88,7 @@ impl Player {
             passwd: "".to_string(),
             gender: Gender::Indeterminate,
             access: Access::default(),
+            location: WorldEntrance::default(),
         }
     }
 

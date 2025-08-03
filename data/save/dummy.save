@@ -1,1 +1,1 @@
-{"name":"dummy","passwd":"$argon2id$v=19$m=19456,t=2,p=1$6tYR8N2lsfE7Y2e7nFKmLQ$UJrXxwG7WfGzwkkxTf241rU+Xn2IyM67TV0NUUx2S2I","gender":"Indeterminate","access":"Dummy"}
+{"name":"dummy","passwd":"$argon2id$v=19$m=19456,t=2,p=1$6tYR8N2lsfE7Y2e7nFKmLQ$UJrXxwG7WfGzwkkxTf241rU+Xn2IyM67TV0NUUx2S2I","gender":"Indeterminate","access":"Dummy","location":{"area":"root","room":"root"}}

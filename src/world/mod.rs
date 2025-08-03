@@ -1,3 +1,14 @@
+//! The World
+//! 
+//! Note about areas and rooms that the world HAS TO HAVE:
+//! - an area called `root` (`data/areas/root.area`).
+//! - a room called `root` (`data/areas/root.room`).
+//! 
+//! The dual `root:root` is used as an entrance for new players,
+//! guests, and as a fallback after major world changes which
+//! cause e.g. saved locations in player saves to be invalid.
+//! 
+//! If one or the other file is missing… Bad Things™ will happen!
 use std::{collections::HashMap, fs::read_to_string, path::PathBuf, str::FromStr, sync::Arc};
 
 use serde::{Deserialize, Serialize};
@@ -12,10 +23,20 @@ pub(crate) struct MotD {
     text: String,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct WorldEntrance {
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub(crate) struct WorldEntrance {
     area: String,
     room: String,
+}
+
+impl WorldEntrance {
+    /// Generate default entrance entry.
+    pub(crate) fn default() -> Self {
+        Self {
+            area: "root".to_string(),
+            room: "root".to_string()
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]
