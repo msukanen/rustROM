@@ -1,7 +1,9 @@
 //! A little MUD project in Rust.
+use std::ops::Deref;
 use std::sync::Arc;
 
-use once_cell::sync::Lazy;
+use clap::Parser;
+use once_cell::sync::{Lazy, OnceCell};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::sync::{broadcast, RwLock};
@@ -18,19 +20,47 @@ use game_loop::game_loop;
 
 use crate::mob::core::IsMob;
 use crate::player::access::Access;
-use crate::player::save::{LoadError, Player};
+use crate::player::save::{LoadError, Player, SAVE_PATH};
 use crate::string::prompt::PromptType;
 use crate::string::sanitize::Sanitizer;
 use crate::traits::save::DoesSave;
 use crate::world::World;
 
-pub(crate) static DATA_PATH: Lazy<Arc<String>> = Lazy::new(||
-    Arc::new(std::env::var("RUSTROM_DATA")
-        .expect("\
-        HALT the press!\n\n\
-        RUSTROM_DATA, path to the world data, is not set/given!\n\n\
-        Either set it, or provide it on the command line."))
-    );
+pub struct ImmutablePath; impl ImmutablePath {
+    pub fn set(path: impl Into<String>) {
+        DATA.set(path.into()).expect("FFS!");
+    }
+}
+impl Deref for ImmutablePath {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        DATA.get().expect("OOF")
+    }
+}
+static DATA: OnceCell<String> = OnceCell::new();
+pub (crate) static DATA_PATH: ImmutablePath = ImmutablePath;
+//pub (crate) static DATA_PATH: Lazy<Arc<String>> = Lazy::new(||{panic("!!!")});
+
+#[derive(Parser, Debug)]
+#[command(
+    version,
+    about = "A RustROM MUD engine.",
+    after_help = "\
+Note:   The data path can also be set using the RUSTROM_DATA environment\n\
+\tvariable, for example:\n\n\
+Usage:  RUSTROM_DATA=/path/to/data rustrom [OPTIONS]
+        "
+)]
+struct CmdLineArgs {
+    #[arg(short, long, default_value = "8080")]
+    port: u32,
+    #[arg(long, default_value = "0.0.0.0")]
+    host_listen_addr: String,
+    #[arg(long, default_value = "rustrom")]
+    world: String,
+    #[arg(long, env = "RUSTROM_DATA", default_value = "data")]
+    data_path: String,
+}
 
 #[derive(Debug)]
 pub(crate) enum ClientState {
@@ -51,16 +81,23 @@ async fn main() {
     const WELCOME_BACK: &str = "Welcome back!";
     const WELCOME_NEW: &str = "May your adventures be prosperous!";
 
+    let args = CmdLineArgs::parse();
+    let _ = DATA.set(args.data_path);
+
     // Initialize the logger
     env_logger::init();
 
-    let world = Arc::new(RwLock::new(World::new("rustrom").expect("ERROR: world dead or in fire?!")));
+    let world = Arc::new(RwLock::new({
+        let w = World::new(&args.world).expect("ERROR: world dead or in fire?!");
+        w.validate().expect(&format!("Error validating {}", "rustrom.world"))
+    }));
 
     tokio::spawn(game_loop(world.clone()));
 
     // Create a listener that will accept incoming connections.
-    let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    log::info!("Server listening on 127.0.0.1:8080");
+    let listen_on = format!("{}:{}", args.host_listen_addr, args.port);
+    let listener = TcpListener::bind(&listen_on).await.unwrap();
+    log::info!("Server listening on {}", listen_on);
 
     // A broadcast channel is used to send messages to all connected clients.
     // Here, we're just broadcasting chat messages.
