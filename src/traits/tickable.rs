@@ -1,5 +1,8 @@
+use async_trait::async_trait;
+
 /// A trait for anything that ticks.
-pub(crate) trait Tickable {
+#[async_trait]
+pub trait Tickable {
     /// Tick along, tick along …
-    fn tick(&mut self, uptime: u64);
+    async fn tick(&mut self, uptime: u64);
 }

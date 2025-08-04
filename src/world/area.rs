@@ -1,45 +1,54 @@
 //! Area stuff.
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::{Arc, Weak}};
 
+use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 
-use crate::{traits::tickable::Tickable, world::room::{area_room_serialization, Room}, DATA_PATH};
+use crate::{traits::tickable::Tickable, world::{room::{area_room_serialization, Room}, World}, DATA_PATH};
 
 static AREA_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/areas", *DATA_PATH)));
 
-pub(crate) mod world_area_serialization {
+pub mod world_area_serialization {
     //! Serializer for [World] level [Area] listing.
-    use std::{collections::HashMap, fs};
+    use std::{collections::HashMap, fs, sync::Arc};
 
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use tokio::sync::RwLock;
 
     use super::{Area, AREA_PATH};
 
-    pub fn serialize<S: Serializer>(areas: &HashMap<String, Area>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S: Serializer>(areas: &HashMap<String, Arc<RwLock<Area>>>, serializer: S) -> Result<S::Ok, S::Error>
     where S: Serializer,
     {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
         for (stem, area) in areas {
-            let area_path = format!("{}/{}.area", *AREA_PATH, stem);
-            let area_content = serde_json::to_string_pretty(area).unwrap();
-            fs::write(area_path, area_content).unwrap();
+            let path = format!("{}/{}.area", *AREA_PATH, stem);
+            log::info!("Processing '{}'", path);
+            let contents = runtime.block_on(async {
+                let g = area.read().await;
+                serde_json::to_string_pretty(&*g).unwrap()
+            });
+            fs::write(path, contents).unwrap();
         }
         areas.keys()
             .collect::<Vec<&String>>()
             .serialize(serializer)
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Area>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Arc<RwLock<Area>>>, D::Error>
     where D: Deserializer<'de>,
     {
         let stems = Vec::<String>::deserialize(deserializer)?;
         let mut loaded = HashMap::new();
 
         for stem in stems {
-            let file_path = format!("{}/{}.area", *AREA_PATH, stem);
-            let content = fs::read_to_string(file_path).map_err(serde::de::Error::custom)?;
-            let content: Area = serde_json::from_str(&content).map_err(serde::de::Error::custom)?;
-            loaded.insert(stem, content);
+            let path = format!("{}/{}.area", *AREA_PATH, stem);
+            log::info!("… processing '{}'", path);
+            let contents = fs::read_to_string(path).map_err(serde::de::Error::custom)?;
+            let area: Area = serde_json::from_str(&contents).map_err(serde::de::Error::custom)?;
+            loaded.insert(stem, Arc::new(RwLock::new(area)));
         }
 
         Ok(loaded)
@@ -47,22 +56,19 @@ pub(crate) mod world_area_serialization {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub(crate) struct Area {
-    pub(crate) name: String,
+pub struct Area {
+    pub name: String,
     description: String,
     #[serde(with = "area_room_serialization")]
-    rooms: HashMap<String, Room>,
+    pub rooms: HashMap<String, Arc<RwLock<Room>>>,
+    #[serde(skip)]
+    pub parent: Weak<RwLock<World>>,
 }
 
+#[async_trait]
 impl Tickable for Area {
-    fn tick(&mut self, uptime: u64) {
+    async fn tick(&mut self, uptime: u64) {
         
-    }
-}
-
-impl Area {
-    pub(crate) fn find_room(&self, name: &str) -> Option<&Room> {
-        self.rooms.get(name)
     }
 }
 

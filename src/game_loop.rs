@@ -4,7 +4,7 @@ use tokio::time::{sleep_until, Instant};
 
 use crate::{traits::tickable::Tickable, world::SharedWorld};
 
-pub(crate) async fn game_loop(world: SharedWorld) {
+pub async fn game_loop(world: SharedWorld) {
     let duration = Duration::from_secs(1);
     let mut next_tick = Instant::now() + duration;
     let mut uptime = 0;
@@ -17,7 +17,7 @@ pub(crate) async fn game_loop(world: SharedWorld) {
         uptime += 1;
         #[cfg(test)]{log::debug!("game_loop - Tick {}", uptime);}
 
-        world.write().await.tick(uptime);
+        world.write().await.tick(uptime).await;
 
         if Instant::now() > next_tick {
             log::warn!("Clock skew! Busy day! Lagging behind!");

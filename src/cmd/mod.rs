@@ -1,13 +1,14 @@
 use async_trait::async_trait;
-use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf, sync::broadcast};
+use tokio::{net::tcp::OwnedWriteHalf, sync::broadcast, io::AsyncWriteExt};
 
-use crate::{player::save::Player, tell_user, world::SharedWorld, ClientState};
+use crate::{player::savefile::Player, tell_user, world::SharedWorld, ClientState};
 
 //--- 'mod' all the commands ---
 mod quit;
 mod say;
 mod set;
 mod look;
+mod dig;
 
 /// Command context for all the commands to chew on.
 pub struct CommandCtx<'a> {
@@ -59,18 +60,9 @@ pub async fn parse_and_execute<'a>(
         };
         cmd.exec(&mut ctx).await
     } else {
-        tell_user!(writer, format!("Huh?\n{}", prompt));
+        tell_user!(writer, "Huh?\n{}", prompt);
         ClientState::Playing(player.clone())
     }
-}
-
-/// Quip to user about "unknown" command.  This is also used to mask
-/// admin-only commands behind obscurity.
-#[macro_export]
-macro_rules! tell_unknown_command {
-    ($ctx:expr) => {
-        tell_user!($ctx.writer, format!("Huh?\n{}", $ctx.prompt));
-    };
 }
 
 /// Shorthand for returning from a variety of commands into 'playing'

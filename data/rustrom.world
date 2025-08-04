@@ -2,8 +2,8 @@
     "title": "RustROM",
     "description": "RustROM v0",
     "owner": {
-        "name": "Markku Sukanen",
-        "email": "markku.sukanen@gmail.com"
+        "name": "Platipish",
+        "email": "anikaiful@gmail.com"
     },
     "admins": [
         {
@@ -24,7 +24,7 @@
     "areas": ["root"],
     "root": {
         "area": "root",
-        "room": "rooty"
+        "room": "root"
     },
     "prompts": {}
 }

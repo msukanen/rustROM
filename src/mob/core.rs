@@ -1,8 +1,8 @@
-pub(crate) trait IsMob {
+pub trait IsMob {
     /// Name of a mob.
     fn name<'a>(&'a self) -> &'a str;
 }
 
-pub(crate) struct MobCore {
+pub struct MobCore {
 
 }

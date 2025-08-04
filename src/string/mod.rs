@@ -1,5 +1,5 @@
-pub(crate) mod sanitize;
-pub(crate) mod prompt;
+pub mod sanitize;
+pub mod prompt;
 /// Replaces any non-alphabetic characters in a string with underscores.
 ///
 /// This is useful for creating safe(ish), simple filenames from user input

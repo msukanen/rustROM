@@ -1,28 +1,26 @@
 //! A little MUD project in Rust.
-use std::ops::Deref;
-use std::sync::Arc;
-
+use std::{ops::Deref, sync::Arc};
 use clap::Parser;
-use once_cell::sync::{Lazy, OnceCell};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpListener;
-use tokio::sync::{broadcast, RwLock};
+use once_cell::sync::OnceCell;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::TcpListener,
+    sync::{broadcast, RwLock}
+};
 
 mod player;
 mod mob;
 mod game_loop;
-pub(crate) mod world;
-pub(crate) mod traits;
-pub(crate) mod string;
-pub(crate) mod util;
-mod cmd;
 use game_loop::game_loop;
+pub mod world;
+pub mod traits;
+pub mod string;
+pub mod util;
+mod cmd;
 
 use crate::mob::core::IsMob;
-use crate::player::access::Access;
-use crate::player::save::{LoadError, Player, SAVE_PATH};
-use crate::string::prompt::PromptType;
-use crate::string::sanitize::Sanitizer;
+use crate::player::{access::Access, savefile::{LoadError, Player}};
+use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
 use crate::world::World;
 
@@ -39,7 +37,6 @@ impl Deref for ImmutablePath {
 }
 static DATA: OnceCell<String> = OnceCell::new();
 pub (crate) static DATA_PATH: ImmutablePath = ImmutablePath;
-//pub (crate) static DATA_PATH: Lazy<Arc<String>> = Lazy::new(||{panic("!!!")});
 
 #[derive(Parser, Debug)]
 #[command(
@@ -63,7 +60,7 @@ struct CmdLineArgs {
 }
 
 #[derive(Debug)]
-pub(crate) enum ClientState {
+pub enum ClientState {
     EnteringName,
     EnteringPassword1 { name: String },
     EnteringPasswordV { name: String, pw1: String },
@@ -89,8 +86,22 @@ async fn main() {
 
     let world = Arc::new(RwLock::new({
         let w = World::new(&args.world).expect("ERROR: world dead or in fire?!");
-        w.validate().expect(&format!("Error validating {}", "rustrom.world"))
-    }));
+        w.validate().await.expect(&format!("Error validating {}", "rustrom.world"))
+    }));{
+        log::info!("Connecting dots …");
+        let mut w = world.write().await;
+        for area_arc in w.areas.values() {
+            let mut a = area_arc.write().await;
+            log::info!("… processing area '{}'", a.name);
+            a.parent = Arc::downgrade(&world);
+
+            for room_arc in a.rooms.values() {
+                let mut r = room_arc.write().await;
+                log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.name, r.title());
+                r.parent = Arc::downgrade(area_arc);
+            }
+        }
+    }
 
     tokio::spawn(game_loop(world.clone()));
 
@@ -134,7 +145,8 @@ async fn main() {
                 (g, p)
             };
             let mut prompt = login_prompt;
-            writer.write_all(format!("{}\n\n{}", greeting, prompt).as_bytes()).await.unwrap();
+            tell_user!(writer, "{}\n\n{}", greeting, prompt);
+            //writer.scribble(format!("{}\n\n{}", greeting, prompt)).await;
             let mut abrupt_dc = false;
 
             // This is the main loop for the client.
@@ -197,18 +209,18 @@ async fn main() {
                                             (msg, p)
                                         };
                                         prompt = p;
-                                        tell_user!(writer, format!("{}\n\n{}", msg, prompt));
+                                        tell_user!(writer, "{}\n\n{}", msg, prompt);
                                         ClientState::Playing(save)
                                     },
                                     Err(LoadError::NoSuchSave) => {
                                         prompt = get_prompt!(world, PromptType::PasswordV, PROMPT_PASSWDV);
-                                        tell_user!(writer, prompt);
+                                        tell_user!(writer, "{}", prompt);
                                         ClientState::EnteringPasswordV { name, pw1: input }
                                     },
                                     Err(e) => {
                                         log::warn!("Failed login attempt for '{}': {:?}", name, e);
                                         prompt = get_prompt!(world, PromptType::Login, PROMPT_LOGIN);
-                                        tell_user_p!(writer, prompt, "Invalid name and/or password.");
+                                        tell_user!(writer, "Invalid name and/or password.\n\n{}", prompt);
                                         ClientState::EnteringName
                                     }
                                 }
@@ -223,24 +235,28 @@ async fn main() {
                                         let save_err = player.save().await;
                                         if save_err.is_ok() {
                                             let msg = {world.read().await.welcome_new.clone().unwrap_or_else(|| WELCOME_NEW.to_string())};
-                                            tell_user_p!(writer, prompt, msg);
+                                            tell_user!(writer, "{}\n{}", msg, prompt);
                                             ClientState::Playing(player)
                                         } else {
                                             // Some strange error happened with save...
                                             // Notify user and "gracefully" disconnect them.
                                             log::error!("Fatal error during save attempt of player '{}'! {:?}", name, save_err);
                                             tell_user!(writer, "\
-                                                    A server error occured during character creation!\n\n\
-                                                    This could be due high server load or other reasons. Try again a little later, but meanwhile \
-                                                    please, notify the owner of this MUD via email or other means!");
+                                                    A server error occured during character creation!\n\
+                                                    \n\
+                                                    This could be due high server load or other reasons. \
+                                                    Try again a little later, but meanwhile please, notify \
+                                                    the owner of this MUD via email or other means!");
                                             break;
                                         }
                                     } else {
-                                        tell_user!(writer, "Given password is either too weak or a variant of it has been found in HIBP!\nPlease, choose a different password: ");
+                                        tell_user!(writer, "\
+                                                Given password is either too weak or a variant of it has been found in HIBP!\n\
+                                                Please, choose a different password: ");
                                         ClientState::EnteringPassword1 { name }
                                     }
                                 } else {
-                                    tell_user!(writer, "Passwords do not match. Please choose a password: ");
+                                    tell_user!(writer, "Passwords do not match.\n\nPlease choose a password: ");
                                     ClientState::EnteringPassword1 { name }
                                 }
                             },
@@ -252,11 +268,8 @@ async fn main() {
                     result = rx.recv() => {
                         if let ClientState::Playing(_) = &state {
                             if let Ok(msg) = result {
-                                // If we receive a message from the broadcast channel,
-                                // write it to our client's socket.
-                                writer.write_all(msg.as_bytes()).await.unwrap();
-                                // Also write the prompt again so the user can type.
-                                writer.write_all(b"> ").await.unwrap();
+                                // If we receive a message from the broadcast channel, write it to our client.
+                                tell_user!(writer, "{}{}", msg, prompt);
                             }
                         }
                     }

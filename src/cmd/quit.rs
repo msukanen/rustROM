@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use crate::{cmd::{Command, CommandCtx}, ClientState};
 
-pub(crate) struct QuitCommand;
+pub struct QuitCommand;
 
 #[async_trait]
 impl Command for QuitCommand {

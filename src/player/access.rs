@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone, Copy)]
-pub(crate) enum Access {
+pub enum Access {
     Dummy,
     Player {
         builder: bool,

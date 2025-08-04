@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
 use crate::{cmd::{Command, CommandCtx}, mob::core::IsMob, tell_user, ClientState};
 
-pub(crate) struct SayCommand;
+pub struct SayCommand;
 
 #[async_trait]
 impl Command for SayCommand {

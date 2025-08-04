@@ -1,4 +1,4 @@
-pub(crate) trait Sanitizer {
+pub trait Sanitizer {
     fn sanitize(&self) -> String;
 }
 

@@ -1,18 +1,10 @@
-pub(crate) mod contact;
+pub mod contact;
+pub mod direction;
+pub mod password;
 
-#[macro_export]
-macro_rules! tell_user {
-    ($w:expr, $topic:expr) => {
-        $w.write_all($topic.as_bytes()).await.unwrap();
-    };
-}
+//#[macro_export] macro_rules! tell_user {    ($w:expr, $($arg:tt)*) => {        $w.write_all(format!($($arg)*).as_bytes()).await.unwrap();    };}
 
-#[macro_export]
-macro_rules! tell_user_p {
-    ($w:expr, $prompt:expr, $topic:expr) => {
-        $w.write_all(format!("{}\n\n{}", $topic, $prompt).as_bytes()).await.unwrap();
-    };
-}
+//#[macro_export] macro_rules! prompt_user {    ($ctx:expr) => {        tell_user!($ctx.writer, "{}", $ctx.prompt);    };}
 
 #[macro_export]
 macro_rules! get_g_prompt {
