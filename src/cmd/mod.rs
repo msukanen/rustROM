@@ -47,6 +47,11 @@ pub async fn parse_and_execute<'a>(
     writer: &'a mut OwnedWriteHalf,
     prompt: &'a str,
 ) -> ClientState {
+    if input.is_empty() {// no need for whitespace check as input's already trimmed earlier.
+        tell_user!(writer, prompt);
+        return ClientState::Playing(player.clone());
+    }
+
     let (command, args) = input.split_once(' ').unwrap_or((input, ""));
     
     if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {

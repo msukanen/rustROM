@@ -1,6 +1,6 @@
 [package]
 name = "rustrom"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2024"
 authors = ["Markku Sukanen <markku.sukanen@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -28,3 +28,6 @@ maintenance = { status = "experimental" }
 [build-dependencies]
 walkdir = "2.5"
 heck = "0.5"
+
+[features]
+localtest = []

@@ -89,7 +89,7 @@ async fn main() {
         w.validate().await.expect(&format!("Error validating {}", "rustrom.world"))
     }));{
         log::info!("Connecting dots …");
-        let mut w = world.write().await;
+        let w = world.write().await;
         for area_arc in w.areas.values() {
             let mut a = area_arc.write().await;
             log::info!("… processing area '{}'", a.name);
@@ -144,9 +144,8 @@ async fn main() {
                 let p = w.prompts.get(&PromptType::Login).cloned().unwrap_or_else(|| PROMPT_LOGIN.to_string());
                 (g, p)
             };
+            tell_user!(writer, "{}\n\n{}", greeting, login_prompt);
             let mut prompt = login_prompt;
-            tell_user!(writer, "{}\n\n{}", greeting, prompt);
-            //writer.scribble(format!("{}\n\n{}", greeting, prompt)).await;
             let mut abrupt_dc = false;
 
             // This is the main loop for the client.

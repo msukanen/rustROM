@@ -9,6 +9,7 @@ use tokio::sync::RwLock;
 use crate::{traits::tickable::Tickable, world::{room::{area_room_serialization, Room}, World}, DATA_PATH};
 
 static AREA_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/areas", *DATA_PATH)));
+const DEFAULT_TICK_MODULO: u8 = 10;// normally an Area acts once every 10th tick.
 
 pub mod world_area_serialization {
     //! Serializer for [World] level [Area] listing.
@@ -55,6 +56,7 @@ pub mod world_area_serialization {
     }
 }
 
+fn default_tick_modulo() -> u8 {DEFAULT_TICK_MODULO}// to appease 'serde(default = ...)'
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Area {
     pub name: String,
@@ -63,12 +65,15 @@ pub struct Area {
     pub rooms: HashMap<String, Arc<RwLock<Room>>>,
     #[serde(skip)]
     pub parent: Weak<RwLock<World>>,
+    #[serde(default = "default_tick_modulo")]
+    tick_modulo: u8,
 }
 
 #[async_trait]
 impl Tickable for Area {
     async fn tick(&mut self, uptime: u64) {
-        
+        // Time to tick?
+        if (uptime % self.tick_modulo as u64) != 0 {return ;}
     }
 }
 

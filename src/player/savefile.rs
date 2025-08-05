@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{core::IsMob, gender::Gender}, player::access::Access, traits::save::{DoesSave, SaveError}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender, stat::StatType, CombatStat}, player::access::Access, traits::save::{DoesSave, SaveError}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
 use crate::string::Sluggable;
 
 pub static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -32,6 +32,9 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         gender: Gender::Indeterminate,
         access: Access::Dummy,
         location: WorldEntrance::default(),
+        hp: CombatStat::default(StatType::HP),
+        mp: CombatStat::default(StatType::MP),
+        in_combat: false
     }));
 
 /// Player data lives here!
@@ -42,6 +45,10 @@ pub struct Player {
     gender: Gender,
     pub access: Access,
     pub location: WorldEntrance,
+    hp: CombatStat,
+    mp: CombatStat,
+    #[serde(skip, default)]
+    in_combat: bool,
 }
 
 impl Player {
@@ -55,6 +62,9 @@ impl Player {
             gender: Gender::Indeterminate,
             access: Access::default(),
             location: WorldEntrance::default(),
+            hp: CombatStat::default(StatType::HP),
+            mp: CombatStat::default(StatType::MP),
+            in_combat: false,
         }
     }
 
@@ -104,7 +114,9 @@ impl Player {
     /// # Arguments
     /// - `name`— name of character to load.
     /// - `plaintext_passwd`— password.
-    pub async fn load(name: &str, plaintext_passwd: &str, addr: &SocketAddr) -> Result<Player, LoadError> {
+    /// - `_addr`— `IP:port` of incoming connection.
+    ///            Used *exclusively* in non-release modes *and* only with '`localtest`' feature switched on.
+    pub async fn load(name: &str, plaintext_passwd: &str, _addr: &SocketAddr) -> Result<Player, LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let save = match std::fs::read_to_string(&path) {
@@ -116,13 +128,21 @@ impl Player {
             }
         };
         let save: Player = serde_json::from_str(&save)?;
-        if addr.to_string().eq("127.0.0.1") || save.verify_passwd(plaintext_passwd) {
+        #[cfg(all(debug_assertions, feature = "localtest"))]
+        {   log::debug!("ADDR: {}", _addr.to_string());
+            if _addr.to_string().split(":").nth(0).eq(&Some("127.0.0.1")) {
+                log::warn!("Local test - bypassing password verification.");
+                return Ok(save);
+            }
+        }
+        if save.verify_passwd(plaintext_passwd) {
             Ok(save)
         } else {
             log::warn!("Password failure for user '{}'", name);
             Err(LoadError::InvalidLogin)
         }
     }
+    
     /// Set access mode.
     /// 
     /// # Arguments
@@ -149,9 +169,12 @@ impl DoesSave for Player {
 }
 
 impl IsMob for Player {
-    fn name<'a>(&'a self) -> &'a str {
-        &self.name
+    fn name<'a>(&'a self) -> &'a str { &self.name }
+    fn prompt<'a>(&'a self) -> String {
+        format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current())
     }
+    fn hp<'a>(&'a self) -> &'a CombatStat { &self.hp }
+    fn mp<'a>(&'a self) -> &'a CombatStat { &self.mp }
 }
 
 #[cfg(test)]
