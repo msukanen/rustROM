@@ -60,6 +60,7 @@ fn default_tick_modulo() -> u8 {DEFAULT_TICK_MODULO}// to appease 'serde(default
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Area {
     pub name: String,
+    title: String,
     description: String,
     #[serde(with = "area_room_serialization")]
     pub rooms: HashMap<String, Arc<RwLock<Room>>>,
@@ -74,6 +75,22 @@ impl Tickable for Area {
     async fn tick(&mut self, uptime: u64) {
         // Time to tick?
         if (uptime % self.tick_modulo as u64) != 0 {return ;}
+    }
+}
+
+impl Area {
+    pub async fn bootstrap() -> Result<(), std::io::Error> {
+        log::warn!("Bootstrap - generating starter area '{}/root.area'…", *AREA_PATH);
+        tokio::fs::create_dir_all((*AREA_PATH).as_str()).await?;
+        let area = serde_json::json!({
+            "name": "root",
+            "title": "The Genesis Area",
+            "description": "Where it all begins …",
+            "rooms": ["root"]
+        });
+        tokio::fs::write(format!("{}/root.area", *AREA_PATH), serde_json::to_string_pretty(&area)?).await?;
+        log::info!("Bootstrap(root.area) OK.");
+        Ok(())
     }
 }
 

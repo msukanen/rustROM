@@ -76,4 +76,18 @@ impl Room {
     pub fn title(&self) -> &str {
         &self.title
     }
+
+    pub async fn bootstrap() -> Result<(), std::io::Error> {
+        log::warn!("Bootstrap - generating starter room '{}/root.room'…", *ROOM_PATH);
+        tokio::fs::create_dir_all((*ROOM_PATH).as_str()).await?;
+        let room = serde_json::json!({
+            "name": "root",
+            "title": "The Void",
+            "description": "A vast, empty space. It feels like the beginning of something…",
+            "exits": {}
+        });
+        tokio::fs::write(format!("{}/root.room", *ROOM_PATH), serde_json::to_string_pretty(&room)?).await?;
+        log::info!("Bootstrap(root.room) OK.");
+        Ok(())
+    }
 }

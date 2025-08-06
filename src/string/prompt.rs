@@ -24,7 +24,7 @@ macro_rules! tell_user {
 
 #[macro_export]
 macro_rules! tell_user_unk {
-    ($w:expr, $p:expr) => {
-        tell_user!($w, "Huh?\n{}", $p);
+    ($w:expr) => {
+        tell_user!($w, "Huh?\n");
     };
 }

@@ -1,14 +1,17 @@
+use std::sync::Arc;
 use async_trait::async_trait;
-use tokio::{net::tcp::OwnedWriteHalf, sync::broadcast, io::AsyncWriteExt};
+use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}, io::AsyncWriteExt};
+use crate::{player::Player, tell_user, world::SharedWorld, ClientState};
 
-use crate::{player::savefile::Player, tell_user, world::SharedWorld, ClientState};
-
+pub mod macros;
 //--- 'mod' all the commands ---
 mod quit;
 mod say;
 mod set;
 mod look;
 mod dig;
+mod dmg;
+mod translocate;
 
 /// Command context for all the commands to chew on.
 pub struct CommandCtx<'a> {
@@ -17,7 +20,6 @@ pub struct CommandCtx<'a> {
     pub tx: &'a broadcast::Sender<String>,
     pub args: &'a str,
     pub writer: &'a mut OwnedWriteHalf,
-    pub prompt: &'a str,
 }
 
 /// An async trait for all commands to obey.
@@ -44,12 +46,10 @@ pub async fn parse_and_execute<'a>(
     world: &'a SharedWorld,
     tx: &'a broadcast::Sender<String>,
     input: &'a str,
-    writer: &'a mut OwnedWriteHalf,
-    prompt: &'a str,
+    writer: &'a mut OwnedWriteHalf
 ) -> ClientState {
     if input.is_empty() {// no need for whitespace check as input's already trimmed earlier.
-        tell_user!(writer, prompt);
-        return ClientState::Playing(player.clone());
+        return ClientState::Playing(player);
     }
 
     let (command, args) = input.split_once(' ').unwrap_or((input, ""));
@@ -61,20 +61,10 @@ pub async fn parse_and_execute<'a>(
             tx,
             args: args.trim(),
             writer,
-            prompt,
         };
         cmd.exec(&mut ctx).await
     } else {
-        tell_user!(writer, "Huh?\n{}", prompt);
-        ClientState::Playing(player.clone())
+        tell_user!(writer, "Huh?\n");
+        ClientState::Playing(player)
     }
-}
-
-/// Shorthand for returning from a variety of commands into 'playing'
-/// state of existence.
-#[macro_export]
-macro_rules! resume_game {
-    ($ctx:expr) => {
-        return ClientState::Playing($ctx.player.clone());
-    };
 }

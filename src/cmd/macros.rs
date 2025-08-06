@@ -1,0 +1,30 @@
+/// Shorthand for returning from a variety of commands into 'playing'
+/// state of existence.
+#[macro_export]
+macro_rules! resume_game {
+    ($ctx:expr) => {
+        return ClientState::Playing($ctx.player.clone());
+    };
+}
+
+/// Do something in current room of residence...
+/// 
+/// # Arguments
+/// - `$ctx`— [CommandCtx]
+/// - `|room|`— will hold on to found room.
+/// - `$block`— some block of code.
+#[macro_export]
+macro_rules! do_in_current_room {
+    ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {
+        if let Some(area) = $ctx.world.read().await.areas.get(&$ctx.player.location.area) {
+            if let Some($room) = area.read().await.rooms.get(&$ctx.player.location.room) {
+                $($block)*
+            } else {
+                //TODO: safe transfer!
+                $($otherwise)*
+            }
+        } else {
+            //TODO: safe transfer!
+        }
+    };
+}

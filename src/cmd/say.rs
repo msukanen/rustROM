@@ -11,8 +11,6 @@ impl Command for SayCommand {
             let msg = format!("[{}] says: {}\n", ctx.player.name(), ctx.args);
             ctx.tx.send(msg).unwrap();
         }
-
-        tell_user!(ctx.writer, ctx.prompt);
         ClientState::Playing(ctx.player.clone())
     }
 }

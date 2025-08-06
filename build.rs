@@ -14,10 +14,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for entry in WalkDir::new("src/cmd").into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
-        if !path.is_file() {continue;}
+        if !path.is_file() || path.extension().and_then(|s| s.to_str()) != Some("rs")
+         {continue;}
 
         if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-            if stem != "mod" {
+            if stem != "mod" && stem != "macros" {
                 commands.push(stem.to_string());
             }
         }

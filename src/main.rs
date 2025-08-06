@@ -19,7 +19,7 @@ pub mod util;
 mod cmd;
 
 use crate::mob::core::IsMob;
-use crate::player::{access::Access, savefile::{LoadError, Player}};
+use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
 use crate::world::World;
@@ -183,8 +183,14 @@ async fn main() {
                         let input = line.trim().sanitize();
                         let old_state = std::mem::replace(&mut state, ClientState::EnteringName);
                         state = match old_state {
-                            ClientState::Playing(player) => {
-                                cmd::parse_and_execute(player, &world, &tx, &input, &mut writer, &prompt).await
+                            ClientState::Playing(player) => {                               
+                                let state = cmd::parse_and_execute(player, &world, &tx, &input, &mut writer).await;
+                                let prompt = match &state {
+                                    ClientState::Playing(p) => p.prompt(),
+                                    _ => get_prompt!(world, PromptType::Playing, PROMPT_PLAYING),
+                                };
+                                tell_user!(writer, prompt);
+                                state
                             },
                             ClientState::EnteringName => {
                                 if input.is_empty() {
@@ -201,13 +207,11 @@ async fn main() {
                                 match Player::load(&name, &input, &addr).await {
                                     Ok(save) => {
                                         log::info!("'{}' successfully logged in.", name);
-                                        let (msg, p) = {
+                                        let msg = {
                                             let w = world.read().await;
-                                            let msg = w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string());
-                                            let p = get_g_prompt!(w, PromptType::Playing, PROMPT_PLAYING);
-                                            (msg, p)
+                                            w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string())
                                         };
-                                        prompt = p;
+                                        prompt = save.prompt();
                                         tell_user!(writer, "{}\n\n{}", msg, prompt);
                                         ClientState::Playing(save)
                                     },

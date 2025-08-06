@@ -5,10 +5,10 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{core::IsMob, gender::Gender, stat::StatType, CombatStat}, player::access::Access, traits::save::{DoesSave, SaveError}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::save::{DoesSave, SaveError}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
 use crate::string::Sluggable;
 
-pub static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
+static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
 
 #[derive(Debug)]
 pub enum LoadError {
@@ -52,6 +52,7 @@ pub struct Player {
 }
 
 impl Player {
+    pub fn placeholder() -> Self { Self::new("placeholder") }
     /// Generate a new, blank [SaveFile] skeleton.
     pub fn new<S>(name: S) -> Self
     where S: Display,
@@ -66,6 +67,14 @@ impl Player {
             mp: CombatStat::default(StatType::MP),
             in_combat: false,
         }
+    }
+
+    /// Bootstrap saves.
+    pub async fn bootstrap() -> Result<(), std::io::Error> {
+        log::warn!("Bootstrap - generating saves dir '{}'", *SAVE_PATH);
+        tokio::fs::create_dir_all((*SAVE_PATH).as_str()).await?;
+        log::info!("Bootstrap(save) OK.");
+        Ok(())
     }
 
     /// Set password.
@@ -175,6 +184,10 @@ impl IsMob for Player {
     }
     fn hp<'a>(&'a self) -> &'a CombatStat { &self.hp }
     fn mp<'a>(&'a self) -> &'a CombatStat { &self.mp }
+    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {// TODO: return alive/dead/etc.
+        self.hp -= percentage;
+        return false;
+    }
 }
 
 #[cfg(test)]

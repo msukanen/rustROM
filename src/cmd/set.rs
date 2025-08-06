@@ -8,7 +8,7 @@ pub struct SetCommand;
 impl Command for SetCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if !ctx.player.access.is_admin() {
-            tell_user_unk!(ctx.writer, ctx.prompt);
+            tell_user_unk!(ctx.writer);
             resume_game!(ctx);
         }
 
@@ -22,7 +22,7 @@ supported (global) sets are:\n\
   - greeting        -- the initial welcome message when someone connects.\n\
 \n");
             }
-            tell_user!(ctx.writer, "Usage: set <field> <value>\n{}", ctx.prompt);
+            tell_user!(ctx.writer, "Usage: set <field> <value>\n");
             resume_game!(ctx);
         }
 
@@ -36,7 +36,6 @@ supported (global) sets are:\n\
                     tell_user!(ctx.writer, "Greeting not set. Use: set greeting <new-greeting>\n");
                 }
             }
-            tell_user!(ctx.writer, "{}", ctx.prompt);
             resume_game!(ctx);
         }
         let mut w = ctx.world.write().await;
@@ -47,7 +46,6 @@ supported (global) sets are:\n\
             tell_user!(ctx.writer, "Unknown <field>. Try 'greeting'.\n");
         }
 
-        tell_user!(ctx.writer, "{}", ctx.prompt);
         resume_game!(ctx);
     }
 }
