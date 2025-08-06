@@ -1,6 +1,5 @@
 use async_trait::async_trait;
-use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, mob::core::IsMob, tell_user, ClientState};
+use crate::{cmd::{Command, CommandCtx}, mob::core::IsMob, resume_game, ClientState};
 
 pub struct SayCommand;
 
@@ -8,9 +7,9 @@ pub struct SayCommand;
 impl Command for SayCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if !ctx.args.is_empty() {
-            let msg = format!("[{}] says: {}\n", ctx.player.name(), ctx.args);
+            let msg = format!("[{}] says: {}\n", ctx.player.read().await.name(), ctx.args);
             ctx.tx.send(msg).unwrap();
         }
-        ClientState::Playing(ctx.player.clone())
+        resume_game!(ctx);
     }
 }

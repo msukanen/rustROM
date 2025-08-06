@@ -9,7 +9,7 @@
 //! cause e.g. saved locations in player saves to be invalid.
 //! 
 //! If one or the other file is missing… Bad Things™ will happen!
-use std::{collections::HashMap, fs::read_to_string, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fs::read_to_string, net::IpAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -59,7 +59,9 @@ pub struct World {
     #[serde(with = "world_area_serialization")]
     pub areas: HashMap<String, Arc<RwLock<Area>>>,
     pub root: WorldEntrance,
-    pub prompts: HashMap<PromptType, String>
+    pub prompts: HashMap<PromptType, String>,
+    #[serde(skip, default)]
+    pub players: HashMap<IpAddr, Arc<RwLock<Player>>>,
 }
 
 /// Thread-shared world type.
@@ -168,11 +170,11 @@ impl World {
     /// 
     /// # Returns
     /// `true` if transfer actually had to be done.
-    pub fn transfer_to_safety(&self, ctx: &mut CommandCtx<'_>, room: &Option<Arc<Room>>) -> bool {
+    pub async fn transfer_to_safety(&self, ctx: &mut CommandCtx<'_>, room: &Option<Arc<Room>>) -> bool {
         if room.is_some() {false}
         else {
-            ctx.player.location.area = "root".to_string();
-            ctx.player.location.room = "root".to_string();
+            ctx.player.write().await.location.area = "root".to_string();
+            ctx.player.write().await.location.room = "root".to_string();
             true
         }
     }

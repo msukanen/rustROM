@@ -167,7 +167,7 @@ impl DoesSave for Player {
     /// 
     /// # Returns
     /// Success?
-    async fn save(&mut self) -> Result<(), SaveError> {
+    async fn save(&self) -> Result<(), SaveError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, self.name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let file = std::fs::File::create(path)?;

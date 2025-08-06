@@ -3,7 +3,7 @@
 #[macro_export]
 macro_rules! resume_game {
     ($ctx:expr) => {
-        return ClientState::Playing($ctx.player.clone());
+        return ClientState::Playing;
     };
 }
 
@@ -16,8 +16,8 @@ macro_rules! resume_game {
 #[macro_export]
 macro_rules! do_in_current_room {
     ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {
-        if let Some(area) = $ctx.world.read().await.areas.get(&$ctx.player.location.area) {
-            if let Some($room) = area.read().await.rooms.get(&$ctx.player.location.room) {
+        if let Some(area) = $ctx.world.read().await.areas.get(&$ctx.player.read().await.location.area) {
+            if let Some($room) = area.read().await.rooms.get(&$ctx.player.read().await.location.room) {
                 $($block)*
             } else {
                 //TODO: safe transfer!

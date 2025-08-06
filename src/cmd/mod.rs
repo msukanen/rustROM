@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}, io::AsyncWriteExt};
-use crate::{player::Player, tell_user, world::SharedWorld, ClientState};
+use crate::{player::Player, resume_game, tell_user, world::SharedWorld, ClientState};
 
 pub mod macros;
 //--- 'mod' all the commands ---
@@ -13,9 +13,11 @@ mod dig;
 mod dmg;
 mod translocate;
 
+type PlayerLock = Arc<RwLock<Player>>;
+
 /// Command context for all the commands to chew on.
 pub struct CommandCtx<'a> {
-    pub player: Player,
+    pub player: PlayerLock,
     pub world: &'a SharedWorld,
     pub tx: &'a broadcast::Sender<String>,
     pub args: &'a str,
@@ -42,14 +44,14 @@ include!(concat!(env!("OUT_DIR"), "/commands.rs"));
 /// - `prompt`— prompt to show after command execution.
 ///             This may get overridden by specific commands.
 pub async fn parse_and_execute<'a>(
-    player: Player,
+    player: PlayerLock,
     world: &'a SharedWorld,
     tx: &'a broadcast::Sender<String>,
     input: &'a str,
     writer: &'a mut OwnedWriteHalf
 ) -> ClientState {
     if input.is_empty() {// no need for whitespace check as input's already trimmed earlier.
-        return ClientState::Playing(player);
+        resume_game!(_);
     }
 
     let (command, args) = input.split_once(' ').unwrap_or((input, ""));
@@ -65,6 +67,6 @@ pub async fn parse_and_execute<'a>(
         cmd.exec(&mut ctx).await
     } else {
         tell_user!(writer, "Huh?\n");
-        ClientState::Playing(player)
+        ClientState::Playing
     }
 }

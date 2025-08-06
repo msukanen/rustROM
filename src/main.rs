@@ -64,8 +64,8 @@ pub enum ClientState {
     EnteringName,
     EnteringPassword1 { name: String },
     EnteringPasswordV { name: String, pw1: String },
-    Playing(Player),
-    Logout(Player),
+    Playing,
+    Logout,
 }
 
 #[tokio::main]
@@ -145,19 +145,22 @@ async fn main() {
                 (g, p)
             };
             tell_user!(writer, "{}\n\n{}", greeting, login_prompt);
-            let mut prompt = login_prompt;
             let mut abrupt_dc = false;
 
             // This is the main loop for the client.
             loop {
                 // Check if player is logging out...
-                if let ClientState::Logout(mut player) = state {
-                    log::info!("Player '{}' logging out.", player.name());
-                    if let Err(e) = player.save().await {
-                        log::error!("Error saving '{}'! {:?}", player.name(), e);
-                    }
-                    if !abrupt_dc {
-                        tell_user!(writer, "Goodbye! See you soon again!\n");
+                if let ClientState::Logout = &state {
+                    let mut w = world.write().await;
+                    if let Some(p) = w.players.remove(&addr.ip()) {
+                        let p = p.read().await;
+                        log::info!("Player '{}' logging out.", p.name());
+                        if let Err(e) = p.save().await {
+                            log::error!("Error saving '{}'! {:?}", p.name(), e);
+                        }
+                        if !abrupt_dc {
+                            tell_user!(writer, "Goodbye! See you soon again!\n");
+                        }
                     }
                     break;
                 }
@@ -169,10 +172,10 @@ async fn main() {
                         // An abrupt disconnect?
                         if result.unwrap_or(0) == 0 {
                             log::info!("Client {} disconnected.", addr);
-                            if let ClientState::Playing(player) = state {
+                            if let ClientState::Playing = &state {
                                 // Shift to logout state and re-loop…
                                 abrupt_dc = true;
-                                state = ClientState::Logout(player);
+                                state = ClientState::Logout;
                                 continue;
                             } else {
                                 // They weren't playing - nothing to save - d/c.
@@ -182,24 +185,33 @@ async fn main() {
 
                         let input = line.trim().sanitize();
                         let old_state = std::mem::replace(&mut state, ClientState::EnteringName);
+
                         state = match old_state {
-                            ClientState::Playing(player) => {                               
-                                let state = cmd::parse_and_execute(player, &world, &tx, &input, &mut writer).await;
-                                let prompt = match &state {
-                                    ClientState::Playing(p) => p.prompt(),
-                                    _ => get_prompt!(world, PromptType::Playing, PROMPT_PLAYING),
-                                };
+                            ClientState::Playing => {                               
+                                let w = world.read().await;
+                                let prompt: String;
+                                if let Some(p) = w.players.get(&addr.ip()) {
+                                    state = cmd::parse_and_execute(p.clone(), &world, &tx, &input, &mut writer).await;
+                                    prompt = match &state {
+                                        ClientState::Playing => p.read().await.prompt(),
+                                        _ => get_prompt!(world, PromptType::Playing, PROMPT_PLAYING),
+                                    };
+                                } else {
+                                    // player a goner?!
+                                    abrupt_dc = true;
+                                    state = ClientState::Logout;
+                                    continue;
+                                }
                                 tell_user!(writer, prompt);
                                 state
                             },
                             ClientState::EnteringName => {
                                 if input.is_empty() {
-                                    tell_user!(writer, prompt);
+                                    tell_user!(writer, login_prompt);
                                     state
                                 } else {
                                     log::info!("Login attempt on '{}'…", input);
-                                    prompt = get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1);
-                                    tell_user!(writer, prompt);
+                                    tell_user!(writer, get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1));
                                     ClientState::EnteringPassword1 { name: input.to_string() }
                                 }
                             },
@@ -207,23 +219,23 @@ async fn main() {
                                 match Player::load(&name, &input, &addr).await {
                                     Ok(save) => {
                                         log::info!("'{}' successfully logged in.", name);
-                                        let msg = {
-                                            let w = world.read().await;
-                                            w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string())
+                                        let (msg, pr) = {
+                                            let mut w = world.write().await;
+                                            let pr = save.prompt();
+                                            let p = Arc::new(RwLock::new(save));
+                                            w.players.insert(addr.ip(), p.clone());
+                                            (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), pr)
                                         };
-                                        prompt = save.prompt();
-                                        tell_user!(writer, "{}\n\n{}", msg, prompt);
-                                        ClientState::Playing(save)
+                                        tell_user!(writer, "{}\n\n{}", msg, pr);
+                                        ClientState::Playing
                                     },
                                     Err(LoadError::NoSuchSave) => {
-                                        prompt = get_prompt!(world, PromptType::PasswordV, PROMPT_PASSWDV);
-                                        tell_user!(writer, "{}", prompt);
+                                        tell_user!(writer, "{}", get_prompt!(world, PromptType::PasswordV, PROMPT_PASSWDV));
                                         ClientState::EnteringPasswordV { name, pw1: input }
                                     },
                                     Err(e) => {
                                         log::warn!("Failed login attempt for '{}': {:?}", name, e);
-                                        prompt = get_prompt!(world, PromptType::Login, PROMPT_LOGIN);
-                                        tell_user!(writer, "Invalid name and/or password.\n\n{}", prompt);
+                                        tell_user!(writer, "Invalid name and/or password.\n\n{}", get_prompt!(world, PromptType::Login, PROMPT_LOGIN));
                                         ClientState::EnteringName
                                     }
                                 }
@@ -233,13 +245,15 @@ async fn main() {
                                     let mut player = Player::new(&name);
                                     if player.set_passwd(input).await.is_ok() {
                                         log::info!("New save being created for '{}'…", name);
-                                        prompt = get_prompt!(world, PromptType::Playing, PROMPT_PLAYING);
+                                        let prompt = get_prompt!(world, PromptType::Playing, PROMPT_PLAYING);
                                         player.set_access(Access::default());
                                         let save_err = player.save().await;
                                         if save_err.is_ok() {
                                             let msg = {world.read().await.welcome_new.clone().unwrap_or_else(|| WELCOME_NEW.to_string())};
                                             tell_user!(writer, "{}\n{}", msg, prompt);
-                                            ClientState::Playing(player)
+                                            let p = Arc::new(RwLock::new(player));
+                                            world.write().await.players.insert(addr.ip(), p.clone());
+                                            ClientState::Playing
                                         } else {
                                             // Some strange error happened with save...
                                             // Notify user and "gracefully" disconnect them.
@@ -263,16 +277,19 @@ async fn main() {
                                     ClientState::EnteringPassword1 { name }
                                 }
                             },
-                            ClientState::Logout(player) => ClientState::Logout(player)// needed, even though handled at top of loop earlier.
+                            ClientState::Logout => ClientState::Logout// redundant, but needed for appeasing the 'match'.
                         };
                     },
 
                     // --- Second Branch: Receive broadcast messages from other clients ---
                     result = rx.recv() => {
-                        if let ClientState::Playing(_) = &state {
+                        if let ClientState::Playing = &state {
                             if let Ok(msg) = result {
                                 // If we receive a message from the broadcast channel, write it to our client.
-                                tell_user!(writer, "{}{}", msg, prompt);
+                                let w = world.read().await;
+                                if let Some(p) = w.players.get(&addr.ip()) {
+                                    tell_user!(writer, "{}{}", msg, p.read().await.prompt());
+                                }
                             }
                         }
                     }

@@ -8,7 +8,7 @@ pub struct TranslocateCommand;
 #[async_trait]
 impl Command for TranslocateCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        if !ctx.player.access.is_admin() {
+        if !ctx.player.read().await.access.is_admin() {
             tell_user_unk!(ctx.writer);
             resume_game!(ctx);
         }
@@ -25,7 +25,7 @@ usage:  translocate self|TARGET AREA[.]ROOM
             resume_game!(ctx);
         }
 
-        
+
 
         resume_game!(ctx);
     }

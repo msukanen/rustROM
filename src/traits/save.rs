@@ -16,5 +16,5 @@ impl From<serde_json::Error> for SaveError {
 
 #[async_trait]
 pub trait DoesSave {
-    async fn save(&mut self) -> Result<(), SaveError>;
+    async fn save(&self) -> Result<(), SaveError>;
 }

@@ -7,7 +7,7 @@ pub struct SetCommand;
 #[async_trait]
 impl Command for SetCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        if !ctx.player.access.is_admin() {
+        if !ctx.player.read().await.access.is_admin() {
             tell_user_unk!(ctx.writer);
             resume_game!(ctx);
         }

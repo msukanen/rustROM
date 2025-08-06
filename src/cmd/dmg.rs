@@ -7,7 +7,7 @@ pub struct DmgCommand;
 #[async_trait]
 impl Command for DmgCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        if !ctx.player.access.is_admin() {
+        if !ctx.player.read().await.access.is_admin() {
             tell_user_unk!(ctx.writer);
             resume_game!(ctx);
         }
@@ -24,7 +24,7 @@ impl Command for DmgCommand {
             match args[0] {
                 "self" => {
                     if let Ok(n) = args[1].parse::<i32>() {
-                        ctx.player.take_dmg(n as StatValue);
+                        ctx.player.write().await.take_dmg(n as StatValue);
                     }
                 },
                 "fix" => {
