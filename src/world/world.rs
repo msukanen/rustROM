@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::CommandCtx, string::prompt::PromptType, traits::tickable::Tickable, util::contact::{AdminInfo, Contact}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
+use crate::{cmd::CommandCtx, player::Player, string::prompt::PromptType, traits::tickable::Tickable, util::contact::{AdminInfo, Contact}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MotD {
@@ -84,12 +84,55 @@ impl World {
     /// 
     /// # Arguments
     /// - `name`— stem-name of the world. Designates the storage medium (without filename extension, etc.).
-    pub fn new(name: &str) -> Result<Self, WorldError> {
+    pub async fn new(name: &str) -> Result<Self, WorldError> {
         let filename = format!("{}/{}.world", *DATA_PATH, name);
         log::info!("Loading '{}'", filename);
         let path = PathBuf::from_str(filename.as_str()).unwrap();
-        let content = read_to_string(path)?;
-        let world: World = serde_json::from_str(&content)?;
+        let content = if !path.exists() {
+            let world = World::bootstrap(name).await;
+            if let Err(_) = world {
+                panic!("Oh dear! Could not generate world skeleton! Abort!");
+            }
+            world.unwrap()
+        } else {
+            read_to_string(path)?
+        };
+        let mut world: World = serde_json::from_str(&content)?;
+        world.filename = filename;
+        Ok(world)
+    }
+
+    /// Bootstrap MUD from grounds up.
+    pub async fn bootstrap(name: &str) -> Result<String, std::io::Error> {
+        log::warn!("Bootstrapping - no previous world setup detected …");
+        tokio::fs::create_dir_all((*DATA_PATH).as_str()).await?;
+        // Bootstrap the "subsystems"…
+        Player::bootstrap().await?;
+        Room::bootstrap().await?;
+        Area::bootstrap().await?;
+        log::warn!("Bootstrap - generating world skeleton '{}/{}.world'", *DATA_PATH, name);
+        let world = serde_json::json!({
+            "title": "RustROM World",
+            "description": "A World To Be",
+            "owner": {
+                "name": "The Owner",
+                "email": "owner.of@the.world"
+            },
+            "admins": [{}],
+            "motd": [],
+            "greeting": "Welcome to your new RustROM!",
+            "welcome_back": "Welcome back!",
+            "welcome_new": "Welcome, new adventurer!",
+            "areas": ["root"],
+            "root": {
+                "area": "root",
+                "room": "root"
+            },
+            "prompts": {}
+        });
+        let world = serde_json::to_string_pretty(&world)?;
+        tokio::fs::write(format!("{}/{}.world", *DATA_PATH, name), &world).await?;
+        log::info!("Bootstrap({}.world) OK.", name);
         Ok(world)
     }
 
@@ -157,7 +200,7 @@ mod world_tests {
     #[tokio::test]
     async fn busy_world() {
         let _ = env_logger::try_init();
-        let world = Arc::new(RwLock::new(World::new("rustrom").expect("ERROR: world dead or in fire?!")));
+        let world = Arc::new(RwLock::new(World::new("rustrom").await.expect("ERROR: world dead or in fire?!")));
 
         tokio::spawn(game_loop(world.clone()));
         {

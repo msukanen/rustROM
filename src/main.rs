@@ -85,7 +85,7 @@ async fn main() {
     env_logger::init();
 
     let world = Arc::new(RwLock::new({
-        let w = World::new(&args.world).expect("ERROR: world dead or in fire?!");
+        let w = World::new(&args.world).await.expect("ERROR: world dead or in fire?!");
         w.validate().await.expect(&format!("Error validating {}", "rustrom.world"))
     }));{
         log::info!("Connecting dots …");
