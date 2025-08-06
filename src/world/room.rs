@@ -63,7 +63,7 @@ pub struct Room {
     pub name: String,
     title: String,
     description: String,
-    exits: HashMap<Direction, String>,
+    pub exits: HashMap<Direction, String>,
     #[serde(skip)]
     pub parent: Weak<RwLock<Area>>,
 }

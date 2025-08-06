@@ -12,6 +12,7 @@ mod look;
 mod dig;
 mod dmg;
 mod translocate;
+mod goto;
 
 type PlayerLock = Arc<RwLock<Player>>;
 

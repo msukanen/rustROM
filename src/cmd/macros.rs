@@ -13,6 +13,7 @@ macro_rules! resume_game {
 /// - `$ctx`— [CommandCtx]
 /// - `|room|`— will hold on to found room.
 /// - `$block`— some block of code.
+/// - [otherwise] `$otherwise`— execute this block if 'room' is for some reason unavailable.
 #[macro_export]
 macro_rules! do_in_current_room {
     ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {
@@ -22,6 +23,16 @@ macro_rules! do_in_current_room {
             } else {
                 //TODO: safe transfer!
                 $($otherwise)*
+            }
+        } else {
+            //TODO: safe transfer!
+        }
+    };
+
+    ($ctx:ident, |$room:ident| {$($block:tt)*}) => {
+        if let Some(area) = $ctx.world.read().await.areas.get(&$ctx.player.read().await.location.area) {
+            if let Some($room) = area.read().await.rooms.get(&$ctx.player.read().await.location.room) {
+                $($block)*
             }
         } else {
             //TODO: safe transfer!

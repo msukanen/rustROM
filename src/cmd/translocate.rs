@@ -13,20 +13,36 @@ impl Command for TranslocateCommand {
             resume_game!(ctx);
         }
 
-        let args: Vec<&str> = ctx.args.splitn(3, ' ').collect();
-        if args.len() < 3 {
-            tell_user!(ctx.writer, "\
-'translocate' is used to transport a player (self or otherwise) to another\n\
-(existing) location in the world.  The command, obviously, fails if target\n\
-location does not exist.\n\
-\n\
-usage:  translocate self|TARGET AREA[.]ROOM
-");
+        let args: Vec<&str> = ctx.args.splitn(2, ' ').collect();
+        if args.len() < 2 {
+            translocate_usage(ctx).await;
             resume_game!(ctx);
         }
 
+        // Who's being translocated?
+        match args[0] {
+            "self" => {},
+            _ => {}
+        }
 
+        let loc: Vec<&str> = args[1].split_terminator(&['.', ' ']).collect();
+        if loc.len() < 2 {
+            translocate_usage(ctx).await;
+            resume_game!(ctx);
+        }
+        let area = loc[0];
+        let room = loc[1];
+        
 
         resume_game!(ctx);
     }
+}
+
+async fn translocate_usage(ctx: &mut CommandCtx<'_>) {
+    tell_user!(ctx.writer, "\
+'translocate' is used to transport a player (self or otherwise) to another \
+(existing) location in the world.  The command, obviously, fails if target \
+location does not exist.\n
+\n
+usage:  translocate self|TARGET AREA[.]ROOM");
 }
