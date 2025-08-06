@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::mob::core::IsMob;
+use crate::{mob::core::IsMob, traits::Description};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -97,7 +97,7 @@ async fn main() {
 
             for room_arc in a.rooms.values() {
                 let mut r = room_arc.write().await;
-                log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.name, r.title());
+                log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.name(), r.title());
                 r.parent = Arc::downgrade(area_arc);
             }
         }

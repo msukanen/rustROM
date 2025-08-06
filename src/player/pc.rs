@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::save::{DoesSave, SaveError}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -29,6 +29,7 @@ impl From<serde_json::Error> for LoadError {
 static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         name: "dummy".into(),
         passwd: "$argon2id$v=19$m=19456,t=2,p=1$Cg...$....".into(),
+        description: "Dummy!".into(),
         gender: Gender::Indeterminate,
         access: Access::Dummy,
         location: WorldEntrance::default(),
@@ -41,6 +42,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Player {
     name: String,
+    description: String,
     passwd: String,// argon2 hash
     gender: Gender,
     pub access: Access,
@@ -59,7 +61,8 @@ impl Player {
     {
         Self {
             name: name.to_string(),
-            passwd: "".to_string(),
+            description: "<nothing remarkable>".into(),
+            passwd: "".into(),
             gender: Gender::Indeterminate,
             access: Access::default(),
             location: WorldEntrance::default(),
@@ -178,7 +181,6 @@ impl DoesSave for Player {
 }
 
 impl IsMob for Player {
-    fn name<'a>(&'a self) -> &'a str { &self.name }
     fn prompt<'a>(&'a self) -> String {
         format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current())
     }
@@ -188,6 +190,13 @@ impl IsMob for Player {
         self.hp -= percentage;
         return false;
     }
+}
+
+impl Description for Player {
+    fn name<'a>(&'a self) -> &'a str { &self.name }
+    fn description<'a>(&'a self) -> &'a str { &self.description }
+    /// For [Player], 'title' is the same as their name.
+    fn title<'a>(&'a self) -> &'a str { &self.name }
 }
 
 #[cfg(test)]

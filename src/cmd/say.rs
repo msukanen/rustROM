@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, mob::core::IsMob, resume_game, ClientState};
+use crate::{cmd::{Command, CommandCtx}, resume_game, traits::Description, ClientState};
 
 pub struct SayCommand;
 

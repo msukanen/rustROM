@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{util::direction::Direction, world::area::Area, DATA_PATH};
+use crate::{traits::Description, util::direction::Direction, world::area::Area, DATA_PATH};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 
@@ -60,7 +60,7 @@ pub mod area_room_serialization {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Room {
-    pub name: String,
+    name: String,
     title: String,
     description: String,
     pub exits: HashMap<Direction, String>,
@@ -69,14 +69,6 @@ pub struct Room {
 }
 
 impl Room {
-    pub fn description(&self) -> &str {
-        &self.description
-    }
-
-    pub fn title(&self) -> &str {
-        &self.title
-    }
-
     pub async fn bootstrap() -> Result<(), std::io::Error> {
         log::warn!("Bootstrap - generating starter room '{}/root.room'…", *ROOM_PATH);
         tokio::fs::create_dir_all((*ROOM_PATH).as_str()).await?;
@@ -90,4 +82,10 @@ impl Room {
         log::info!("Bootstrap(root.room) OK.");
         Ok(())
     }
+}
+
+impl Description for Room {
+    fn description(&self) -> &str { &self.description }
+    fn title(&self) -> &str { &self.title }
+    fn name(&self) -> &str { &self.name }
 }
