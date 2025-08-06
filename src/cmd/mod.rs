@@ -25,6 +25,22 @@ pub struct CommandCtx<'a> {
     pub writer: &'a mut OwnedWriteHalf,
 }
 
+pub struct ShortCommandCtx<'a> {
+    pub player: PlayerLock,
+    pub world: &'a SharedWorld,
+    pub writer: &'a mut OwnedWriteHalf,
+}
+
+impl <'a> CommandCtx<'a> {
+    pub fn short_ctx(&mut self) -> ShortCommandCtx<'_> {
+        ShortCommandCtx {
+            player: self.player.clone(),
+            world: self.world,
+            writer: self.writer,
+        }
+    }
+}
+
 /// An async trait for all commands to obey.
 #[async_trait]
 pub trait Command: Send + Sync {

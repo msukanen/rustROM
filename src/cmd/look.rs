@@ -1,18 +1,33 @@
 use async_trait::async_trait;
+use ansi_term::Color::{Yellow, Green};
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, ClientState};
+use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, ClientState};
 
 pub struct LookCommand;
 
 #[async_trait]
 impl Command for LookCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        do_in_current_room!(ctx, |room| {
-            let r = room.read().await;
-            tell_user!(ctx.writer, "{}\n{}\n\n", r.title(), r.description());
-        } otherwise {
-            tell_user!(ctx.writer, "You see... nothing much else than a wall of white text on a dark surface?\n");
-        });
-        resume_game!(ctx);
+        let mut ctx = ctx.short_ctx();
+        look_at_current_room(&mut ctx).await
     }
+}
+
+/// The looking glass… used by e.g. 'look' command, etc.
+pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState {
+    do_in_current_room!(ctx, |room| {
+        let r = room.read().await;
+        let mut desc = format!("{}\n\n{}\n\n", Yellow.paint(r.title()).to_string(), r.description());
+
+        if !r.exits.is_empty() {
+            desc.push_str(&Green.paint("Exits: ").to_string());
+            let exits: Vec<String> = r.exits.keys().map(|d| format!("{:?}", d).to_lowercase()).collect();
+            desc.push_str(&exits.join(", "));
+            desc.push_str("\n\n");
+        }
+        tell_user!(ctx.writer, desc);
+    } otherwise {
+        tell_user!(ctx.writer, "You see... nothing much else than a wall of white text on a dark surface?\n");
+    });
+    resume_game!(ctx);
 }

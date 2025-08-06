@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Various directions, obviously.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum Direction {
     North, East, South, West,
@@ -10,7 +11,8 @@ pub enum Direction {
 
 impl TryFrom<&str> for Direction {
     type Error = &'static str;
-        
+
+    /// Try convert the given `value` into a suitable [Direction] enum.
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_lowercase().as_str() {
             "north"|
