@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, mob::{core::IsMob, stat::StatValue}, resume_game, tell_command_usage, tell_user, tell_user_unk, util::direction::Direction, ClientState};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, resume_game, tell_command_usage, tell_user, util::direction::Direction, ClientState};
 
 pub struct GotoCommand;
 
@@ -41,4 +41,31 @@ fn goto_directions() -> String {r#"
     Up, Down.
 
 "#.to_string()
+}
+
+#[cfg(test)]
+mod goto_tests {
+    use std::sync::Arc;
+
+    use tokio::{io::duplex, sync::RwLock};
+
+    use crate::{cmd::ShortCommandCtx, player::Player, world::World};
+
+    #[tokio::test]
+    async fn go_a_to_b() {
+        let w = Arc::new(RwLock::new(World::new("rustrom").await.unwrap()));
+        let (mut client, mut writer) = duplex(1024);
+        let aa = "root";
+        let ar = "root";
+        let ba = "root";
+        let br = "not-so-root";
+        let mut p = Arc::new(RwLock::new(Player::new("ani")));
+        p.write().await.location.area = aa.to_string();
+        p.write().await.location.room = ar.to_string();
+        let ctx = ShortCommandCtx {
+            player: p,
+            world: &w,
+            writer: &mut writer
+        };
+    }
 }
