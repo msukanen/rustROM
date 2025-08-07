@@ -1,5 +1,6 @@
 pub mod sanitize;
 pub mod prompt;
+pub mod styling;
 /// Replaces any non-alphabetic characters in a string with underscores.
 ///
 /// This is useful for creating safe(ish), simple filenames from user input

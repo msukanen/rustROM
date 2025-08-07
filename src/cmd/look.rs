@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use ansi_term::Color::{Yellow, Green};
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, ClientState};
+use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, string::styling::format_color, tell_user, traits::Description, ClientState};
 
 pub struct LookCommand;
 
@@ -18,18 +17,18 @@ pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState 
     do_in_current_room!(ctx, |room| {
         let r = room.read().await;
         let mut desc = format!(
-            "{}\n\n{}\n\n",
-            Yellow.paint(r.title()).to_string(),
+            "<c yellow>{}</c>\n\n{}\n\n",
+            r.title(),
             r.description()
         );
 
         if !r.exits.is_empty() {
-            desc.push_str(&Green.paint("Exits: ").to_string());
+            desc.push_str("<c green>Exits:</c> ");
             let exits: Vec<String> = r.exits.keys().map(|d| format!("{:?}", d).to_lowercase()).collect();
             desc.push_str(&exits.join(", "));
             desc.push_str("\n\n");
         }
-        tell_user!(ctx.writer, desc);
+        tell_user!(ctx.writer, format_color(&desc));
     } otherwise {
         tell_user!(ctx.writer, "You see... nothing much else than a wall of white text on a dark surface?\n");
     });
