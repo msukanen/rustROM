@@ -17,7 +17,11 @@ impl Command for LookCommand {
 pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState {
     do_in_current_room!(ctx, |room| {
         let r = room.read().await;
-        let mut desc = format!("{}\n\n{}\n\n", Yellow.paint(r.title()).to_string(), r.description());
+        let mut desc = format!(
+            "{}\n\n{}\n\n",
+            Yellow.paint(r.title()).to_string(),
+            r.description()
+        );
 
         if !r.exits.is_empty() {
             desc.push_str(&Green.paint("Exits: ").to_string());
