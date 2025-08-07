@@ -39,3 +39,14 @@ macro_rules! do_in_current_room {
         }
     };
 }
+
+#[macro_export]
+macro_rules! tell_command_usage {
+    ($ctx:ident, $cmd_name:literal, $brief:literal, $usage:expr) => {
+        {
+            let usage = format!("<c green>COMMAND </c><c yellow>'{}'</c> - {}\n{}\n\n", $cmd_name, $brief, $usage);
+            tell_user!($ctx.writer, crate::string::styling::format_color(&usage));
+            resume_game!($ctx);
+        }
+    };
+}

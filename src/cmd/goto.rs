@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, mob::{core::IsMob, stat::StatValue}, resume_game, tell_user, tell_user_unk, util::direction::Direction, ClientState};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, mob::{core::IsMob, stat::StatValue}, resume_game, tell_command_usage, tell_user, tell_user_unk, util::direction::Direction, ClientState};
 
 pub struct GotoCommand;
 
@@ -9,8 +9,12 @@ pub struct GotoCommand;
 impl Command for GotoCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if ctx.args.is_empty() {
-            goto_usage(ctx).await;
-            resume_game!(ctx);
+            tell_command_usage!(ctx,
+                "goto",
+                "goes to places …",
+                format!("{}{}<c green>Usage:</c> goto [DIR]", r#"
+<c yellow>'goto'</c> is used to go to e.g. various directions, like:"#, goto_directions())
+            );
         }
 
         let exit: Result<Direction, _> = Direction::try_from(ctx.args);
@@ -30,15 +34,7 @@ impl Command for GotoCommand {
     }
 }
 
-async fn goto_usage(ctx: &mut CommandCtx<'_>) {
-    tell_user!(ctx.writer, r#"
-'goto' command "goes to", obviously ;-)
-
-usage:  goto [DIR]
-"#);
-}
-
-fn goto_directions() -> String {r#"\
+fn goto_directions() -> String {r#"
 
     North, East, South, West,
     NorthEast, NorthWest, SouthEast, SouthWest,

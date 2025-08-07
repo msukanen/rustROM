@@ -2,5 +2,7 @@
     "name": "not-so-root",
     "title": "RustROM room #2",
     "description": "Next to the root, perhaps.",
-    "exits": {}
+    "exits": {
+        "West": "root"
+    }
 }

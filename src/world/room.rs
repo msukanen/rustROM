@@ -70,16 +70,40 @@ pub struct Room {
 
 impl Room {
     pub async fn bootstrap() -> Result<(), std::io::Error> {
-        log::warn!("Bootstrap - generating starter room '{}/root.room'…", *ROOM_PATH);
+        // 1st room - the very "root" of all.
+        let stem = "root";
+        log::warn!("Bootstrap - generating starter room '{}/{}.room'…", *ROOM_PATH, stem);
         tokio::fs::create_dir_all((*ROOM_PATH).as_str()).await?;
         let room = serde_json::json!({
             "name": "root",
             "title": "The Void",
             "description": "A vast, empty space. It feels like the beginning of something…",
-            "exits": {}
+            "exits": {
+                "East": "not-so-root"
+            }
         });
-        tokio::fs::write(format!("{}/root.room", *ROOM_PATH), serde_json::to_string_pretty(&room)?).await?;
-        log::info!("Bootstrap(root.room) OK.");
+        tokio::fs::write(
+            format!("{}/{}.room", *ROOM_PATH, stem),
+            serde_json::to_string_pretty(&room)?
+        ).await?;
+
+        // 2nd room - so that there's somewhere to go from 1st.
+        let stem = "not-so-root";
+        log::warn!("Bootstrap - generating 2nd starter room '{}/{}.room'…", *ROOM_PATH, stem);
+        let room = serde_json::json!({
+            "name": "not-so-root",
+            "title": "The Void mk.2",
+            "description": "A vast, empty space, adjacent to the root emptiness …",
+            "exits": {
+                "West": "root"
+            }
+        });
+        tokio::fs::write(
+            format!("{}/{}.room", *ROOM_PATH, stem),
+            serde_json::to_string_pretty(&room)?
+        ).await?;
+
+        log::info!("Bootstrap(root.room, not-so-root.room) OK.");
         Ok(())
     }
 }
