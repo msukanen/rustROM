@@ -35,9 +35,14 @@ impl WorldEntrance {
     /// Generate default entrance entry.
     pub fn default() -> Self {
         Self {
-            area: "root".to_string(),
-            room: "root".to_string()
+            area: "root".into(),
+            room: "root".into()
         }
+    }
+
+    /// A blank entrance.
+    pub fn new() -> Self {
+        Self { area: "".into(), room: "".into() }
     }
 }
 
@@ -103,6 +108,25 @@ impl World {
         world.filename = filename;
         Ok(world)
     }
+
+    /// A blank world for blank reasons...
+    #[cfg(test)]
+    pub(crate) fn blank() -> Self { Self {
+        uptime: 0,
+        filename: "/dev/null".into(),
+        title: "".into(),
+        description: "".to_string(),
+        owner: Contact::new(),
+        admins: None,
+        motd: None,
+        greeting: None,
+        welcome_back: None,
+        welcome_new: None,
+        areas: HashMap::new(),
+        root: WorldEntrance::new(),
+        prompts: HashMap::new(),
+        players: HashMap::new(),
+    }}
 
     /// Bootstrap MUD from grounds up.
     pub async fn bootstrap(name: &str) -> Result<String, std::io::Error> {
