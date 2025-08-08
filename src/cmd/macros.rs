@@ -30,12 +30,16 @@ macro_rules! do_in_current_room {
     };
 
     ($ctx:ident, |$room:ident| {$($block:tt)*}) => {
-        if let Some(area) = $ctx.world.read().await.areas.get(&$ctx.player.read().await.location.area) {
-            if let Some($room) = area.read().await.rooms.get(&$ctx.player.read().await.location.room) {
-                $($block)*
+        {
+            let area_name = $ctx.player.read().await.location.area.clone();// ← to avoid borrow issues…
+            let room_name = $ctx.player.read().await.location.room.clone();// ← to avoid borrow issues…
+            if let Some(area) = $ctx.world.read().await.areas.get(&area_name) {
+                if let Some($room) = area.read().await.rooms.get(&room_name) {
+                    $($block)*
+                }
+            } else {
+                //TODO: safe transfer!
             }
-        } else {
-            //TODO: safe transfer!
         }
     };
 }
