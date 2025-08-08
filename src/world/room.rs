@@ -60,9 +60,9 @@ pub mod area_room_serialization {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Room {
-    name: String,
+    pub(crate) name: String,
     title: String,
-    description: String,
+    pub(crate) description: String,
     pub exits: HashMap<Direction, String>,
     #[serde(skip)]
     pub parent: Weak<RwLock<Area>>,

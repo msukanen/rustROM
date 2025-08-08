@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, resume_game, tell_command_usage, tell_user, util::direction::Direction, ClientState};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, do_in_current_room, resume_game, tell_command_usage, tell_user, util::direction::Direction, ClientState};
 
 pub struct GotoCommand;
 
@@ -17,16 +17,23 @@ impl Command for GotoCommand {
             );
         }
 
-        let exit: Result<Direction, _> = Direction::try_from(ctx.args);
+        let exit: Result<Direction, _> = ctx.args.try_into();
         if exit.is_err() {
             tell_user!(ctx.writer, "Unknown direction.\n\n{}\n", goto_directions());
             resume_game!(ctx);
         }
+        
+        let exit = exit.unwrap();
 
         // See if room has corresponding exit...
         do_in_current_room!(ctx, |room|{
-            if let Some(destination_room_name) = room.read().await.exits.get(&exit.unwrap()) {
-                tell_user!(ctx.writer, "TODO: yes, there is a room '{}' there, but 'goto' is not yet finished…\n", destination_room_name);
+            if let Some(droom_name) = room.read().await.exits.get(&exit) {
+                // TODO: check that the room *actually* exists…
+                ctx.player.write().await.location.room = droom_name.clone();
+                let cmd = LookCommand;
+                cmd.exec(ctx).await;
+            } else {
+                tell_user!(ctx.writer, "Cannot go that way …");
             }
         });
 
@@ -45,27 +52,60 @@ fn goto_directions() -> String {r#"
 
 #[cfg(test)]
 mod goto_tests {
-    use std::sync::Arc;
+    use std::{net::{IpAddr, Ipv4Addr}, str::FromStr, sync::Arc};
 
-    use tokio::{io::duplex, sync::RwLock};
+    use tokio::{io::AsyncReadExt, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{cmd::ShortCommandCtx, player::Player, world::World};
+    use crate::{cmd::{goto::GotoCommand, Command, CommandCtx}, player::Player, world::{area::Area, room::Room, World}};
 
     #[tokio::test]
     async fn go_a_to_b() {
-        let w = Arc::new(RwLock::new(World::new("rustrom").await.unwrap()));
-        let (mut client, mut writer) = duplex(1024);
-        let aa = "root";
-        let ar = "root";
-        let ba = "root";
-        let br = "not-so-root";
-        let mut p = Arc::new(RwLock::new(Player::new("ani")));
-        p.write().await.location.area = aa.to_string();
-        p.write().await.location.room = ar.to_string();
-        let ctx = ShortCommandCtx {
-            player: p,
+        let _ = env_logger::try_init();
+        let w = Arc::new(RwLock::new(World::blank()));
+        let a = Arc::new(RwLock::new(Area::blank()));
+        w.write().await.areas.insert("root".to_string(), a);
+        {
+            let w = w.read().await;
+            let mut a = w.areas.get("root").unwrap().write().await;
+            
+            let r = Arc::new(RwLock::new(Room::blank()));
+            r.write().await.name = "void".to_string();
+            r.write().await.description = "Alpha".to_string();
+            a.rooms.insert("void".to_string(), r);
+            
+            let r = Arc::new(RwLock::new(Room::blank()));
+            r.write().await.name = "clearing".to_string();
+            r.write().await.description = "Omega".to_string();
+            a.rooms.insert("clearing".to_string(), r);
+        }
+
+        let p = Arc::new(RwLock::new(Player::new("ani")));
+        p.write().await.location.area = "root".to_string();
+        p.write().await.location.room = "void".to_string();
+        let ip = IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap());
+        w.write().await.players.insert(ip.clone(), p);
+        
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let client_task = tokio::spawn(async move {
+            let mut stream = TcpStream::connect(addr).await.unwrap();
+            let mut buffer = vec![];
+            stream.read_to_end(&mut buffer).await.unwrap();
+            String::from_utf8(buffer).unwrap()
+        });
+        let (server_socket, _) = listener.accept().await.unwrap();
+        let (_, mut writer) = server_socket.into_split();
+        let (tx, _) = broadcast::channel::<String>(1);
+        let mut ctx = CommandCtx {
+            player: w.read().await.players.get(&ip).unwrap().clone(),
             world: &w,
-            writer: &mut writer
+            writer: &mut writer,
+            tx: &tx,
+            args: "east"
         };
+        let goto_cmd = GotoCommand;
+        goto_cmd.exec(&mut ctx).await;
+        let out = client_task.await.unwrap();
+        assert!(out.contains("Omega"));
     }
 }
