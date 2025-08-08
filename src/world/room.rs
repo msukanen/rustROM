@@ -108,6 +108,15 @@ impl Room {
         log::info!("Bootstrap({}.room, {}.room) OK.", stem1, stem2);
         Ok(())
     }
+
+    /// An entirely blank slate.
+    pub(crate) fn blank() -> Self { Self {
+        name: "".into(),
+        title: "".into(),
+        description: "".into(),
+        exits: HashMap::new(),
+        parent: Weak::new(),
+    }}
 }
 
 impl Description for Room {
