@@ -182,6 +182,7 @@ impl DoesSave for Player {
 
 impl IsMob for Player {
     fn prompt<'a>(&'a self) -> String {
+        log::debug!("Prompt queried...");
         format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current())
     }
     fn hp<'a>(&'a self) -> &'a CombatStat { &self.hp }

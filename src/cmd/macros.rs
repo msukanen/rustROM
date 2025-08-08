@@ -48,9 +48,24 @@ macro_rules! do_in_current_room {
 macro_rules! tell_command_usage {
     ($ctx:ident, $cmd_name:literal, $brief:literal, $usage:expr) => {
         {
-            let usage = format!("<c green>COMMAND </c><c yellow>'{}'</c> - {}\n{}\n\n", $cmd_name, $brief, $usage);
-            tell_user!($ctx.writer, crate::string::styling::format_color(&usage));
+            let usage = format!("<c green>COMMAND </c><c yellow>'{}'</c> - {}\n\n{}\n\n", $cmd_name, $brief, $usage);
+            tell_user!($ctx.writer, crate::string::styling::format_color(&usage).as_str());
             resume_game!($ctx);
         }
     };
+}
+
+/// Check Read-only field.
+/// NOTE: this macro has to be called from an async context!
+#[macro_export]
+macro_rules! check_ro_field {
+    ($ctx:expr, $field:expr, $accessor:ident) => {{
+        let w = $ctx.world.read().await;
+        if let Some(g) = &w.$accessor {
+            let desc = format!("<c yellow>--[ <c green>{}</c> ], current value:--</c>\n{}", $field, g);
+            tell_user!($ctx.writer, &desc);
+        } else {
+            tell_user!($ctx.writer, "<c red>'{}' not set</c>. Use: <c yellow>set {} [VALUE]", $field, $field);
+        }
+    }};
 }

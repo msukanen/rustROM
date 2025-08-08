@@ -144,7 +144,7 @@ async fn main() {
                 let p = w.prompts.get(&PromptType::Login).cloned().unwrap_or_else(|| PROMPT_LOGIN.to_string());
                 (g, p)
             };
-            tell_user!(writer, "{}\n\n{}", greeting, login_prompt);
+            tell_user!(writer, "{}\n\n{}", greeting, &login_prompt);
             let mut abrupt_dc = false;
 
             // This is the main loop for the client.
@@ -207,7 +207,7 @@ async fn main() {
                             },
                             ClientState::EnteringName => {
                                 if input.is_empty() {
-                                    tell_user!(writer, login_prompt);
+                                    tell_user!(writer, &login_prompt);
                                     state
                                 } else {
                                     log::info!("Login attempt on '{}'…", input);

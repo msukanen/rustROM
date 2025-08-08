@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, resume_game, string::styling::format_color, tell_command_usage, tell_user, tell_user_unk, ClientState};
+use crate::{check_ro_field, cmd::{Command, CommandCtx}, resume_game, string::styling::format_color, tell_command_usage, tell_user, tell_user_unk, ClientState};
 
 pub struct SetCommand;
 
@@ -18,39 +18,51 @@ impl Command for SetCommand {
                 tell_command_usage!(ctx,
                     "set",
                     "sets some (global) in-game variable",
-                    r#"
-<c yellow>'set'</c> command is used to set/check a variety of in-game values.
-Currently supported (global) sets are:
-
-  <c blue>*</c> <c green>greeting</c>        -- the initial welcome message when someone connects.
-
-<c green>Usage:</c> set [FIELD] [VALUE]"#);
+                    format!("<c yellow>'set'</c> command is used to set/check a variety of in-game values.\n{}\n<c green>Usage:</c> set [FIELD] [VALUE]\n       set ro [FIELD]",
+                            get_settables_list()));
             }
-            tell_user!(ctx.writer, format_color("<c green>Usage:</c> set <field> <value>\n"));
+            tell_user!(ctx.writer, "<c green>Usage:</c> set [FIELD] [VALUE]\n       set ro [FIELD]\n");
             resume_game!(ctx);
         }
 
         let (field, value) = (parts[0], parts[1]);
+
+        // Read-only check…
         if field.eq_ignore_ascii_case("ro") {
-            if value.eq_ignore_ascii_case("greeting") {
-                let g = {&ctx.world.read().await.greeting};
-                if let Some(g) = g {
-                    let desc = format!("{}\n{}\n", format_color("<c yellow>--[<c green> greeting </c>], current value:</c>"), g);
-                    tell_user!(ctx.writer, desc);
-                } else {
-                    tell_user!(ctx.writer, "Greeting not set. Use: set greeting <new-greeting>\n");
-                }
+            match value.to_lowercase().as_str() {
+                "greeting" => check_ro_field!(ctx, "greeting", greeting),
+                "welcome_back" => check_ro_field!(ctx, "welcome_back", welcome_back),
+                "welcome_new" => check_ro_field!(ctx, "welcome_new", welcome_new),
+                _ => {tell_user!(ctx.writer, "<c red>Unknown [FIELD]</c>. See <c yellow>'set ?'</c> for a list of available options.\n");}
             }
             resume_game!(ctx);
         }
-        let mut w = ctx.world.write().await;
-        if field.eq_ignore_ascii_case("greeting") {
-            w.greeting = Some(value.to_string());
-            tell_user!(ctx.writer, "Greeting updated.\n");
-        } else {
-            tell_user!(ctx.writer, "Unknown <field>. Try 'greeting'.\n");
-        }
 
+        // Write logic…
+        let mut w = ctx.world.write().await;
+        match field.to_lowercase().as_str() {
+            "greeting" => {
+                w.greeting = Some(value.to_string());
+                tell_user!(ctx.writer, "Greeting updated.\n");
+            },
+            "welcome_back" => {
+                w.welcome_back = Some(value.to_string());
+                tell_user!(ctx.writer, "Welcome back message updated.\n");
+            },
+            "welcome_new" => {
+                w.welcome_new = Some(value.to_string());
+                tell_user!(ctx.writer, "Welcome new message updated.\n");
+            },
+            _ => {tell_user!(ctx.writer, "<c red>Unknown [FIELD]</c>. See <c yellow>'set ?'</c> for a list of available options.\n");},
+        }
         resume_game!(ctx);
     }
 }
+
+fn get_settables_list() -> &'static str {
+r#"Currently supported (global) sets are:
+
+  <c blue>*</c> <c green>greeting</c>        -- the initial welcome message when someone connects.
+  <c blue>*</c> <c green>welcome_back</c>    -- 'welcome back' message for returning players.
+  <c blue>*</c> <c green>welcome_new</c>     -- welcome message for the new players (also alts).
+"#}

@@ -13,12 +13,12 @@ pub enum PromptType {
 #[macro_export]
 macro_rules! tell_user {
     ($w:expr, $t:expr) => {
-        $w.write_all($t.as_bytes()).await.unwrap();
+        $w.write_all(crate::string::styling::format_color($t).as_bytes()).await.unwrap();
     };
 
     ($w:expr, $fmt:literal, $($arg:tt)*) => {{
         let msg = format!($fmt, $($arg)*);
-        tell_user!($w, msg);
+        tell_user!($w, &msg);
     }}
 }
 

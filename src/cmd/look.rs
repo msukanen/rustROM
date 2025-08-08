@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, string::styling::format_color, tell_user, traits::Description, ClientState};
+use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, ClientState};
 
 pub struct LookCommand;
 
@@ -28,7 +28,7 @@ pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState 
             desc.push_str(&exits.join(", "));
             desc.push_str("\n\n");
         }
-        tell_user!(ctx.writer, format_color(&desc));
+        tell_user!(ctx.writer, &desc);
     } otherwise {
         tell_user!(ctx.writer, "You see... nothing much else than a wall of white text on a dark surface?\n");
     });

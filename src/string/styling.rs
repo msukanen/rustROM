@@ -1,13 +1,4 @@
-/*
-This example demonstrates a simple, stack-based parser for a custom
-color markup language, using the `ansi_term` library.
-
---- How to Run ---
-1. Add `ansi_term` to your Cargo.toml dependencies:
-   `ansi_term = "0.12"`
-2. Run `cargo run`. It will parse the example string and print the
-   colored output to your terminal.
-*/
+use std::fmt::Display;
 
 use ansi_term::{Colour, Style};
 
@@ -28,57 +19,77 @@ fn parse_color(name: &str) -> Option<Colour> {
 }
 
 /// Formats a string with custom color tags into an ANSI-colored string.
-pub fn format_color(input: &str) -> String {
+pub fn format_color<S: Display>(input: S) -> String
+{
+    let input = input.to_string();
     let mut output = String::new();
-    // The style stack. The style at the top is the current style.
-    // We start with a default, plain style.
     let mut style_stack = vec![Style::new()];
 
-    // We split the input by the '<' character to separate text from tags.
-    for part in input.split('<') {
-        // If a part doesn't contain '>', it's just plain text that came
-        // before the first tag.
+    let mut parts = input.split('<');
+
+    // --- THIS IS THE FIX ---
+    // The first part of the split can never be a tag, it's always just text.
+    // We handle it separately to avoid misinterpreting any '>' characters it might contain.
+    if let Some(first_part) = parts.next() {
+        if let Some(current_style) = style_stack.last() {
+            output.push_str(&current_style.paint(first_part).to_string());
+        }
+    }
+
+    // Now, loop through the rest of the parts. Each of these was preceded by a '<'.
+    for part in parts {
+        // If a part doesn't contain '>', it's a malformed tag like "<abc"
+        // with no closing ">". We'll treat it as literal text.
         if !part.contains('>') {
             if let Some(current_style) = style_stack.last() {
-                output.push_str(&current_style.paint(part).to_string());
+                let original_text = format!("<{}", part);
+                output.push_str(&current_style.paint(original_text).to_string());
             }
             continue;
         }
 
-        // If it does contain '>', we split it into the tag and the text that follows.
         if let Some((tag_content, text_after_tag)) = part.split_once('>') {
             let tag_parts: Vec<&str> = tag_content.split_whitespace().collect();
 
+            let mut is_valid_tag = false;
             if let Some(tag_name) = tag_parts.first() {
-                // --- Handle Closing Tags ---
-                if tag_name.starts_with('/') {
-                    // Only pop if we have more than the base style on the stack.
-                    if style_stack.len() > 1 {
-                        style_stack.pop();
-                    }
-                }
-                // --- Handle Opening Tags ---
-                else {
-                    // Get the current style to build upon it.
-                    let mut new_style = style_stack.last().cloned().unwrap_or_else(Style::new);
+                let is_closing = tag_name.starts_with('/');
+                let actual_tag = if is_closing { &tag_name[1..] } else { *tag_name };
 
-                    if let Some(color_name) = tag_parts.get(1) {
-                        if let Some(color) = parse_color(color_name) {
-                            match *tag_name {
-                                "c" => new_style = new_style.fg(color),
-                                "bg" => new_style = new_style.on(color),
-                                _ => {} // Ignore unknown tags
+                if actual_tag == "c" || actual_tag == "bg" {
+                    is_valid_tag = true;
+                    if is_closing {
+                        if style_stack.len() > 1 {
+                            style_stack.pop();
+                        }
+                    } else {
+                        let mut new_style = style_stack.last().cloned().unwrap_or_else(Style::new);
+                        if let Some(color_name) = tag_parts.get(1) {
+                            if let Some(color) = parse_color(color_name) {
+                                match *tag_name {
+                                    "c" => new_style = new_style.fg(color),
+                                    "bg" => new_style = new_style.on(color),
+                                    _ => {}
+                                }
                             }
                         }
+                        style_stack.push(new_style);
                     }
-                    // Push the new, modified style onto the stack.
-                    style_stack.push(new_style);
                 }
             }
-            
-            // Paint the text that followed this tag with the new current style.
-            if let Some(current_style) = style_stack.last() {
-                output.push_str(&current_style.paint(text_after_tag).to_string());
+
+            if is_valid_tag {
+                // If it was a valid tag, just paint the text that followed.
+                if let Some(current_style) = style_stack.last() {
+                    output.push_str(&current_style.paint(text_after_tag).to_string());
+                }
+            } else {
+                // If it was NOT a valid tag, it must be plain text.
+                // Reconstruct the original string, including the '<' from the split.
+                let original_text = format!("<{}", part);
+                if let Some(current_style) = style_stack.last() {
+                    output.push_str(&current_style.paint(original_text).to_string());
+                }
             }
         }
     }
