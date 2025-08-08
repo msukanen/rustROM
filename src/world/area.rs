@@ -79,19 +79,31 @@ impl Tickable for Area {
 }
 
 impl Area {
+    /// Bootstrap - staging area.
     pub async fn bootstrap() -> Result<(), std::io::Error> {
-        log::warn!("Bootstrap - generating starter area '{}/root.area'…", *AREA_PATH);
+        let stem = "root";
+        log::warn!("Bootstrap - generating starter area '{}/{}.area'…", *AREA_PATH, stem);
         tokio::fs::create_dir_all((*AREA_PATH).as_str()).await?;
         let area = serde_json::json!({
             "name": "root",
             "title": "The Genesis Area",
             "description": "Where it all begins …",
-            "rooms": ["root"]
+            "rooms": ["root", "not-so-root"]
         });
-        tokio::fs::write(format!("{}/root.area", *AREA_PATH), serde_json::to_string_pretty(&area)?).await?;
-        log::info!("Bootstrap(root.area) OK.");
+        tokio::fs::write(format!("{}/{}.area", *AREA_PATH, stem), serde_json::to_string_pretty(&area)?).await?;
+        log::info!("Bootstrap({}.area) OK.", stem);
         Ok(())
     }
+
+    /// A blank slate.
+    pub(crate) fn blank() -> Self { Self {
+        name: "".into(),
+        title: "".into(),
+        description: "".into(),
+        rooms: HashMap::new(),
+        parent: Weak::new(),
+        tick_modulo: 10
+    }}
 }
 
 impl Description for Area {
