@@ -56,7 +56,7 @@ mod goto_tests {
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{cmd::{goto::GotoCommand, Command, CommandCtx}, player::Player, util::direction::Direction, world::{area::Area, room::Room, World}};
+    use crate::{player::Player, util::direction::Direction, world::{area::Area, room::Room, World}};
 
     #[tokio::test]
     async fn go_a_to_b() {

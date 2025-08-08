@@ -55,6 +55,27 @@ impl CombatStat {
             Self::MP { max, .. } => *max,
         }
     }
+
+    pub fn reset(&mut self) {
+        match self {
+            Self::HP { current, max } |
+            Self::MP { current, max, .. } => *current = *max,
+        }
+    }
+
+    pub fn is_dead(&self) -> bool {
+        match self {
+            Self::HP { current, .. } => *current < -10.0,
+            _ => false
+        }
+    }
+
+    pub fn is_unconscious(&self) -> bool {
+        match self {
+            Self::HP { current, .. } |
+            Self::MP { current, .. } => *current <= 0.0001,
+        }
+    }
 }
 
 #[async_trait]
