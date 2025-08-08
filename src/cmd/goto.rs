@@ -54,13 +54,14 @@ fn goto_directions() -> String {r#"
 mod goto_tests {
     use std::{net::{IpAddr, Ipv4Addr}, str::FromStr, sync::Arc};
 
-    use tokio::{io::AsyncReadExt, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
+    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{cmd::{goto::GotoCommand, Command, CommandCtx}, player::Player, world::{area::Area, room::Room, World}};
+    use crate::{cmd::{goto::GotoCommand, Command, CommandCtx}, player::Player, util::direction::Direction, world::{area::Area, room::Room, World}};
 
     #[tokio::test]
     async fn go_a_to_b() {
         let _ = env_logger::try_init();
+        log::info!("Preparing the stage …");
         let w = Arc::new(RwLock::new(World::blank()));
         let a = Arc::new(RwLock::new(Area::blank()));
         w.write().await.areas.insert("root".to_string(), a);
@@ -71,41 +72,71 @@ mod goto_tests {
             let r = Arc::new(RwLock::new(Room::blank()));
             r.write().await.name = "void".to_string();
             r.write().await.description = "Alpha".to_string();
+            r.write().await.exits.insert(Direction::East, "clearing".into());
             a.rooms.insert("void".to_string(), r);
             
             let r = Arc::new(RwLock::new(Room::blank()));
             r.write().await.name = "clearing".to_string();
             r.write().await.description = "Omega".to_string();
+            r.write().await.exits.insert(Direction::West, "void".into());
             a.rooms.insert("clearing".to_string(), r);
         }
+        log::info!("World staged.");
 
         let p = Arc::new(RwLock::new(Player::new("ani")));
         p.write().await.location.area = "root".to_string();
         p.write().await.location.room = "void".to_string();
+
         let ip = IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap());
         w.write().await.players.insert(ip.clone(), p);
-        
+
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let client_task = tokio::spawn(async move {
-            let mut stream = TcpStream::connect(addr).await.unwrap();
-            let mut buffer = vec![];
-            stream.read_to_end(&mut buffer).await.unwrap();
-            String::from_utf8(buffer).unwrap()
-        });
-        let (server_socket, _) = listener.accept().await.unwrap();
-        let (_, mut writer) = server_socket.into_split();
         let (tx, _) = broadcast::channel::<String>(1);
-        let mut ctx = CommandCtx {
-            player: w.read().await.players.get(&ip).unwrap().clone(),
-            world: &w,
-            writer: &mut writer,
-            tx: &tx,
-            args: "east"
-        };
-        let goto_cmd = GotoCommand;
-        goto_cmd.exec(&mut ctx).await;
-        let out = client_task.await.unwrap();
-        assert!(out.contains("Omega"));
+
+        let client_task = tokio::spawn(async move {
+            let (reader, mut writer) = TcpStream::connect(addr).await.unwrap().into_split();
+            let mut reader = BufReader::new(reader);
+            let mut buffer = String::new();
+
+            // Send the "look" command
+            writer.write_all(b"look\n").await.unwrap();
+            // Send the "goto" command
+            writer.write_all(b"goto east\n").await.unwrap();
+
+            // Now, read all the output until the server closes the connection.
+            reader.read_to_string(&mut buffer).await.unwrap();
+            buffer
+        });
+        log::info!("Client task prepped…");
+
+        // 4. Server-side logic now simulates the main loop for two commands.
+        let server_task = tokio::spawn(async move {
+            let (server_socket, _) = listener.accept().await.unwrap();
+            let (server_reader, mut server_writer) = server_socket.into_split();
+            let mut server_reader = BufReader::new(server_reader);
+            let mut line = String::new();
+            let player_arc = w.read().await.players.get(&addr.ip()).unwrap().clone();
+
+            // Handle "look" command
+            server_reader.read_line(&mut line).await.unwrap();
+            log::info!("client sent: \"{}\"", line);
+            crate::cmd::parse_and_execute(player_arc.clone(), &w, &tx, &line.trim(), &mut server_writer).await;
+            
+            // Handle "goto east" command
+            line.clear();
+            server_reader.read_line(&mut line).await.unwrap();
+            crate::cmd::parse_and_execute(player_arc.clone(), &w, &tx, &line.trim(), &mut server_writer).await;
+        }); // `server_socket` is dropped here, closing the connection.
+        log::info!("Server task prepped…");
+
+        // 5. Wait for the client task to finish and get the output.
+        let (_, client_out) = tokio::join!(server_task, client_task);
+        let output_string = client_out.unwrap();
+
+        // 6. Assert that the output contains the description of BOTH rooms.
+        log::info!("output_string = \n---\n{}\n---", output_string);
+        assert!(output_string.contains("Alpha"));
+        assert!(output_string.contains("Omega"));
     }
 }
