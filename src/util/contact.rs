@@ -11,3 +11,9 @@ pub struct AdminInfo {
     login: String,
     aliases: Option<Vec<String>>,
 }
+
+impl Contact {
+    pub fn new() -> Self {
+        Self { name: "".into(), email: "".into() }
+    }
+}
