@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{check_ro_field, cmd::{Command, CommandCtx}, resume_game, string::styling::format_color, tell_command_usage, tell_user, tell_user_unk, ClientState};
+use crate::{check_ro_field, cmd::{Command, CommandCtx}, resume_game, tell_command_usage, tell_user, tell_user_unk, ClientState};
 
 pub struct SetCommand;
 
