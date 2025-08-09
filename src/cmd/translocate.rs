@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, mob::{core::IsMob, stat::StatValue}, resume_game, tell_user, tell_user_unk, ClientState};
+use crate::{cmd::{goto::GotoCommand, look::LookCommand, Command, CommandCtx}, resume_game, tell_user, tell_user_unk, ClientState};
 
 pub struct TranslocateCommand;
 
@@ -19,30 +19,34 @@ impl Command for TranslocateCommand {
             resume_game!(ctx);
         }
 
+        let room = args[1];
+        if ctx.world.read().await.rooms.get(room).is_none() {
+            tell_user!(ctx.writer, "No such room exists.\n");
+            resume_game!(ctx);
+        }
+
         // Who's being translocated?
         match args[0] {
-            "self" => {},
+            "self" => {
+                ctx.player.write().await.location = room.to_string();
+                let look = LookCommand;
+                look.exec(ctx).await;
+            },
             _ => {}
         }
 
-        let loc: Vec<&str> = args[1].split_terminator(&['.', ' ']).collect();
-        if loc.len() < 2 {
-            translocate_usage(ctx).await;
-            resume_game!(ctx);
-        }
-        let area = loc[0];
-        let room = loc[1];
-        
+
 
         resume_game!(ctx);
     }
 }
 
 async fn translocate_usage(ctx: &mut CommandCtx<'_>) {
-    tell_user!(ctx.writer, "\
-'translocate' is used to transport a player (self or otherwise) to another \
-(existing) location in the world.  The command, obviously, fails if target \
-location does not exist.\n
-\n
-usage:  translocate self|TARGET AREA[.]ROOM");
-}
+    tell_user!(ctx.writer, r#"
+<c yellow>'translocate'</c> is used to transport a player (self or otherwise) to another 
+(existing) location in the world.  The command, obviously, fails if target 
+location does not exist.
+
+<c green>Usage:</c> <c yellow>translocate self [ROOM]</c>
+       <c yellow>translocate [TARGET] [ROOM]
+"#);}

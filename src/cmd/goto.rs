@@ -12,8 +12,8 @@ impl Command for GotoCommand {
             tell_command_usage!(ctx,
                 "goto",
                 "goes to places …",
-                format!("{}{}<c green>Usage:</c> goto [DIR]", r#"
-<c yellow>'goto'</c> is used to go to e.g. various directions, like:"#, goto_directions())
+                format!("<c yellow>'goto'</c> is used to go to e.g. various directions, like:{}", goto_directions()),
+                "goto [DIRECTION]"
             );
         }
 
@@ -28,10 +28,14 @@ impl Command for GotoCommand {
         // See if room has corresponding exit...
         do_in_current_room!(ctx, |room|{
             if let Some(droom_name) = room.read().await.exits.get(&exit) {
-                // TODO: check that the room *actually* exists…
-                ctx.player.write().await.location.room = droom_name.clone();
-                let cmd = LookCommand;
-                cmd.exec(ctx).await;
+                if ctx.world.read().await.rooms.get(droom_name.as_str()).is_some() {
+                    ctx.player.write().await.location = droom_name.clone();
+                    let cmd = LookCommand;
+                    cmd.exec(ctx).await;
+                } else {
+                    log::warn!("Room error: access to '{}' from '{}' is dysfunctional!", &droom_name, room.read().await.name);
+                    tell_user!(ctx.writer, "You could've sworn there is something that way, but there isn't...\n");
+                }
             } else {
                 tell_user!(ctx.writer, "Cannot go that way …");
             }
@@ -45,10 +49,7 @@ fn goto_directions() -> String {r#"
 
     North, East, South, West,
     NorthEast, NorthWest, SouthEast, SouthWest,
-    Up, Down.
-
-"#.to_string()
-}
+    Up, Down."#.to_string()}
 
 #[cfg(test)]
 mod goto_tests {
@@ -84,8 +85,7 @@ mod goto_tests {
         log::info!("World staged.");
 
         let p = Arc::new(RwLock::new(Player::new("ani")));
-        p.write().await.location.area = "root".to_string();
-        p.write().await.location.room = "void".to_string();
+        p.write().await.location = "void".to_string();
 
         let ip = IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap());
         w.write().await.players.insert(ip.clone(), p);

@@ -3,6 +3,7 @@
     "title": "RustROM RootRoom of Rootness",
     "description": "Very rooty room of rooty rootness…",
     "exits": {
-        "East": "not-so-root"
+        "East": "not-so-root",
+        "North": "does-not-exist"
     }
 }

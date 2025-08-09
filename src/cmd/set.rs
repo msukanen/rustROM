@@ -18,10 +18,11 @@ impl Command for SetCommand {
                 tell_command_usage!(ctx,
                     "set",
                     "sets some (global) in-game variable",
-                    format!("<c yellow>'set'</c> command is used to set/check a variety of in-game values.\n{}\n<c green>Usage:</c> set [FIELD] [VALUE]\n       set ro [FIELD]",
-                            get_settables_list()));
+                    format!("<c yellow>'set'</c> command is used to set/check a variety of in-game values.\n{}", get_settables_list()),
+                    "set [FIELD] [VALUE]",
+                    "set ro [FIELD]");
             }
-            tell_user!(ctx.writer, "<c green>Usage:</c> set [FIELD] [VALUE]\n       set ro [FIELD]\n");
+            tell_user!(ctx.writer, "<c green>Usage:</c> <c yellow>set [FIELD] [VALUE]</c>\n       <c yellow>set ro [FIELD]</c>\n");
             resume_game!(ctx);
         }
 
@@ -64,5 +65,4 @@ r#"Currently supported (global) sets are:
 
   <c blue>*</c> <c green>greeting</c>        -- the initial welcome message when someone connects.
   <c blue>*</c> <c green>welcome_back</c>    -- 'welcome back' message for returning players.
-  <c blue>*</c> <c green>welcome_new</c>     -- welcome message for the new players (also alts).
-"#}
+  <c blue>*</c> <c green>welcome_new</c>     -- welcome message for the new players (also alts)."#}

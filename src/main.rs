@@ -1,5 +1,5 @@
 //! A little MUD project in Rust.
-use std::{ops::Deref, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 use clap::Parser;
 use once_cell::sync::OnceCell;
 use tokio::{
@@ -89,18 +89,21 @@ async fn main() {
         w.validate().await.expect(&format!("Error validating {}", "rustrom.world"))
     }));{
         log::info!("Connecting dots …");
-        let w = world.write().await;
-        for area_arc in w.areas.values() {
+        let mut w = world.write().await;
+        let mut collected_rooms_to_add = HashMap::new();
+        for area_arc in w.areas.values_mut() {
             let mut a = area_arc.write().await;
             log::info!("… processing area '{}'", a.name);
             a.parent = Arc::downgrade(&world);
 
-            for room_arc in a.rooms.values() {
+            for (room_stem, room_arc) in &a.rooms {
                 let mut r = room_arc.write().await;
                 log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.name(), r.title());
                 r.parent = Arc::downgrade(area_arc);
+                collected_rooms_to_add.insert(room_stem.clone(), room_arc.clone());
             }
         }
+        w.rooms = collected_rooms_to_add;
     }
 
     tokio::spawn(game_loop(world.clone()));

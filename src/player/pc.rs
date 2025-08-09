@@ -32,7 +32,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         description: "Dummy!".into(),
         gender: Gender::Indeterminate,
         access: Access::Dummy,
-        location: WorldEntrance::default(),
+        location: "root".into(),
         hp: CombatStat::default(StatType::HP),
         mp: CombatStat::default(StatType::MP),
         in_combat: false
@@ -46,7 +46,7 @@ pub struct Player {
     passwd: String,// argon2 hash
     gender: Gender,
     pub access: Access,
-    pub location: WorldEntrance,
+    pub location: String,
     hp: CombatStat,
     mp: CombatStat,
     #[serde(skip, default)]
@@ -65,7 +65,7 @@ impl Player {
             passwd: "".into(),
             gender: Gender::Indeterminate,
             access: Access::default(),
-            location: WorldEntrance::default(),
+            location: "root".into(),
             hp: CombatStat::default(StatType::HP),
             mp: CombatStat::default(StatType::MP),
             in_combat: false,

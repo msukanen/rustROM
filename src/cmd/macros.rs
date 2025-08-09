@@ -16,43 +16,55 @@ macro_rules! resume_game {
 /// - [otherwise] `$otherwise`— execute this block if 'room' is for some reason unavailable.
 #[macro_export]
 macro_rules! do_in_current_room {
-    ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {
-        if let Some(area) = $ctx.world.read().await.areas.get(&$ctx.player.read().await.location.area) {
-            if let Some($room) = area.read().await.rooms.get(&$ctx.player.read().await.location.room) {
-                $($block)*
-            } else {
-                //TODO: safe transfer!
-                $($otherwise)*
-            }
+    ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {{
+        if let Some($room) = $ctx.world.read().await.rooms.get(&$ctx.player.read().await.location) {
+            $($block)*
+        } else {
+            //TODO: safe transfer!
+            $($otherwise)*
+        }
+    }};
+
+    ($ctx:ident, |$room:ident| {$($block:tt)*}) => {{
+        let room_name = $ctx.player.read().await.location.clone();// ← to avoid borrow issues…
+        if let Some($room) = $ctx.world.read().await.rooms.get(&room_name) {
+            $($block)*
         } else {
             //TODO: safe transfer!
         }
-    };
-
-    ($ctx:ident, |$room:ident| {$($block:tt)*}) => {
-        {
-            let area_name = $ctx.player.read().await.location.area.clone();// ← to avoid borrow issues…
-            let room_name = $ctx.player.read().await.location.room.clone();// ← to avoid borrow issues…
-            if let Some(area) = $ctx.world.read().await.areas.get(&area_name) {
-                if let Some($room) = area.read().await.rooms.get(&room_name) {
-                    $($block)*
-                }
-            } else {
-                //TODO: safe transfer!
-            }
-        }
-    };
+    }};
 }
 
 #[macro_export]
 macro_rules! tell_command_usage {
-    ($ctx:ident, $cmd_name:literal, $brief:literal, $usage:expr) => {
-        {
-            let usage = format!("<c green>COMMAND </c><c yellow>'{}'</c> - {}\n\n{}\n\n", $cmd_name, $brief, $usage);
-            tell_user!($ctx.writer, &usage);
-            resume_game!($ctx);
-        }
-    };
+    ($ctx:ident, $cmd_name:literal, $brief:expr, $long:expr, $usage:expr) => {{
+        let usage_str = format!("<c green>Usage: </c>{}\n\n", $usage);
+        let help_text = format!(
+            "<c green>COMMAND</c> <c yellow>'{}'</c> - {}\n\n{}\n\n{}",
+            $cmd_name,
+            $brief,
+            $long,
+            usage_str
+        );
+        tell_user!($ctx.writer, crate::string::styling::format_color(help_text));
+        resume_game!($ctx);
+    }};
+
+    ($ctx:ident, $cmd_name:literal, $brief:expr, $long:expr, $usage:expr, $($opt_usage:expr),*) => {{
+        let mut usage_str = format!("<c green>Usage: </c>{}\n", $usage);
+        $(
+            usage_str.push_str(&format!("       {}\n", $opt_usage));
+        )*
+        let help_text = format!(
+            "<c green>COMMAND</c> <c yellow>'{}'</c> - {}\n\n{}\n\n{}\n",
+            $cmd_name,
+            $brief,
+            $long,
+            usage_str
+        );
+        tell_user!($ctx.writer, crate::string::styling::format_color(help_text));
+        resume_game!($ctx);
+    }};
 }
 
 /// Check Read-only field.
