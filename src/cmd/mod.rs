@@ -25,6 +25,8 @@ pub struct CommandCtx<'a> {
     pub writer: &'a mut OwnedWriteHalf,
 }
 
+/// Short cmd ctx for e.g. those specific helpers which never
+/// need anything else than this particular triplet.
 pub struct ShortCommandCtx<'a> {
     pub player: PlayerLock,
     pub world: &'a SharedWorld,
@@ -32,6 +34,7 @@ pub struct ShortCommandCtx<'a> {
 }
 
 impl <'a> CommandCtx<'a> {
+    /// Get a [ShortCommandCtx] version of self.
     pub fn short_ctx(&mut self) -> ShortCommandCtx<'_> {
         ShortCommandCtx {
             player: self.player.clone(),
@@ -44,6 +47,10 @@ impl <'a> CommandCtx<'a> {
 /// An async trait for all commands to obey.
 #[async_trait]
 pub trait Command: Send + Sync {
+    /// Do something …
+    /// 
+    /// # Arguments
+    /// - `ctx`— [CommandCtx]
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState;
 }
 
@@ -53,13 +60,11 @@ include!(concat!(env!("OUT_DIR"), "/commands.rs"));
 /// Parses the player's input and executes the corresponding command.
 /// 
 /// # Arguments
-/// - `player`— [Player], obviously.
+/// - `player`— [PlayerLock], obviously.
 /// - `world`— reference to the world itself. Seldom used, but one never knows…
 /// - `tx`— global broadcast channel.
 /// - `input`— whatever the user typed…
 /// - `writer`— channel to deliver text to the user.
-/// - `prompt`— prompt to show after command execution.
-///             This may get overridden by specific commands.
 pub async fn parse_and_execute<'a>(
     player: PlayerLock,
     world: &'a SharedWorld,
