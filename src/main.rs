@@ -188,9 +188,12 @@ async fn main() {
 
                         state = match old_state {
                             ClientState::Playing => {                               
-                                let w = world.read().await;
+                                let p = {
+                                    let w = world.read().await;
+                                    w.players.get(&addr.ip()).cloned()
+                                };
                                 let prompt: String;
-                                if let Some(p) = w.players.get(&addr.ip()) {
+                                if let Some(p) = p {
                                     state = cmd::parse_and_execute(p.clone(), &world, &tx, &input, &mut writer).await;
                                     prompt = match &state {
                                         ClientState::Playing => p.read().await.prompt(),
