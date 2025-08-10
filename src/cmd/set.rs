@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{check_ro_field, cmd::{Command, CommandCtx}, resume_game, tell_command_usage, tell_user, tell_user_unk, ClientState};
+use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, tell_user_unk, ClientState};
 
 pub struct SetCommand;
 
@@ -14,15 +14,12 @@ impl Command for SetCommand {
 
         let parts: Vec<&str> = ctx.args.splitn(2, ' ').collect();
         if parts.len() < 2 {
-            if parts.len() == 1 && parts[0] == "?" {
-                tell_command_usage!(ctx,
-                    "set",
-                    "sets some (global) in-game variable",
-                    format!("<c yellow>'set'</c> command is used to set/check a variety of in-game values.\n{}", get_settables_list()),
-                    "set [FIELD] [VALUE]",
-                    "set ro [FIELD]");
+            if parts[0].starts_with('?') {
+                ctx.args = "set";
+                let help = HelpCommand;
+                return help.exec(ctx).await;
             }
-            tell_user!(ctx.writer, "<c green>Usage:</c> <c yellow>set [FIELD] [VALUE]</c>\n       <c yellow>set ro [FIELD]</c>\n");
+            tell_user!(ctx.writer, "<c green>Usage:</c> set <c cyan>[FIELD] [VALUE]</c>\n       set ro <c cyan>[FIELD]</c>\n");
             resume_game!(ctx);
         }
 

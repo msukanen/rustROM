@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{look::LookCommand, Command, CommandCtx}, do_in_current_room, resume_game, tell_command_usage, tell_user, util::direction::Direction, ClientState};
+use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, do_in_current_room, resume_game, tell_user, util::direction::Direction, ClientState};
 
 pub struct GotoCommand;
 
@@ -9,17 +9,14 @@ pub struct GotoCommand;
 impl Command for GotoCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if ctx.args.is_empty() {
-            tell_command_usage!(ctx,
-                "goto",
-                "goes to places …",
-                format!("<c yellow>'goto'</c> is used to go to e.g. various directions, like:{}", goto_directions()),
-                "goto [DIRECTION]"
-            );
+            ctx.args = "goto";
+            let help = HelpCommand;
+            return help.exec(ctx).await;
         }
 
         let exit: Result<Direction, _> = ctx.args.try_into();
         if exit.is_err() {
-            tell_user!(ctx.writer, "Unknown direction.\n\n{}\n", goto_directions());
+            tell_user!(ctx.writer, "Unknown direction. Use one of:\n{}\n", goto_directions());
             resume_game!(ctx);
         }
         

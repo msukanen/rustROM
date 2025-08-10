@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{mob::core::IsMob, traits::Description};
+use crate::{mob::core::IsMob, traits::Description, util::help::Help};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -84,6 +84,7 @@ async fn main() {
     // Initialize the logger
     env_logger::init();
 
+    // Load the world ...
     let world = Arc::new(RwLock::new({
         let w = World::new(&args.world).await.expect("ERROR: world dead or in fire?!");
         w.validate().await.expect(&format!("Error validating {}", "rustrom.world"))
@@ -105,6 +106,9 @@ async fn main() {
         }
         w.rooms = collected_rooms_to_add;
     }
+
+    // Load help files ...
+    world.write().await.help = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
 
     tokio::spawn(game_loop(world.clone()));
 

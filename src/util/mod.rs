@@ -1,6 +1,8 @@
 pub mod contact;
 pub mod direction;
 pub mod password;
+pub mod help;
+pub(crate) use help::Help;
 
 #[macro_export]
 macro_rules! get_prompt {

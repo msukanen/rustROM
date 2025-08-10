@@ -35,38 +35,6 @@ macro_rules! do_in_current_room {
     }};
 }
 
-#[macro_export]
-macro_rules! tell_command_usage {
-    ($ctx:ident, $cmd_name:literal, $brief:expr, $long:expr, $usage:expr) => {{
-        let usage_str = format!("<c green>Usage: </c>{}\n\n", $usage);
-        let help_text = format!(
-            "<c green>COMMAND</c> <c yellow>'{}'</c> - {}\n\n{}\n\n{}",
-            $cmd_name,
-            $brief,
-            $long,
-            usage_str
-        );
-        tell_user!($ctx.writer, crate::string::styling::format_color(help_text));
-        resume_game!($ctx);
-    }};
-
-    ($ctx:ident, $cmd_name:literal, $brief:expr, $long:expr, $usage:expr, $($opt_usage:expr),*) => {{
-        let mut usage_str = format!("<c green>Usage: </c>{}\n", $usage);
-        $(
-            usage_str.push_str(&format!("       {}\n", $opt_usage));
-        )*
-        let help_text = format!(
-            "<c green>COMMAND</c> <c yellow>'{}'</c> - {}\n\n{}\n\n{}\n",
-            $cmd_name,
-            $brief,
-            $long,
-            usage_str
-        );
-        tell_user!($ctx.writer, crate::string::styling::format_color(help_text));
-        resume_game!($ctx);
-    }};
-}
-
 /// Check Read-only field.
 /// NOTE: this macro has to be called from an async context!
 #[macro_export]

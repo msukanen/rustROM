@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{Command, CommandCtx}, mob::{core::IsMob, stat::StatValue}, resume_game, tell_command_usage, tell_user, tell_user_unk, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, mob::{core::IsMob, stat::StatValue}, resume_game, tell_user, tell_user_unk, ClientState};
 
 pub struct DmgCommand;
 
@@ -15,13 +15,9 @@ impl Command for DmgCommand {
         let args: Vec<&str> = ctx.args.split(' ').collect();
         log::info!("ARGL: {} '{}'", args.len(), args[0]);
         if args.len() == 1 {
-            tell_command_usage!(ctx,
-                "dmg",
-                "causes/repairs damage.",
-                "<c yellow>'dmg' is used to cause/repair any physical damage present on any target creature.",
-                "dmg self|[TARGET] [AMOUNT]",
-                "dmg fix self|[TARGET] [AMOUNT]"
-            );
+            ctx.args = "dmg";
+            let help = HelpCommand;
+            return help.exec(ctx).await;
         } else {
             match args[0] {
                 "self" => {
