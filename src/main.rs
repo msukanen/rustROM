@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{mob::core::IsMob, traits::Description, util::help::Help};
+use crate::{cmd::CommandCtx, mob::core::IsMob, traits::Description, util::{help::Help, ClientState}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -57,15 +57,6 @@ struct CmdLineArgs {
     world: String,
     #[arg(long, env = "RUSTROM_DATA", default_value = "data")]
     data_path: String,
-}
-
-#[derive(Debug)]
-pub enum ClientState {
-    EnteringName,
-    EnteringPassword1 { name: String },
-    EnteringPasswordV { name: String, pw1: String },
-    Playing,
-    Logout,
 }
 
 #[tokio::main]
@@ -166,7 +157,7 @@ async fn main() {
                             log::error!("Error saving '{}'! {:?}", p.name(), e);
                         }
                         if !abrupt_dc {
-                            tell_user!(writer, "Goodbye! See you soon again!\n");
+                            tell_user!(writer, "<c cyan>Goodbye! See you soon again!</c>\n");
                         }
                     }
                     break;
@@ -178,7 +169,7 @@ async fn main() {
                     result = reader.read_line(&mut line) => {
                         // An abrupt disconnect?
                         if result.unwrap_or(0) == 0 {
-                            log::info!("Client {} disconnected.", addr);
+                            log::info!("Client {} disconnected abruptly.", addr);
                             if let ClientState::Playing = &state {
                                 // Shift to logout state and re-loop…
                                 abrupt_dc = true;
@@ -191,21 +182,27 @@ async fn main() {
                         }
 
                         let input = line.trim().sanitize();
-                        let old_state = std::mem::replace(&mut state, ClientState::EnteringName);
 
-                        state = match old_state {
-                            ClientState::Playing => {                               
+                        state = match state {
+                            ClientState::Logout => ClientState::Logout,// redundant, but needed so that the analyzer doesn't yell at us.
+                            ClientState::Editing {..} |
+                            ClientState::Playing => {
                                 let p = {
                                     let w = world.read().await;
                                     w.players.get(&addr.ip()).cloned()
                                 };
                                 let prompt: String;
                                 if let Some(p) = p {
-                                    state = cmd::parse_and_execute(p.clone(), &world, &tx, &input, &mut writer).await;
-                                    prompt = match &state {
-                                        ClientState::Playing => p.read().await.prompt(),
-                                        _ => get_prompt!(world, PromptType::Playing, PROMPT_PLAYING),
-                                    };
+                                    let ctx = CommandCtx {
+                                        state,
+                                        player: p.clone(),
+                                        world: &world,
+                                        tx: &tx,
+                                        args: &input,
+                                        writer: &mut writer,
+                                        };
+                                    state = cmd::parse_and_execute(ctx).await;//state, p.clone(), &world, &tx, &input, &mut writer).await;
+                                    prompt = p.read().await.prompt();
                                 } else {
                                     // player a goner?!
                                     abrupt_dc = true;
@@ -286,8 +283,7 @@ async fn main() {
                                     tell_user!(writer, "Passwords do not match.\n\nPlease choose a password: ");
                                     ClientState::EnteringPassword1 { name }
                                 }
-                            },
-                            ClientState::Logout => ClientState::Logout// redundant, but needed for appeasing the 'match'.
+                            }
                         };
                     },
 

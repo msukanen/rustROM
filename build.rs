@@ -31,10 +31,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for cmd in &commands {
         // e.g., for "say.rs", creates `SayCommand`
         let struct_name = cmd.to_upper_camel_case();
-        writeln!(
-            file,
+        writeln!(file,
             "    m.insert(\"{}\".to_string(), Box::new({}::{}Command));",
-            cmd, cmd, struct_name
+            cmd,
+            if cmd == "return" { "r#return"} else { cmd },
+            struct_name
         )?;
     }
     writeln!(file, "m\n}});")?;

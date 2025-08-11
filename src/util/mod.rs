@@ -1,3 +1,5 @@
+pub mod clientstate;
+pub(crate) use clientstate::ClientState;
 pub mod contact;
 pub mod direction;
 pub mod password;

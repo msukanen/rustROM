@@ -14,11 +14,13 @@ mod dmg;
 mod translocate;
 mod goto;
 mod help;
+mod r#return;
 
 type PlayerLock = Arc<RwLock<Player>>;
 
 /// Command context for all the commands to chew on.
 pub struct CommandCtx<'a> {
+    pub state: ClientState,
     pub player: PlayerLock,
     pub world: &'a SharedWorld,
     pub tx: &'a broadcast::Sender<String>,
@@ -29,6 +31,7 @@ pub struct CommandCtx<'a> {
 /// Short cmd ctx for e.g. those specific helpers which never
 /// need anything else than this particular triplet.
 pub struct ShortCommandCtx<'a> {
+    pub state: ClientState,
     pub player: PlayerLock,
     pub world: &'a SharedWorld,
     pub writer: &'a mut OwnedWriteHalf,
@@ -38,6 +41,7 @@ impl <'a> CommandCtx<'a> {
     /// Get a [ShortCommandCtx] version of self.
     pub fn short_ctx(&mut self) -> ShortCommandCtx<'_> {
         ShortCommandCtx {
+            state: self.state.clone(),
             player: self.player.clone(),
             world: self.world,
             writer: self.writer,
@@ -61,35 +65,39 @@ include!(concat!(env!("OUT_DIR"), "/commands.rs"));
 /// Parses the player's input and executes the corresponding command.
 /// 
 /// # Arguments
+/// - `state`— [ClientState] before executing a command.
 /// - `player`— [PlayerLock], obviously.
 /// - `world`— reference to the world itself. Seldom used, but one never knows…
 /// - `tx`— global broadcast channel.
 /// - `input`— whatever the user typed…
 /// - `writer`— channel to deliver text to the user.
-pub async fn parse_and_execute<'a>(
+pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>
+/*     state: ClientState,
     player: PlayerLock,
     world: &'a SharedWorld,
     tx: &'a broadcast::Sender<String>,
     input: &'a str,
     writer: &'a mut OwnedWriteHalf
-) -> ClientState {
-    if input.is_empty() {// no need for whitespace check as input's already trimmed earlier.
+ */) -> ClientState {
+    if ctx.args.is_empty() {// no need for whitespace check as input's already trimmed earlier.
         resume_game!(_);
     }
 
-    let (command, args) = input.split_once(' ').unwrap_or((input, ""));
+    let (command, args) = ctx.args.split_once(' ').unwrap_or((ctx.args, ""));
+    ctx.args = args;
     
     if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {
-        let mut ctx = CommandCtx {
+/*         let mut ctx = CommandCtx {
+            state,
             player,
             world,
             tx,
             args: args.trim(),
             writer,
         };
-        cmd.exec(&mut ctx).await
+ */        cmd.exec(&mut ctx).await
     } else {
-        tell_user!(writer, "Huh?\n");
-        ClientState::Playing
+        tell_user!(ctx.writer, "Huh?\n");
+        ctx.state
     }
 }

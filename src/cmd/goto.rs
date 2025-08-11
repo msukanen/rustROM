@@ -52,9 +52,11 @@ fn goto_directions() -> String {r#"
 mod goto_tests {
     use std::{net::{IpAddr, Ipv4Addr}, str::FromStr, sync::Arc};
 
-    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
+    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{player::Player, util::direction::Direction, world::{area::Area, room::Room, World}};
+    use crate::{player::Player, world::{area::Area, room::Room, World}};
+
+    use super::*;
 
     #[tokio::test]
     async fn go_a_to_b() {
@@ -118,12 +120,26 @@ mod goto_tests {
             // Handle "look" command
             server_reader.read_line(&mut line).await.unwrap();
             log::info!("client sent: \"{}\"", line);
-            crate::cmd::parse_and_execute(player_arc.clone(), &w, &tx, &line.trim(), &mut server_writer).await;
+            let ctx = CommandCtx {
+                state: ClientState::Playing,
+                player: player_arc.clone(),
+                world: &w,
+                tx: &tx,
+                args: &line.trim(),
+                writer: &mut server_writer };
+            crate::cmd::parse_and_execute(ctx).await;
             
             // Handle "goto east" command
             line.clear();
             server_reader.read_line(&mut line).await.unwrap();
-            crate::cmd::parse_and_execute(player_arc.clone(), &w, &tx, &line.trim(), &mut server_writer).await;
+            let ctx = CommandCtx {
+                state: ClientState::Playing,
+                player: player_arc.clone(),
+                world: &w,
+                tx: &tx,
+                args: &line.trim(),
+                writer: &mut server_writer };
+            crate::cmd::parse_and_execute(ctx).await;
         }); // `server_socket` is dropped here, closing the connection.
         log::info!("Server task prepped…");
 
