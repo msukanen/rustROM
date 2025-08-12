@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}, io::AsyncWriteExt};
-use crate::{player::Player, resume_game, tell_user, world::SharedWorld, ClientState};
+use crate::{player::Player, resume_game, tell_user, util::clientstate::EditorMode, world::SharedWorld, ClientState};
 
 pub mod macros;
 //--- 'mod' all the commands ---
@@ -16,6 +16,7 @@ mod goto;
 mod help;
 mod r#return;
 mod hedit;
+mod redit;
 
 type PlayerLock = Arc<RwLock<Player>>;
 
@@ -77,16 +78,22 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
     let (command, args) = ctx.args.split_once(' ').unwrap_or((ctx.args, ""));
     ctx.args = args;
     
-    if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {
+    let table = match ctx.player.read().await.state() {
+        ClientState::Playing => &COMMANDS,
+        ClientState::Editing { ref mode } => match mode {
+            EditorMode::Room { .. } => &REDIT_COMMANDS,
+            EditorMode::Help { .. } => &HEDIT_COMMANDS,
+        },
+        _ => {// Should not happen, but ...
+            log::error!("Player state '{:?}' invalid?", ctx.player.read().await.state());
+            resume_game!(ctx);
+        }
+    };
+
+    if let Some(cmd) = table.get(command.to_lowercase().as_str()) {
         cmd.exec(&mut ctx).await
-    }
-    // check for editor-specific commands:
-    else if let Some(cmd) = match &ctx.player.read().await.state() {
-        ClientState::Editing { mode } => mode.get(command.to_lowercase().as_str()),
-        _ => None
-    } {
-        /* do something! */
-        ctx.player.read().await.state()
+    } else if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {
+        cmd.exec(&mut ctx).await
     } else {
         tell_user!(ctx.writer, "Huh?\n");
         ctx.player.read().await.state()

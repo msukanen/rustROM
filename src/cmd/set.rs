@@ -1,16 +1,13 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, tell_user_unk, ClientState};
+use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, validate_admin, ClientState};
 
 pub struct SetCommand;
 
 #[async_trait]
 impl Command for SetCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        if !ctx.player.read().await.access.is_admin() {
-            tell_user_unk!(ctx.writer);
-            resume_game!(ctx);
-        }
+        validate_admin!(ctx);
 
         let parts: Vec<&str> = ctx.args.splitn(2, ' ').collect();
         if parts.len() < 2 {
@@ -56,10 +53,3 @@ impl Command for SetCommand {
         resume_game!(ctx);
     }
 }
-
-fn get_settables_list() -> &'static str {
-r#"Currently supported (global) sets are:
-
-  <c blue>*</c> <c green>greeting</c>        -- the initial welcome message when someone connects.
-  <c blue>*</c> <c green>welcome_back</c>    -- 'welcome back' message for returning players.
-  <c blue>*</c> <c green>welcome_new</c>     -- welcome message for the new players (also alts)."#}

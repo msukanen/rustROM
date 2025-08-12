@@ -167,11 +167,16 @@ impl Player {
         self.access = access
     }
 
+    /// Push new [ClientState] into stack.
+    /// 
+    /// # Arguments
+    /// - `state`— [ClientState] to push into stack.
     pub fn push_state(&mut self, state: ClientState) -> ClientState {
         self.state_stack.push(state.clone());
         state
     }
 
+    /// Pop last state from stack, if possible, and return it (or a default) [ClientState].
     pub fn pop_state(&mut self) -> ClientState {
         if self.state_stack.len() > 1 {
             self.state_stack.pop().unwrap()
@@ -180,6 +185,7 @@ impl Player {
         }
     }
 
+    /// Get current [ClientState].
     pub fn state(&self) -> ClientState {
         self.state_stack.last().unwrap().clone()
     }
@@ -188,6 +194,9 @@ impl Player {
     /// 
     /// **NOTE:** generally used only when [Player] actually enters the game after
     ///       password checks et al, but in an emergency, might have use elsewhere too.
+    /// 
+    /// # Arguments
+    /// - `state`— [ClientState] which will replace the whole stack.
     pub fn erase_states(&mut self, state: ClientState) -> ClientState {
         self.state_stack = vec![state.clone()];
         state
