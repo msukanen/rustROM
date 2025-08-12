@@ -239,7 +239,7 @@ impl IsMob for Player {
 }
 
 impl Description for Player {
-    fn name<'a>(&'a self) -> &'a str { &self.name }
+    fn id<'a>(&'a self) -> &'a str { &self.name }
     fn description<'a>(&'a self) -> &'a str { &self.description }
     /// For [Player], 'title' is the same as their name.
     fn title<'a>(&'a self) -> &'a str { &self.name }

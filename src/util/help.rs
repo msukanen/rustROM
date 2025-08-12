@@ -13,7 +13,7 @@ static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Help {
     /// Stem name, etc.
-    name: String,
+    pub id: String,
     /// Free form title of the help entry.
     pub title: String,
     /// Keywords/aliases.
@@ -25,7 +25,7 @@ pub struct Help {
 
 impl Description for Help {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn name<'a>(&'a self) -> &'a str { &self.name }
+    fn id<'a>(&'a self) -> &'a str { &self.id }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
@@ -67,7 +67,7 @@ impl std::fmt::Display for Help {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,
             "---[ <c green>{}</c> ]---\n  -| {}\n\n{}\n",
-            self.name().to_uppercase(),
+            self.id().to_uppercase(),
             self.title(),
             self.description()
         )

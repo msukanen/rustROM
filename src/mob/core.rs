@@ -19,6 +19,6 @@ pub struct MobCore {
 
 impl Description for MobCore {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn name<'a>(&'a self) -> &'a str { &self.name }
+    fn id<'a>(&'a self) -> &'a str { &self.name }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }

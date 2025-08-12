@@ -30,7 +30,7 @@ impl Command for GotoCommand {
                     let cmd = LookCommand;
                     cmd.exec(ctx).await;
                 } else {
-                    log::warn!("Room error: access to '{}' from '{}' is dysfunctional!", &droom_name, room.read().await.name);
+                    log::warn!("Room error: access to '{}' from '{}' is dysfunctional!", &droom_name, room.read().await.id);
                     tell_user!(ctx.writer, "You could've sworn there is something that way, but there isn't...\n");
                 }
             } else {
@@ -70,13 +70,13 @@ mod goto_tests {
             let mut a = w.areas.get("root").unwrap().write().await;
             
             let r = Arc::new(RwLock::new(Room::blank()));
-            r.write().await.name = "void".to_string();
+            r.write().await.id = "void".to_string();
             r.write().await.description = "Alpha".to_string();
             r.write().await.exits.insert(Direction::East, "clearing".into());
             a.rooms.insert("void".to_string(), r);
             
             let r = Arc::new(RwLock::new(Room::blank()));
-            r.write().await.name = "clearing".to_string();
+            r.write().await.id = "clearing".to_string();
             r.write().await.description = "Omega".to_string();
             r.write().await.exits.insert(Direction::West, "void".into());
             a.rooms.insert("clearing".to_string(), r);

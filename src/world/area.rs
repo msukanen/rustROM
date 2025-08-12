@@ -59,7 +59,7 @@ pub mod world_area_serialization {
 fn default_tick_modulo() -> u8 {DEFAULT_TICK_MODULO}// to appease 'serde(default = ...)'
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Area {
-    pub name: String,
+    pub id: String,
     title: String,
     description: String,
     #[serde(with = "area_room_serialization")]
@@ -97,7 +97,7 @@ impl Area {
 
     /// A blank slate.
     pub(crate) fn blank() -> Self { Self {
-        name: "".into(),
+        id: "".into(),
         title: "".into(),
         description: "".into(),
         rooms: HashMap::new(),
@@ -108,7 +108,7 @@ impl Area {
 
 impl Description for Area {
     fn description(&self) -> &str { &self.description }
-    fn name(&self) -> &str { &self.name }
+    fn id(&self) -> &str { &self.id }
     fn title(&self) -> &str { &self.title }
 }
 
@@ -126,7 +126,7 @@ mod area_tests {
         let contents = std::fs::read_to_string(PathBuf::from(format!("{}/root.area", *AREA_PATH))).expect("Cannot find?!");
         debug!("Con10z:\n{}", contents);
         let area: Area = serde_json::from_str(&contents).unwrap();
-        debug!("Area name: \"{}\"", area.name);
+        debug!("Area name: \"{}\"", area.id);
         debug!("     desc: \"{}\"", area.description);
         
     }

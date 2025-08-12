@@ -60,7 +60,7 @@ pub mod area_room_serialization {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Room {
-    pub(crate) name: String,
+    pub(crate) id: String,
     title: String,
     pub(crate) description: String,
     pub exits: HashMap<Direction, String>,
@@ -109,9 +109,9 @@ impl Room {
         Ok(())
     }
 
-    /// An entirely blank slate.
+    /// Get an entirely blank slate.
     pub(crate) fn blank() -> Self { Self {
-        name: "".into(),
+        id: "".into(),
         title: "".into(),
         description: "".into(),
         exits: HashMap::new(),
@@ -122,5 +122,5 @@ impl Room {
 impl Description for Room {
     fn description(&self) -> &str { &self.description }
     fn title(&self) -> &str { &self.title }
-    fn name(&self) -> &str { &self.name }
+    fn id(&self) -> &str { &self.id }
 }

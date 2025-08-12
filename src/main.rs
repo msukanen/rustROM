@@ -85,12 +85,12 @@ async fn main() {
         let mut collected_rooms_to_add = HashMap::new();
         for area_arc in w.areas.values_mut() {
             let mut a = area_arc.write().await;
-            log::info!("… processing area '{}'", a.name);
+            log::info!("… processing area '{}'", a.id);
             a.parent = Arc::downgrade(&world);
 
             for (room_stem, room_arc) in &a.rooms {
                 let mut r = room_arc.write().await;
-                log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.name(), r.title());
+                log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.id(), r.title());
                 r.parent = Arc::downgrade(area_arc);
                 collected_rooms_to_add.insert(room_stem.clone(), room_arc.clone());
             }
@@ -152,9 +152,9 @@ async fn main() {
                     let mut w = world.write().await;
                     if let Some(p) = w.players.remove(&addr.ip()) {
                         let p = p.read().await;
-                        log::info!("Player '{}' logging out.", p.name());
+                        log::info!("Player '{}' logging out.", p.id());
                         if let Err(e) = p.save().await {
-                            log::error!("Error saving '{}'! {:?}", p.name(), e);
+                            log::error!("Error saving '{}'! {:?}", p.id(), e);
                         }
                         if !abrupt_dc {
                             tell_user!(writer, "<c cyan>Goodbye! See you soon again!</c>\n");
