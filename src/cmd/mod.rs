@@ -71,14 +71,7 @@ include!(concat!(env!("OUT_DIR"), "/commands.rs"));
 /// - `tx`— global broadcast channel.
 /// - `input`— whatever the user typed…
 /// - `writer`— channel to deliver text to the user.
-pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>
-/*     state: ClientState,
-    player: PlayerLock,
-    world: &'a SharedWorld,
-    tx: &'a broadcast::Sender<String>,
-    input: &'a str,
-    writer: &'a mut OwnedWriteHalf
- */) -> ClientState {
+pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
     if ctx.args.is_empty() {// no need for whitespace check as input's already trimmed earlier.
         resume_game!(_);
     }
@@ -87,15 +80,15 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>
     ctx.args = args;
     
     if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {
-/*         let mut ctx = CommandCtx {
-            state,
-            player,
-            world,
-            tx,
-            args: args.trim(),
-            writer,
-        };
- */        cmd.exec(&mut ctx).await
+        cmd.exec(&mut ctx).await
+    }
+    // check for editor-specific commands:
+    else if let Some(cmd) = match &ctx.state {
+        ClientState::Editing { mode } => mode.get(command.to_lowercase().as_str()),
+        _ => None
+    } {
+        /* do something! */
+        ctx.state
     } else {
         tell_user!(ctx.writer, "Huh?\n");
         ctx.state

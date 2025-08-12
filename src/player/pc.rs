@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::password::{validate_passwd, PasswordError}, world::WorldEntrance, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{password::{validate_passwd, PasswordError}, ClientState}, world::WorldEntrance, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -35,7 +35,8 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         location: "root".into(),
         hp: CombatStat::default(StatType::HP),
         mp: CombatStat::default(StatType::MP),
-        in_combat: false
+        in_combat: false,
+        state_stack: vec![ClientState::Logout]
     }));
 
 /// Player data lives here!
@@ -51,6 +52,8 @@ pub struct Player {
     mp: CombatStat,
     #[serde(skip, default)]
     in_combat: bool,
+    #[serde(skip, default)]
+    pub state_stack: Vec<ClientState>,
 }
 
 impl Player {
@@ -69,6 +72,7 @@ impl Player {
             hp: CombatStat::default(StatType::HP),
             mp: CombatStat::default(StatType::MP),
             in_combat: false,
+            state_stack: vec![ClientState::EnteringName],
         }
     }
 
