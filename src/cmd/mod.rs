@@ -15,12 +15,12 @@ mod translocate;
 mod goto;
 mod help;
 mod r#return;
+mod hedit;
 
 type PlayerLock = Arc<RwLock<Player>>;
 
 /// Command context for all the commands to chew on.
 pub struct CommandCtx<'a> {
-    pub state: ClientState,
     pub player: PlayerLock,
     pub world: &'a SharedWorld,
     pub tx: &'a broadcast::Sender<String>,
@@ -31,7 +31,6 @@ pub struct CommandCtx<'a> {
 /// Short cmd ctx for e.g. those specific helpers which never
 /// need anything else than this particular triplet.
 pub struct ShortCommandCtx<'a> {
-    pub state: ClientState,
     pub player: PlayerLock,
     pub world: &'a SharedWorld,
     pub writer: &'a mut OwnedWriteHalf,
@@ -41,7 +40,6 @@ impl <'a> CommandCtx<'a> {
     /// Get a [ShortCommandCtx] version of self.
     pub fn short_ctx(&mut self) -> ShortCommandCtx<'_> {
         ShortCommandCtx {
-            state: self.state.clone(),
             player: self.player.clone(),
             world: self.world,
             writer: self.writer,
@@ -83,14 +81,14 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
         cmd.exec(&mut ctx).await
     }
     // check for editor-specific commands:
-    else if let Some(cmd) = match &ctx.state {
+    else if let Some(cmd) = match &ctx.player.read().await.state() {
         ClientState::Editing { mode } => mode.get(command.to_lowercase().as_str()),
         _ => None
     } {
         /* do something! */
-        ctx.state
+        ctx.player.read().await.state()
     } else {
         tell_user!(ctx.writer, "Huh?\n");
-        ctx.state
+        ctx.player.read().await.state()
     }
 }

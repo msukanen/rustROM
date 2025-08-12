@@ -42,7 +42,7 @@ macro_rules! check_ro_field {
     ($ctx:expr, $field:expr, $accessor:ident) => {{
         let w = $ctx.world.read().await;
         if let Some(g) = &w.$accessor {
-            let desc = format!("<c yellow>--[ <c green>{}</c> ], current value:--</c>\n{}\n", $field, g);
+            let desc = format!("<c red>// BEGIN: <c green>{}</c>:</c>\n{}\n<c red>// END</c>\n", $field, g);
             tell_user!($ctx.writer, &desc);
         } else {
             tell_user!($ctx.writer, "<c red>'{}' not set</c>. Use: <c yellow>set {} [VALUE]", $field, $field);

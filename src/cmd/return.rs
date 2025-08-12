@@ -7,7 +7,6 @@ pub struct ReturnCommand;
 #[async_trait]
 impl Command for ReturnCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        
-        resume_game!(ctx);
+        ctx.player.write().await.pop_state()
     }
 }

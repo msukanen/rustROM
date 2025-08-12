@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{password::{validate_passwd, PasswordError}, ClientState}, world::WorldEntrance, DATA_PATH};
+use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, world::WorldEntrance, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -53,7 +53,7 @@ pub struct Player {
     #[serde(skip, default)]
     in_combat: bool,
     #[serde(skip, default)]
-    pub state_stack: Vec<ClientState>,
+    state_stack: Vec<ClientState>,
 }
 
 impl Player {
@@ -166,6 +166,32 @@ impl Player {
     pub fn set_access(&mut self, access: Access) {
         self.access = access
     }
+
+    pub fn push_state(&mut self, state: ClientState) -> ClientState {
+        self.state_stack.push(state.clone());
+        state
+    }
+
+    pub fn pop_state(&mut self) -> ClientState {
+        if self.state_stack.len() > 1 {
+            self.state_stack.pop().unwrap()
+        } else {
+            ClientState::Playing
+        }
+    }
+
+    pub fn state(&self) -> ClientState {
+        self.state_stack.last().unwrap().clone()
+    }
+
+    /// Wipe out current state stack and set new root value for it.
+    /// 
+    /// **NOTE:** generally used only when [Player] actually enters the game after
+    ///       password checks et al, but in an emergency, might have use elsewhere too.
+    pub fn erase_states(&mut self, state: ClientState) -> ClientState {
+        self.state_stack = vec![state.clone()];
+        state
+    }
 }
 
 #[async_trait]
@@ -186,7 +212,14 @@ impl DoesSave for Player {
 
 impl IsMob for Player {
     fn prompt<'a>(&'a self) -> String {
-        format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current())
+        match self.state() {
+            ClientState::Playing => format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current()),
+            ClientState::Editing { mode } => format!("[{}]?> ", match mode {
+                EditorMode::Help { topic } => format!("HELP({})", topic),
+                EditorMode::Room { id } => format!("ROOM({})", id)
+            }),
+            _ => "#> ".into()
+        }
     }
     fn hp<'a>(&'a self) -> &'a CombatStat { &self.hp }
     fn mp<'a>(&'a self) -> &'a CombatStat { &self.mp }

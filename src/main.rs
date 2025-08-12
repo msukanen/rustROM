@@ -184,34 +184,6 @@ async fn main() {
                         let input = line.trim().sanitize();
 
                         state = match state {
-                            ClientState::Logout => ClientState::Logout,// redundant, but needed so that the analyzer doesn't yell at us.
-                            ClientState::Editing {..} |
-                            ClientState::Playing => {
-                                let p = {
-                                    let w = world.read().await;
-                                    w.players.get(&addr.ip()).cloned()
-                                };
-                                let prompt: String;
-                                if let Some(p) = p {
-                                    let ctx = CommandCtx {
-                                        state,
-                                        player: p.clone(),
-                                        world: &world,
-                                        tx: &tx,
-                                        args: &input,
-                                        writer: &mut writer,
-                                        };
-                                    state = cmd::parse_and_execute(ctx).await;//state, p.clone(), &world, &tx, &input, &mut writer).await;
-                                    prompt = p.read().await.prompt();
-                                } else {
-                                    // player a goner?!
-                                    abrupt_dc = true;
-                                    state = ClientState::Logout;
-                                    continue;
-                                }
-                                tell_user!(writer, prompt);
-                                state
-                            },
                             ClientState::EnteringName => {
                                 if input.is_empty() {
                                     tell_user!(writer, &login_prompt);
@@ -224,10 +196,11 @@ async fn main() {
                             },
                             ClientState::EnteringPassword1{ name } => {
                                 match Player::load(&name, &input, &addr).await {
-                                    Ok(save) => {
+                                    Ok(mut save) => {
                                         log::info!("'{}' successfully logged in.", name);
                                         let (msg, pr) = {
                                             let mut w = world.write().await;
+                                            save.erase_states(ClientState::Playing);
                                             let pr = save.prompt();
                                             let p = Arc::new(RwLock::new(save));
                                             w.players.insert(addr.ip(), p.clone());
@@ -260,7 +233,7 @@ async fn main() {
                                             tell_user!(writer, "{}\n{}", msg, prompt);
                                             let p = Arc::new(RwLock::new(player));
                                             world.write().await.players.insert(addr.ip(), p.clone());
-                                            ClientState::Playing
+                                            p.write().await.erase_states(ClientState::Playing)
                                         } else {
                                             // Some strange error happened with save...
                                             // Notify user and "gracefully" disconnect them.
@@ -283,7 +256,32 @@ async fn main() {
                                     tell_user!(writer, "Passwords do not match.\n\nPlease choose a password: ");
                                     ClientState::EnteringPassword1 { name }
                                 }
-                            }
+                            },
+                            _ => {
+                                let p = {
+                                    let w = world.read().await;
+                                    w.players.get(&addr.ip()).cloned()
+                                };
+                                let prompt: String;
+                                if let Some(p) = p {
+                                    let ctx = CommandCtx {
+                                        player: p.clone(),
+                                        world: &world,
+                                        tx: &tx,
+                                        args: &input,
+                                        writer: &mut writer,
+                                        };
+                                    state = cmd::parse_and_execute(ctx).await;//state, p.clone(), &world, &tx, &input, &mut writer).await;
+                                    prompt = p.read().await.prompt();
+                                } else {
+                                    // player a goner?!
+                                    abrupt_dc = true;
+                                    state = ClientState::Logout;
+                                    continue;
+                                }
+                                tell_user!(writer, prompt);
+                                state
+                            },
                         };
                     },
 

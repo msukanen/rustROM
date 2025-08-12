@@ -121,7 +121,6 @@ mod goto_tests {
             server_reader.read_line(&mut line).await.unwrap();
             log::info!("client sent: \"{}\"", line);
             let ctx = CommandCtx {
-                state: ClientState::Playing,
                 player: player_arc.clone(),
                 world: &w,
                 tx: &tx,
@@ -133,7 +132,6 @@ mod goto_tests {
             line.clear();
             server_reader.read_line(&mut line).await.unwrap();
             let ctx = CommandCtx {
-                state: ClientState::Playing,
                 player: player_arc.clone(),
                 world: &w,
                 tx: &tx,
