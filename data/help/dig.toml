@@ -1,4 +1,4 @@
-name = "dig"
+id = "dig"
 title = "Diggy-diggy-ho, dwarven style…"
 aliases = ["dig"]
 description = """

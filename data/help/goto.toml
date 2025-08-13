@@ -1,4 +1,4 @@
-name = "goto"
+id = "goto"
 aliases = ["goto", "go", "move to"]
 title = "Goes to places…"
 description = """

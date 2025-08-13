@@ -1,4 +1,4 @@
-name = "dmg"
+id = "dmg"
 title = "Causes/repairs damage…"
 aliases = ["dmg", "fix"]
 admin = true

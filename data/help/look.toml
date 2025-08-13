@@ -1,4 +1,4 @@
-name = "look"
+id = "look"
 title = "Look | Looking"
 aliases = ["look", "l"]
 description = """

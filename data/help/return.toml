@@ -1,4 +1,4 @@
-name = "return"
+id = "return"
 aliases = ["return"]
 title = "Returns to previous command context."
 description = """
