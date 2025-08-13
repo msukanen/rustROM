@@ -8,6 +8,7 @@ use crate::{cmd::{Command, CommandCtx}, player::LoadError, resume_game, tell_use
 pub(crate) mod desc;
 pub(crate) mod data;
 pub(crate) mod save;
+pub(crate) mod title;
 
 pub struct HeditCommand;
 
