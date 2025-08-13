@@ -1,5 +1,5 @@
 {
-    "name": "not-so-root",
+    "id": "not-so-root",
     "title": "RustROM room #2",
     "description": "Next to the root, perhaps.",
     "exits": {
