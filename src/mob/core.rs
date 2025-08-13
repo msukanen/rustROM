@@ -2,7 +2,7 @@ use crate::{mob::{stat::StatValue, CombatStat}, traits::Description};
 
 pub trait IsMob {
     /// Name of a mob.
-    fn prompt<'a>(&'a self) -> String;
+    async fn prompt<'a>(&'a self) -> String;
     fn hp<'a>(&'a self) -> &'a CombatStat;
     fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool;
     fn mp<'a>(&'a self) -> &'a CombatStat;

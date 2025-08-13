@@ -15,9 +15,11 @@ mod translocate;
 mod goto;
 mod help;
 mod r#return;
-mod hedit;
+pub(crate) mod hedit;
 mod redit;
+mod abort;
 
+/// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
 
 /// Command context for all the commands to chew on.
@@ -64,15 +66,10 @@ include!(concat!(env!("OUT_DIR"), "/commands.rs"));
 /// Parses the player's input and executes the corresponding command.
 /// 
 /// # Arguments
-/// - `state`— [ClientState] before executing a command.
-/// - `player`— [PlayerLock], obviously.
-/// - `world`— reference to the world itself. Seldom used, but one never knows…
-/// - `tx`— global broadcast channel.
-/// - `input`— whatever the user typed…
-/// - `writer`— channel to deliver text to the user.
+/// - `ctx`– [CommandCtx], crafted in `main()` (usually).
 pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
     if ctx.args.is_empty() {// no need for whitespace check as input's already trimmed earlier.
-        resume_game!(_);
+        resume_game!(ctx);
     }
 
     let (command, args) = ctx.args.split_once(' ').unwrap_or((ctx.args, ""));
@@ -80,7 +77,7 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
     
     let table = match ctx.player.read().await.state() {
         ClientState::Playing => &COMMANDS,
-        ClientState::Editing { ref mode } => match mode {
+        ClientState::Editing { ref mode, .. } => match mode {
             EditorMode::Room { .. } => &REDIT_COMMANDS,
             EditorMode::Help { .. } => &HEDIT_COMMANDS,
         },

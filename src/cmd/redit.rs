@@ -14,13 +14,13 @@ impl Command for ReditCommand {
         validate_builder!(ctx);
         
         if match ctx.player.read().await.state() {
-            ClientState::Editing { mode } => match mode {
+            ClientState::Editing { mode, .. } => match mode {
                 EditorMode::Room { .. } => false,
                 _ => true
             },
             _ => true
         } {
-            ctx.player.write().await.push_state(ClientState::Editing { mode: EditorMode::Room { id: ctx.args.into() } });
+            ctx.player.write().await.push_state(ClientState::Editing { mode: EditorMode::Room });// TODO
         }
         ctx.player.read().await.state()
     }

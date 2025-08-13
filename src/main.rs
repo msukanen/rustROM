@@ -151,7 +151,7 @@ async fn main() {
                 if let ClientState::Logout = &state {
                     let mut w = world.write().await;
                     if let Some(p) = w.players.remove(&addr.ip()) {
-                        let p = p.read().await;
+                        let mut p = p.write().await;
                         log::info!("Player '{}' logging out.", p.id());
                         if let Err(e) = p.save().await {
                             log::error!("Error saving '{}'! {:?}", p.id(), e);
@@ -201,7 +201,7 @@ async fn main() {
                                         let (msg, pr) = {
                                             let mut w = world.write().await;
                                             save.erase_states(ClientState::Playing);
-                                            let pr = save.prompt();
+                                            let pr = save.prompt().await;
                                             let p = Arc::new(RwLock::new(save));
                                             w.players.insert(addr.ip(), p.clone());
                                             (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), pr)
@@ -272,7 +272,7 @@ async fn main() {
                                         writer: &mut writer,
                                         };
                                     state = cmd::parse_and_execute(ctx).await;//state, p.clone(), &world, &tx, &input, &mut writer).await;
-                                    prompt = p.read().await.prompt();
+                                    prompt = p.read().await.prompt().await;
                                 } else {
                                     // player a goner?!
                                     abrupt_dc = true;
@@ -292,7 +292,7 @@ async fn main() {
                                 // If we receive a message from the broadcast channel, write it to our client.
                                 let w = world.read().await;
                                 if let Some(p) = w.players.get(&addr.ip()) {
-                                    tell_user!(writer, "{}{}", msg, p.read().await.prompt());
+                                    tell_user!(writer, "{}{}", msg, p.read().await.prompt().await);
                                 }
                             }
                         }

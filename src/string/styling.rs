@@ -2,6 +2,24 @@ use std::fmt::Display;
 
 use ansi_term::{Colour, Style};
 
+pub const RULER_LINE: &str = "|___\
+<c cyan>5</c>___\
+<c green>T</c>\
+<c cyan>10</c>___\
+<c cyan>15</c>___\
+<c cyan>20</c>___\
+<c cyan>25</c>___\
+<c cyan>30</c>___\
+<c cyan>35</c>___\
+<c cyan>40</c>___\
+<c cyan>45</c>___\
+<c cyan>50</c>___\
+<c cyan>55</c>___\
+<c cyan>60</c>___\
+<c cyan>65</c>___\
+<c cyan>70</c>___\
+<c cyan>75</c>___|";
+
 /// Parses a color name string into an ansi_term::Colour.
 fn parse_color(name: &str) -> Option<Colour> {
     match name.to_lowercase().as_str() {
