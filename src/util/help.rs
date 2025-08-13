@@ -1,11 +1,12 @@
 use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
 
+use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use walkdir::WalkDir;
 
-use crate::{traits::Description, DATA_PATH};
+use crate::{traits::{save::{DoesSave, SaveError}, Description}, DATA_PATH};
 
 static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *DATA_PATH)));
 
@@ -21,6 +22,8 @@ pub struct Help {
     pub description: String,
     #[serde(default)]
     pub admin: bool,
+    #[serde(default)]
+    pub builder: bool,
 }
 
 impl Description for Help {
@@ -39,6 +42,7 @@ impl From<std::io::Error> for HelpError { fn from(value: std::io::Error) -> Self
 impl From<toml::de::Error> for HelpError { fn from(value: toml::de::Error) -> Self { Self::Format(value) }}
 
 impl Help {
+    /// Load all help files into hashmap, properly aliased too while at it.
     pub(crate) async fn load_all() -> Result<HashMap<String, Arc<RwLock<Help>>>, HelpError> {
         let path = PathBuf::from_str((*HELP_PATH).as_str()).unwrap();
         let mut helps = HashMap::new();
@@ -61,6 +65,18 @@ impl Help {
 
         Ok(helps)
     }
+
+    /// Generate a brand new shiny help entry.
+    pub(crate) fn new(id: &str) -> Self {
+        Self {
+            id: id.into(),
+            title: "".into(),
+            aliases: vec![id.into()],
+            description: "".into(),
+            admin: false,
+            builder: false,
+        }
+    }
 }
 
 impl std::fmt::Display for Help {
@@ -71,5 +87,16 @@ impl std::fmt::Display for Help {
             self.title(),
             self.description()
         )
+    }
+}
+
+#[async_trait]
+impl DoesSave for Help {
+    async fn save(&mut self) -> Result<(), SaveError> {
+        if self.id().is_empty() { return Err(SaveError::NoIdProvided); }
+        let path = PathBuf::from_str(&format!("{}/{}.toml", *HELP_PATH, self.id())).unwrap();
+        let contents = toml::to_string_pretty(&self)?;
+        tokio::fs::write(path, contents).await?;
+        Ok(())
     }
 }

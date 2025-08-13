@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, world::WorldEntrance, DATA_PATH};
+use crate::{cmd::hedit::HeditState, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -16,6 +16,7 @@ pub enum LoadError {
     Io(std::io::Error),
     Format(serde_json::Error),
     NoSuchSave,
+    InvalidLockId(String),
 }
 
 impl From<std::io::Error> for LoadError {
@@ -36,7 +37,8 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         hp: CombatStat::default(StatType::HP),
         mp: CombatStat::default(StatType::MP),
         in_combat: false,
-        state_stack: vec![ClientState::Logout]
+        state_stack: vec![ClientState::Logout],
+        hedit: None,
     }));
 
 /// Player data lives here!
@@ -54,6 +56,8 @@ pub struct Player {
     in_combat: bool,
     #[serde(skip, default)]
     state_stack: Vec<ClientState>,
+    #[serde(default)]
+    pub hedit: Option<HeditState>,
 }
 
 impl Player {
@@ -73,6 +77,7 @@ impl Player {
             mp: CombatStat::default(StatType::MP),
             in_combat: false,
             state_stack: vec![ClientState::EnteringName],
+            hedit: None,
         }
     }
 
@@ -209,7 +214,7 @@ impl DoesSave for Player {
     /// 
     /// # Returns
     /// Success?
-    async fn save(&self) -> Result<(), SaveError> {
+    async fn save(&mut self) -> Result<(), SaveError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, self.name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let file = std::fs::File::create(path)?;
@@ -220,12 +225,17 @@ impl DoesSave for Player {
 }
 
 impl IsMob for Player {
-    fn prompt<'a>(&'a self) -> String {
+    async fn prompt<'a>(&'a self) -> String {
         match self.state() {
             ClientState::Playing => format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current()),
-            ClientState::Editing { mode } => format!("[{}]?> ", match mode {
-                EditorMode::Help { topic } => format!("HELP({})", topic),
-                EditorMode::Room { id } => format!("ROOM({})", id)
+            ClientState::Editing { mode} => format!("<c green>[<c cyan>{}</c><c green>]</c>?> ", match mode {
+                EditorMode::Help => {
+                    let g = self.hedit.clone().unwrap();
+                    let dirty = g.dirty;
+                    let g = g.lock.read().await;
+                    format!("HELP(<c yellow>{}{}</c>)", g.id(), if dirty {"<c red>^*</c>"} else {""})
+                },
+                EditorMode::Room => format!("ROOM({})", "room-id")
             }),
             _ => "#> ".into()
         }
