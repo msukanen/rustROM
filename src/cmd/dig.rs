@@ -20,6 +20,9 @@ impl Command for DigCommand {
             tell_user!(ctx.writer, "No such direction exists... See <c yellow>'help dir'</c>.\n");
             resume_game!(ctx);
         }
+
+        let room = Room::blank();
+
         resume_game!(ctx);
     }
 }

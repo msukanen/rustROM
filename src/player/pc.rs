@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{cmd::hedit::HeditState, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -39,6 +39,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         in_combat: false,
         state_stack: vec![ClientState::Logout],
         hedit: None,
+        redit: None,
     }));
 
 /// Player data lives here!
@@ -52,12 +53,10 @@ pub struct Player {
     pub location: String,
     hp: CombatStat,
     mp: CombatStat,
-    #[serde(skip, default)]
-    in_combat: bool,
-    #[serde(skip, default)]
-    state_stack: Vec<ClientState>,
-    #[serde(default)]
-    pub hedit: Option<HeditState>,
+    #[serde(skip, default)] in_combat: bool,
+    #[serde(skip, default)] state_stack: Vec<ClientState>,
+    #[serde(default)] pub hedit: Option<HeditState>,
+    #[serde(default)] pub redit: Option<ReditState>,
 }
 
 impl Player {
@@ -78,6 +77,7 @@ impl Player {
             in_combat: false,
             state_stack: vec![ClientState::EnteringName],
             hedit: None,
+            redit: None,
         }
     }
 

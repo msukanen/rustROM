@@ -16,7 +16,7 @@ mod goto;
 mod help;
 mod r#return;
 pub(crate) mod hedit;
-mod redit;
+pub(crate) mod redit;
 mod abort;
 
 /// Player locker.
