@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::styling::{dirty_mark, EDITOR_DIRTY}, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -233,9 +233,14 @@ impl IsMob for Player {
                     let g = self.hedit.clone().unwrap();
                     let dirty = g.dirty;
                     let g = g.lock.read().await;
-                    format!("HELP(<c yellow>{}{}</c>)", g.id(), if dirty {"<c red>^*</c>"} else {""})
+                    format!("HELP(<c yellow>{}{}</c>)", g.id(), dirty_mark(dirty))
                 },
-                EditorMode::Room => format!("ROOM({})", "room-id")
+                EditorMode::Room => {
+                    let g = self.redit.clone().unwrap();
+                    let dirty = g.dirty;
+                    let g = g.lock.read().await;
+                    format!("ROOM(<c yellow>{}{}</c>)", g.id(), dirty_mark(dirty))
+                },
             }),
             _ => "#> ".into()
         }

@@ -67,7 +67,7 @@ impl Command for HeditCommand {
 
         let mut g = ctx.player.write().await;
         if g.hedit.is_none() {
-            if let Some(existing_entry) = ctx.world.read().await.help.get(ctx.args).cloned() {
+            if let Some(existing_entry) = ctx.world.read().await.help.get(ctx.args) {
                 g.hedit = Some(HeditState {
                     lock: existing_entry.clone(),
                     dirty: false

@@ -2,6 +2,11 @@ use std::fmt::Display;
 
 use ansi_term::{Colour, Style};
 
+pub const EDITOR_DIRTY: &str = "<c red>^*</c>";
+
+/// Return dirty-marker str based on `dirty` flag.
+pub fn dirty_mark(dirty: bool) -> &'static str {if dirty {EDITOR_DIRTY} else {""}}
+
 pub const RULER_LINE: &str = "|___\
 <c cyan>5</c>___\
 <c green>T</c>\

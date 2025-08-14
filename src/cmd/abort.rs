@@ -13,13 +13,11 @@ impl Command for AbortCommand {
                 // NOTE: 'abort' is a no-op when user is not within some editor context.
                 tell_user_unk!(ctx.writer);
             },
-            ClientState::Editing { ref mode } => match mode {
-                EditorMode::Help => {
-                    tell_user!(ctx.writer, "Discarding edits …\n");
-                    ctx.player.write().await.hedit = None;
-                },
-                EditorMode::Room => {
-
+            ClientState::Editing { ref mode } => {
+                tell_user!(ctx.writer, "Discarding edits …\n");
+                match mode {
+                    EditorMode::Help => { ctx.player.write().await.hedit = None; },
+                    EditorMode::Room => { ctx.player.write().await.redit = None; },
                 }
             }
             _ => {}
