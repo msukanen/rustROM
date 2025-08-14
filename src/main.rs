@@ -170,14 +170,16 @@ async fn main() {
                         // An abrupt disconnect?
                         if result.unwrap_or(0) == 0 {
                             log::info!("Client {} disconnected abruptly.", addr);
-                            if let ClientState::Playing = &state {
-                                // Shift to logout state and re-loop…
-                                abrupt_dc = true;
-                                state = ClientState::Logout;
-                                continue;
-                            } else {
-                                // They weren't playing - nothing to save - d/c.
-                                break;
+
+                            match &state {
+                                ClientState::Playing |
+                                ClientState::Editing {..}
+                                => {// Shift to logout state and re-loop…
+                                    abrupt_dc = true;
+                                    state = ClientState::Logout;
+                                    continue
+                                },
+                                _ => break// They weren't playing - nothing to save - d/c.
                             }
                         }
 
