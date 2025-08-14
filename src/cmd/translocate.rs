@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{goto::GotoCommand, look::LookCommand, Command, CommandCtx}, resume_game, tell_user, tell_user_unk, ClientState};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, resume_game, tell_user, tell_user_unk, ClientState};
 
 pub struct TranslocateCommand;
 
@@ -28,14 +28,14 @@ impl Command for TranslocateCommand {
         // Who's being translocated?
         match args[0] {
             "self" => {
-                ctx.player.write().await.location = room.to_string();
+                ctx.player.write().await.location = room.into();
                 let look = LookCommand;
-                look.exec(ctx).await;
+                look.exec({ctx.args = ""; ctx}).await;
             },
-            _ => {}
+            _ => {
+                todo!("Translocate another player.")
+            }
         }
-
-
 
         resume_game!(ctx);
     }
