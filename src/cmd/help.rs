@@ -4,7 +4,8 @@ use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, ClientState};
 pub struct HelpCommand;
 
 const NO_LORE_OR_ADMIN_ONLY: &str = "Well, unfortunately there is no recorded lore about that particular subject, as far as we know…\n";
-
+pub(crate) const ERROR_SAVING_HELP: &str = "Something went wrong (with the file system perhaps)… The error has been logged.\n\
+                                            Admins might get things sorted out, however — no need to be alarmed (too much).\n";
 #[async_trait]
 impl Command for HelpCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {

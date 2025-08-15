@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, traits::save::DoesSave, validate_builder, ClientState};
+use crate::{cmd::{help::{HelpCommand, ERROR_SAVING_HELP}, Command, CommandCtx}, resume_game, tell_user, traits::save::DoesSave, validate_builder, ClientState};
 
 pub struct AliasCommand;
 
@@ -66,9 +66,7 @@ impl Command for AliasCommand {
         }
         
         if let Err(_) = h.save().await {
-            tell_user!(ctx.writer,
-                "Something went wrong (with the file system perhaps)… The error has been logged.\n\
-                Admins might get things sorted out, however — no need to be alarmed (too much).");
+            tell_user!(ctx.writer, ERROR_SAVING_HELP);
         }
 
         resume_game!(ctx);

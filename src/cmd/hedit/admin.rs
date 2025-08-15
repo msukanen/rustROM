@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, resume_game, string::boolean::BooleanCheckExt, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::{HelpCommand, ERROR_SAVING_HELP}, Command, CommandCtx}, rerun_with_help, resume_game, string::boolean::BooleanCheckExt, tell_user, traits::save::DoesSave, validate_builder, ClientState};
 
 pub struct AdminCommand;
 
@@ -27,9 +27,12 @@ impl Command for AdminCommand {
         let mut g = ctx.player.write().await;
         let g = g.hedit.as_mut().unwrap();
         g.dirty = true;
-        let mut g = g.lock.write().await;
-        g.admin = ctx.args.is_true();
-        tell_user!(ctx.writer, "Admin flag is now {}.\n", if g.admin {"set"} else {"unset"});
+        let mut h = g.lock.write().await;
+        h.admin = ctx.args.is_true();
+        tell_user!(ctx.writer, "Admin flag is now {}.\n", if h.admin {"set"} else {"unset"});
+        if let Err(_) = h.save().await {
+            tell_user!(ctx.writer, ERROR_SAVING_HELP);
+        }
 
         resume_game!(ctx);
     }
