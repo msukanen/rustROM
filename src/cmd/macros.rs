@@ -56,7 +56,7 @@ macro_rules! rerun_with_help {
     ($ctx:ident, $cmd:ident) => {
         {
             let cmd = $cmd;
-            return cmd.exec($ctx).await;
+            return cmd.exec({$ctx.args = "?"; $ctx}).await;
         }
     };
 }
