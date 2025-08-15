@@ -10,6 +10,8 @@ pub(crate) mod data;
 pub(crate) mod save;
 pub(crate) mod title;
 pub(crate) mod alias;
+pub(crate) mod admin;
+pub(crate) mod builder;
 
 pub struct HeditCommand;
 
