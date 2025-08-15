@@ -177,7 +177,9 @@ impl Player {
     /// # Arguments
     /// - `state`— [ClientState] to push into stack.
     pub fn push_state(&mut self, state: ClientState) -> ClientState {
-        self.state_stack.push(state.clone());
+        if self.state_stack.last().unwrap() != &state {
+            self.state_stack.push(state.clone());
+        }
         state
     }
 
