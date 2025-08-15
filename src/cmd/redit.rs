@@ -76,15 +76,7 @@ impl Command for ReditCommand {
             }
         };
 
-        if match g.state() {
-            ClientState::Editing { mode, .. } => match mode {
-                EditorMode::Room { .. } => false,
-                _ => true
-            },
-            _ => true
-        } {
-            g.push_state(ClientState::Editing { mode: EditorMode::Room });// TODO
-        }
+        g.push_state(ClientState::Editing { mode: EditorMode::Room });
         g.state()
     }
 }

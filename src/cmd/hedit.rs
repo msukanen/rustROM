@@ -3,12 +3,13 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::{io::AsyncWriteExt, sync::RwLock};
-use crate::{cmd::{Command, CommandCtx}, player::LoadError, resume_game, tell_user, util::{clientstate::EditorMode, Help}, validate_builder, world::SharedWorld, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, player::LoadError, resume_game, tell_user, traits::Description, util::{clientstate::EditorMode, Help}, validate_builder, world::SharedWorld, ClientState};
 
 pub(crate) mod desc;
 pub(crate) mod data;
 pub(crate) mod save;
 pub(crate) mod title;
+pub(crate) mod alias;
 
 pub struct HeditCommand;
 
@@ -60,35 +61,45 @@ impl HeditState {
 impl Command for HeditCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         validate_builder!(ctx);
+
         if ctx.args.is_empty() && ctx.player.read().await.hedit.is_none() {
             tell_user!(ctx.writer, "Which help topic you'd like to edit/create?\n");
             resume_game!(ctx);
         }
 
-        let mut g = ctx.player.write().await;
-        if g.hedit.is_none() {
-            if let Some(existing_entry) = ctx.world.read().await.help.get(ctx.args) {
-                g.hedit = Some(HeditState {
-                    lock: existing_entry.clone(),
-                    dirty: false
-                });
-            } else {
-                g.hedit = Some(HeditState {
-                    lock: Arc::new(RwLock::new(Help::new(ctx.args))),
-                    dirty: true
-                });
-            }
-        };
-
-        if match g.state() {
-            ClientState::Editing { mode, .. } => match mode {
-                EditorMode::Help { .. } => false,
-                _ => true
-            },
-            _ => true
-        } {
-            g.push_state(ClientState::Editing { mode: EditorMode::Help });
+        if ctx.args.starts_with('?') {
+            let cmd = HelpCommand;
+            return cmd.exec({ctx.args = "hedit-internal-commands"; ctx}).await;
         }
-        g.state()
+
+        let mut pg = ctx.player.write().await;
+        if pg.hedit.is_some() {
+            if !ctx.args.is_empty() && pg.hedit.as_ref().unwrap().lock.read().await.id() != ctx.args {
+                let ed = pg.hedit.as_mut().unwrap();
+                if ed.dirty {
+                    tell_user!(ctx.writer, "<c red>Warning!</c> Unsaved edits - '<c yellow>save</c>' or '<c yellow>abort</c>' first.\n");
+                    resume_game!(ctx);
+                }
+            } else {
+                tell_user!(ctx.writer, "Resuming edit session.\n");
+                pg.push_state(ClientState::Editing { mode: EditorMode::Help });
+                resume_game!(ctx);
+            }
+        }
+
+        if let Some(existing_entry) = ctx.world.read().await.help.get(ctx.args) {
+            pg.hedit = Some(HeditState {
+                lock: existing_entry.clone(),
+                dirty: false
+            });
+        } else {
+            pg.hedit = Some(HeditState {
+                lock: Arc::new(RwLock::new(Help::new(ctx.args))),
+                dirty: true
+            });
+        }
+
+        pg.push_state(ClientState::Editing { mode: EditorMode::Help });
+        pg.state()
     }
 }
