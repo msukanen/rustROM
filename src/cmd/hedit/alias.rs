@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, traits::save::DoesSave, validate_builder, ClientState};
 
 pub struct AliasCommand;
 
@@ -63,6 +63,12 @@ impl Command for AliasCommand {
         }
         if !net_rem.is_empty() {
             tell_user!(ctx.writer, "Removed alias{}: {:?}\n", if net_rem.len() == 1 {""} else {"es"}, net_rem);
+        }
+        
+        if let Err(_) = h.save().await {
+            tell_user!(ctx.writer,
+                "Something went wrong (with the file system perhaps)… The error has been logged.\n\
+                Admins might get things sorted out, however — no need to be alarmed (too much).");
         }
 
         resume_game!(ctx);

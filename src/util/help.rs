@@ -95,8 +95,16 @@ impl DoesSave for Help {
     async fn save(&mut self) -> Result<(), SaveError> {
         if self.id().is_empty() { return Err(SaveError::NoIdProvided); }
         let path = PathBuf::from_str(&format!("{}/{}.toml", *HELP_PATH, self.id())).unwrap();
-        let contents = toml::to_string_pretty(&self)?;
-        tokio::fs::write(path, contents).await?;
+        let contents = toml::to_string_pretty(&self);
+        if let Err(e) = contents {
+            log::error!("TOML format error with '{}': {:?}", self.id(), e);
+            return Err(e.into());
+        }
+        let err = tokio::fs::write(path, contents.unwrap()).await;
+        if let Err(e) = err {
+            log::error!("File error with '{}': {:?}", self.id(), e);
+            return Err(e.into());
+        }
         Ok(())
     }
 }

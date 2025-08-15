@@ -9,6 +9,7 @@ Internal commands of <c cyan>HEdit</c>:
   * builder
   * data
   * desc
+  * save
   * title
 
 Each of the commands has their usage info available with <c yellow>'?'</c>, like:
