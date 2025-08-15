@@ -26,6 +26,7 @@ impl Command for AdminCommand {
         g.dirty = true;
         let mut g = g.lock.write().await;
         g.admin = ctx.args.is_true();
+        tell_user!(ctx.writer, "Admin flag is now {}.\n", if g.admin {"set"} else {"unset"});
 
         resume_game!(ctx);
     }

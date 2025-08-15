@@ -26,6 +26,7 @@ impl Command for BuilderCommand {
         g.dirty = true;
         let mut g = g.lock.write().await;
         g.builder = ctx.args.is_true();
+        tell_user!(ctx.writer, "Builder flag is now {}.\n", if g.builder {"set"} else {"unset"});
 
         resume_game!(ctx);
     }
