@@ -2,11 +2,11 @@ id = "hedit-alias"
 title = "HEdit - aliasing..."
 aliases = ["hedit-alias"]
 description = """
-'alias' is used to give a variety of aliases for any given help entry.
+<c yellow>'alias'</c> is used to give a variety of aliases for any given help entry.
 
-Usage: alias             -- lists all current aliases.
-       alias +[ALIAS]    -- adds new alias.
-       alias -[ALIAS]    -- removes an alias (if present).
+<c green>Usage:</c> alias             -- lists all current aliases.
+       alias +<c cyan>[ALIAS]</c>    -- adds new alias.
+       alias -<c cyan>[ALIAS]</c>    -- removes an alias (if present).
 """
 admin = false
-builder = false
+builder = true
