@@ -1,6 +1,8 @@
 pub trait BooleanCheckExt {
     /// Value is considered 'true'?
     fn is_true(&self) -> bool;
+    /// Value is considered 'boolean'?
+    fn is_boolean(&self) -> bool;
 }
 
 impl BooleanCheckExt for &str {
@@ -11,6 +13,16 @@ impl BooleanCheckExt for &str {
             "set"  |
             "on"   => true,
             _      => false
+        }
+    }
+
+    fn is_boolean(&self) -> bool {
+        if self.is_true() { return true;}
+        match *self {
+            "false" |
+            "unset" |
+            "off"   => true,
+            _       => false
         }
     }
 }

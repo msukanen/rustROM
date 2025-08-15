@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, resume_game, tell_user, validate_builder, ClientState};
 
 pub struct AliasCommand;
 
@@ -16,10 +16,22 @@ impl Command for AliasCommand {
             resume_game!(ctx);
         }
 
+        // Display help entry.
         if ctx.args.starts_with('?') {
             let cmd = HelpCommand;
             return cmd.exec({ctx.args = "hedit-alias"; ctx}).await;
         }
+
+        // Add alias.
+        if ctx.args.starts_with('+') {
+
+        }
+        // Remove alias.
+        else if ctx.args.starts_with('-') {
+
+        }
+        // rerun command with '?'
+        else { rerun_with_help!(ctx, AliasCommand);}
 
         resume_game!(ctx);
     }

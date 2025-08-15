@@ -49,3 +49,14 @@ macro_rules! check_ro_field {
         }
     }};
 }
+
+/// Run given `$cmd` with `'?'` argument, which generally (should) bring up a help entry.
+#[macro_export]
+macro_rules! rerun_with_help {
+    ($ctx:ident, $cmd:ident) => {
+        {
+            let cmd = $cmd;
+            return cmd.exec($ctx).await;
+        }
+    };
+}

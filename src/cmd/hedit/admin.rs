@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use tokio::io::AsyncWriteExt;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, string::boolean::BooleanCheckExt, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, resume_game, string::boolean::BooleanCheckExt, tell_user, validate_builder, ClientState};
 
 pub struct AdminCommand;
 
@@ -19,6 +19,10 @@ impl Command for AdminCommand {
         if ctx.args.starts_with('?') {
             let cmd = HelpCommand;
             return cmd.exec({ctx.args = "hedit-admin"; ctx}).await;
+        }
+
+        if !ctx.args.is_boolean() {
+            rerun_with_help!(ctx, AdminCommand);
         }
 
         let mut g = ctx.player.write().await;
