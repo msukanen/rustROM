@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-//use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum PromptType {
@@ -13,7 +12,7 @@ pub enum PromptType {
 #[macro_export]
 macro_rules! tell_user {
     ($w:expr, $t:expr) => {
-        $w.write_all(crate::string::styling::format_color($t).as_bytes()).await.unwrap();
+        tokio::io::AsyncWriteExt::write_all($w, crate::string::styling::format_color($t).as_bytes()).await.unwrap();
     };
 
     ($w:expr, $fmt:literal, $($arg:tt)*) => {{

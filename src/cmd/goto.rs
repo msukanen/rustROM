@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use tokio::io::AsyncWriteExt;
 use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, do_in_current_room, resume_game, tell_user, util::direction::Direction, ClientState};
 
 pub struct GotoCommand;
@@ -52,7 +51,7 @@ fn goto_directions() -> String {r#"
 mod goto_tests {
     use std::{net::{IpAddr, Ipv4Addr}, str::FromStr, sync::Arc};
 
-    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
+    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
     use crate::{player::Player, world::{area::Area, room::Room, World}};
 

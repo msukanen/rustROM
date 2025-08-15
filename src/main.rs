@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 use clap::Parser;
 use once_cell::sync::OnceCell;
 use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, BufReader},
     net::TcpListener,
     sync::{broadcast, RwLock}
 };
@@ -142,7 +142,7 @@ async fn main() {
                 let p = w.prompts.get(&PromptType::Login).cloned().unwrap_or_else(|| PROMPT_LOGIN.to_string());
                 (g, p)
             };
-            tell_user!(writer, "{}\n\n{}", greeting, &login_prompt);
+            tell_user!(&mut writer, "{}\n\n{}", greeting, &login_prompt);
             let mut abrupt_dc = false;
 
             // This is the main loop for the client.
@@ -157,7 +157,7 @@ async fn main() {
                             log::error!("Error saving '{}'! {:?}", p.id(), e);
                         }
                         if !abrupt_dc {
-                            tell_user!(writer, "<c cyan>Goodbye! See you soon again!</c>\n");
+                            tell_user!(&mut writer, "<c cyan>Goodbye! See you soon again!</c>\n");
                         }
                     }
                     break;
@@ -188,11 +188,11 @@ async fn main() {
                         state = match state {
                             ClientState::EnteringName => {
                                 if input.is_empty() {
-                                    tell_user!(writer, &login_prompt);
+                                    tell_user!(&mut writer, &login_prompt);
                                     state
                                 } else {
                                     log::info!("Login attempt on '{}'…", input);
-                                    tell_user!(writer, get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1));
+                                    tell_user!(&mut writer, get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1));
                                     ClientState::EnteringPassword1 { name: input.to_string() }
                                 }
                             },
@@ -208,16 +208,16 @@ async fn main() {
                                             w.players.insert(addr.ip(), p.clone());
                                             (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), pr)
                                         };
-                                        tell_user!(writer, "{}\n\n{}", msg, pr);
+                                        tell_user!(&mut writer, "{}\n\n{}", msg, pr);
                                         ClientState::Playing
                                     },
                                     Err(LoadError::NoSuchSave) => {
-                                        tell_user!(writer, "{}", get_prompt!(world, PromptType::PasswordV, PROMPT_PASSWDV));
+                                        tell_user!(&mut writer, "{}", get_prompt!(world, PromptType::PasswordV, PROMPT_PASSWDV));
                                         ClientState::EnteringPasswordV { name, pw1: input }
                                     },
                                     Err(e) => {
                                         log::warn!("Failed login attempt for '{}': {:?}", name, e);
-                                        tell_user!(writer, "Invalid name and/or password.\n\n{}", get_prompt!(world, PromptType::Login, PROMPT_LOGIN));
+                                        tell_user!(&mut writer, "Invalid name and/or password.\n\n{}", get_prompt!(world, PromptType::Login, PROMPT_LOGIN));
                                         ClientState::EnteringName
                                     }
                                 }
@@ -232,7 +232,7 @@ async fn main() {
                                         let save_err = player.save().await;
                                         if save_err.is_ok() {
                                             let msg = {world.read().await.welcome_new.clone().unwrap_or_else(|| WELCOME_NEW.to_string())};
-                                            tell_user!(writer, "{}\n{}", msg, prompt);
+                                            tell_user!(&mut writer, "{}\n{}", msg, prompt);
                                             let p = Arc::new(RwLock::new(player));
                                             world.write().await.players.insert(addr.ip(), p.clone());
                                             p.write().await.erase_states(ClientState::Playing)
@@ -240,7 +240,7 @@ async fn main() {
                                             // Some strange error happened with save...
                                             // Notify user and "gracefully" disconnect them.
                                             log::error!("Fatal error during save attempt of player '{}'! {:?}", name, save_err);
-                                            tell_user!(writer, "\
+                                            tell_user!(&mut writer, "\
                                                     A server error occured during character creation!\n\
                                                     \n\
                                                     This could be due high server load or other reasons. \
@@ -249,13 +249,13 @@ async fn main() {
                                             break;
                                         }
                                     } else {
-                                        tell_user!(writer, "\
+                                        tell_user!(&mut writer, "\
                                                 Given password is either too weak or a variant of it has been found in HIBP!\n\
                                                 Please, choose a different password: ");
                                         ClientState::EnteringPassword1 { name }
                                     }
                                 } else {
-                                    tell_user!(writer, "Passwords do not match.\n\nPlease choose a password: ");
+                                    tell_user!(&mut writer, "Passwords do not match.\n\nPlease choose a password: ");
                                     ClientState::EnteringPassword1 { name }
                                 }
                             },
@@ -281,7 +281,7 @@ async fn main() {
                                     state = ClientState::Logout;
                                     continue;
                                 }
-                                tell_user!(writer, prompt);
+                                tell_user!(&mut writer, prompt);
                                 state
                             },
                         };
@@ -294,7 +294,7 @@ async fn main() {
                                 // If we receive a message from the broadcast channel, write it to our client.
                                 let w = world.read().await;
                                 if let Some(p) = w.players.get(&addr.ip()) {
-                                    tell_user!(writer, "{}{}", msg, p.read().await.prompt().await);
+                                    tell_user!(&mut writer, "{}{}", msg, p.read().await.prompt().await);
                                 }
                             }
                         }

@@ -2,14 +2,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::{io::AsyncWriteExt, sync::RwLock};
-use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, traits::Description, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
+use tokio::sync::RwLock;
+use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
 
 pub struct ReditCommand;
-
-const NO_LORE_OR_ADMIN_ONLY: &str = "Well, unfortunately there is no recorded lore about that particular subject, as far as we know…\n";
 
 mod player_redit_serialization {
     use std::sync::Arc;

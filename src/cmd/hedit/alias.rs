@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use tokio::io::AsyncWriteExt;
 use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, resume_game, tell_user, validate_builder, ClientState};
 
 pub struct AliasCommand;
@@ -24,7 +23,11 @@ impl Command for AliasCommand {
 
         // Add alias.
         if ctx.args.starts_with('+') {
-
+            let words = ctx.args[1..].split(' ')
+                .map(|w| w.trim())
+                .filter(|v| !v.is_empty() && v.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_'))
+                .collect::<Vec<&str>>();
+            
         }
         // Remove alias.
         else if ctx.args.starts_with('-') {

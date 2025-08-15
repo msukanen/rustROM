@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::{HashMap, HashSet}, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
@@ -18,7 +18,7 @@ pub struct Help {
     /// Free form title of the help entry.
     pub title: String,
     /// Keywords/aliases.
-    pub aliases: Vec<String>,
+    pub aliases: HashSet<String>,
     pub description: String,
     #[serde(default)]
     pub admin: bool,
@@ -71,7 +71,7 @@ impl Help {
         Self {
             id: id.into(),
             title: "".into(),
-            aliases: vec![id.into()],
+            aliases: { let mut h = HashSet::new(); h.insert(id.into()); h },
             description: "".into(),
             admin: false,
             builder: false,

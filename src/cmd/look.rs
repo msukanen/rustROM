@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use tokio::io::AsyncWriteExt;
 use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, ClientState};
 
 pub struct LookCommand;

@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use tokio::io::AsyncWriteExt;
 use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, ClientState};
 
 pub struct HelpCommand;
@@ -10,7 +9,22 @@ const NO_LORE_OR_ADMIN_ONLY: &str = "Well, unfortunately there is no recorded lo
 impl Command for HelpCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if let Some(help_entry) = ctx.world.read().await.help.get(ctx.args) {
-            if !help_entry.read().await.admin || ctx.player.read().await.access.is_admin() {
+            let (admin_only, builder_only) = {
+                let g = help_entry.read().await;
+                let a = g.admin;
+                let b = g.builder;
+                (a,b)
+            };
+            let (is_admin, is_builder) = {
+                let g = ctx.player.read().await;
+                let a = g.access.is_admin();
+                let b = g.access.is_builder();
+                (a,b)
+            };
+            
+            if (!admin_only || is_admin) &&
+               (!builder_only || is_builder)
+            {
                 tell_user!(ctx.writer, help_entry.read().await.to_string());
                 resume_game!(ctx);
             }
