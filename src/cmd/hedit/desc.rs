@@ -1,7 +1,7 @@
 use std::{num::{IntErrorKind, NonZeroU32, NonZeroUsize, ParseIntError}, usize};
 
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, resume_game, string::styling::RULER_LINE, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::ERROR_SAVING_HELP, Command, CommandCtx}, resume_game, string::styling::RULER_LINE, tell_user, traits::save::DoesSave, validate_builder, ClientState};
 
 pub struct DescCommand;
 pub const MAX_HELP_DESCRIPTION_LINES: usize = 21; // a modest number, sort of fits on a tiny 80x24 terminal thingydoodah. Takes header, title, etc. into account.
@@ -49,8 +49,11 @@ impl Command for DescCommand {
                 let mut g = ctx.player.write().await;
                 let g = g.hedit.as_mut().unwrap();
                 g.dirty = true;
-                let mut g = g.lock.write().await;
-                g.description = insert_nth_line(&g.description, lno, if args.len() < 2 {""} else {args[1]});
+                let mut h = g.lock.write().await;
+                h.description = insert_nth_line(&h.description, lno, if args.len() < 2 {""} else {args[1]});
+                if let Err(_) = h.save().await {
+                    tell_user!(ctx.writer, ERROR_SAVING_HELP);
+                }
             }
             if verbose {
                 let cmd = DescCommand;
@@ -72,6 +75,9 @@ impl Command for DescCommand {
                     if g.dirty {
                         changed = true;
                         h.description = desc;
+                        if let Err(_) = h.save().await {
+                            tell_user!(ctx.writer, ERROR_SAVING_HELP);
+                        }
                     } else {
                         tell_user!(ctx.writer, "Nothing to change - not that many lines to begin with.\n");
                     }
@@ -96,6 +102,9 @@ impl Command for DescCommand {
                 g.dirty = true;
                 let mut h = g.lock.write().await;
                 h.description = format!("{}\n", &args[1..]);
+                if let Err(_) = h.save().await {
+                    tell_user!(ctx.writer, ERROR_SAVING_HELP);
+                }
             }
             if verbose {
                 let cmd = DescCommand;
@@ -110,8 +119,11 @@ impl Command for DescCommand {
                 let mut g = ctx.player.write().await;
                 let g = g.hedit.as_mut().unwrap();
                 g.dirty = true;
-                let mut g = g.lock.write().await;
-                g.description.push_str(&format!("{}\n", args));
+                let mut h = g.lock.write().await;
+                h.description.push_str(&format!("{}\n", args));
+                if let Err(_) = h.save().await {
+                    tell_user!(ctx.writer, ERROR_SAVING_HELP);
+                }
             }
             if verbose {
                 let cmd = DescCommand;
