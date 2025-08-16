@@ -103,9 +103,18 @@ impl Help {
 
         for file in res {
             if file.name.ends_with(".toml") {
+                let filepath = format!("{}/{}", *HELP_PATH, file.name);
+                match tokio::fs::try_exists(&filepath).await {
+                    Ok(true) => {
+                        log::info!("Skipping download of '{}'. Corresponding entry '{}' already exists.", file.download_url, filepath);
+                        continue;
+                    }
+                    _ => {}
+                }
+
                 log::info!("  → downloading {}…", file.name);
                 let content = client.get(&file.download_url).send().await?.text().await?;
-                #[cfg(test)]{
+                #[cfg(feature = "ittest")]{
                     log::debug!("{}", content);
                 }
                 //#[cfg(not(test))]
@@ -113,6 +122,9 @@ impl Help {
                     let help = toml::from_str::<Help>(&content);
                     if let Ok(mut help) = help {
                         help.save().await?;
+                        log::info!("  ✓ help file '{}' from '{}' stored.", filepath, file.download_url);
+                    } else {
+                        log::info!("  ✗ file '{}' was not recognized as a help entry. Skipping.", file.download_url);
                     }
                 }
             }
@@ -163,17 +175,20 @@ impl DoesSave for Help {
             return Err(e.into());
         }
         tokio::fs::remove_file(&tmp_filename).await?;// this *should* succeed, but who knows...
+
         Ok(())
     }
 }
 
 #[cfg(test)]
 mod help_tests {
+    use crate::DATA;
     use super::Help;
 
     #[tokio::test]
     async fn mock_github_fetch() {
         let _ = env_logger::try_init();
+        let _ = DATA.set("./data".into());
         let err = Help::bootstrap(None).await;
         if let Err(e) = err {
             log::error!("ERR {}", e);
