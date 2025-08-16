@@ -9,6 +9,7 @@ use walkdir::WalkDir;
 use crate::{traits::{save::{DoesSave, SaveError}, Description}, DATA_PATH};
 
 static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *DATA_PATH)));
+static GITHUB_HELP_REPO: &str = "https://api.github.com/repos/msukanen/rustROM-help/contents";
 
 /// Generic help/manual/doc struct.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -43,7 +44,9 @@ impl From<toml::de::Error> for HelpError { fn from(value: toml::de::Error) -> Se
 
 impl Help {
     /// Load all help files into hashmap, properly aliased too while at it.
-    pub(crate) async fn load_all() -> Result<(HashMap<String, Arc<RwLock<Help>>>, HashMap<String, String>), HelpError> {
+    pub(crate) async fn load_all(bootstrap_url: &Option<String>)
+    -> Result<(HashMap<String, Arc<RwLock<Help>>>, HashMap<String, String>), HelpError>
+    {
         let path = PathBuf::from_str((*HELP_PATH).as_str()).unwrap();
         let mut helps = HashMap::new();
         let mut aliases = HashMap::new();
@@ -79,6 +82,45 @@ impl Help {
             builder: false,
         }
     }
+
+    /// Fetch the default help files from a GitHub repo.
+    async fn bootstrap(url: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+        log::info!("Fetching default help files from GitHub…");
+
+        #[derive(Deserialize)]
+        struct GitHubFile {
+            name: String,
+            download_url: String,
+        }
+
+        let client = reqwest::Client::builder().user_agent("RustROM MUD").build()?;
+        let repo_url = url.unwrap_or(GITHUB_HELP_REPO);
+        
+        // get list of files...
+        let res = client.get(repo_url).send().await?;
+        log::debug!("response {:?}", res);
+        let res = res.json::<Vec<GitHubFile>>().await?;
+
+        for file in res {
+            if file.name.ends_with(".toml") {
+                log::info!("  → downloading {}…", file.name);
+                let content = client.get(&file.download_url).send().await?.text().await?;
+                #[cfg(test)]{
+                    log::debug!("{}", content);
+                }
+                //#[cfg(not(test))]
+                {
+                    let help = toml::from_str::<Help>(&content);
+                    if let Ok(mut help) = help {
+                        help.save().await?;
+                    }
+                }
+            }
+        }
+
+        log::info!("Help files downloaded successfully.");
+        Ok(())
+    }
 }
 
 impl std::fmt::Display for Help {
@@ -96,6 +138,9 @@ impl std::fmt::Display for Help {
 impl DoesSave for Help {
     async fn save(&mut self) -> Result<(), SaveError> {
         if self.id().is_empty() { return Err(SaveError::NoIdProvided); }
+
+        // Create help directory if such does not exist...
+        let _ = tokio::fs::create_dir_all((*HELP_PATH).to_string()).await?;
 
         let filename = format!("{}/{}.toml", *HELP_PATH, self.id());
         let tmp_filename = format!("{}.tmp", filename);
@@ -119,5 +164,19 @@ impl DoesSave for Help {
         }
         tokio::fs::remove_file(&tmp_filename).await?;// this *should* succeed, but who knows...
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod help_tests {
+    use super::Help;
+
+    #[tokio::test]
+    async fn mock_github_fetch() {
+        let _ = env_logger::try_init();
+        let err = Help::bootstrap(None).await;
+        if let Err(e) = err {
+            log::error!("ERR {}", e);
+        }
     }
 }

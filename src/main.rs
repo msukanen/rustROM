@@ -52,14 +52,11 @@ Usage:  RUSTROM_DATA=/path/to/data rustrom [OPTIONS]
         "
 )]
 struct CmdLineArgs {
-    #[arg(short, long, default_value = "8080")]
-    port: u32,
-    #[arg(long, default_value = "0.0.0.0")]
-    host_listen_addr: String,
-    #[arg(long, default_value = "rustrom")]
-    world: String,
-    #[arg(long, env = "RUSTROM_DATA", default_value = "data")]
-    data_path: String,
+    #[arg(short, long, default_value = "8080")]                 port: u32,
+    #[arg(long, default_value = "0.0.0.0")]                     host_listen_addr: String,
+    #[arg(long, default_value = "rustrom")]                     world: String,
+    #[arg(long, env = "RUSTROM_DATA", default_value = "data")]  data_path: String,
+    #[arg(long)]                                                bootstrap_url: Option<String>,
 }
 
 #[tokio::main]
@@ -102,7 +99,7 @@ async fn main() {
     }
 
     // Load help files ...
-    let (help_core, help_aliases) = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
+    let (help_core, help_aliases) = Help::load_all(&args.bootstrap_url).await.expect("Oopsie - we're helpless - no help available?!");
     world.write().await.help = help_core;
     world.write().await.help_aliased = help_aliases;
 
