@@ -9,7 +9,7 @@
 //! cause e.g. saved locations in player saves to be invalid.
 //! 
 //! If one or the other file is missing… Bad Things™ will happen!
-use std::{collections::HashMap, fs::read_to_string, net::IpAddr, path::PathBuf, rc::Weak, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fs::read_to_string, net::IpAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -49,10 +49,8 @@ impl WorldEntrance {
 /// The World itself…
 #[derive(Debug, Deserialize, Serialize)]
 pub struct World {
-    #[serde(default)]
-    uptime: u64,
-    #[serde(skip)]
-    filename: String,
+    #[serde(default)] uptime: u64,
+    #[serde(skip)] filename: String,
     title: String,
     description: String,
     owner: Contact,
@@ -65,12 +63,10 @@ pub struct World {
     pub areas: HashMap<String, Arc<RwLock<Area>>>,
     pub root: WorldEntrance,
     pub prompts: HashMap<PromptType, String>,
-    #[serde(skip, default)]
-    pub players: HashMap<IpAddr, Arc<RwLock<Player>>>,
-    #[serde(skip, default)]
-    pub rooms: HashMap<String, Arc<RwLock<Room>>>,
-    #[serde(skip, default)]
-    pub help: HashMap<String, Arc<RwLock<Help>>>,
+    #[serde(skip, default)] pub players: HashMap<IpAddr, Arc<RwLock<Player>>>,
+    #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
+    #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
+    #[serde(skip, default)] pub help_aliased: HashMap<String, Arc<RwLock<Help>>>,
 }
 
 /// Thread-shared world type.
@@ -132,6 +128,7 @@ impl World {
         players: HashMap::new(),
         rooms: HashMap::new(),
         help: HashMap::new(),
+        help_aliased: HashMap::new(),
     }}
 
     /// Bootstrap MUD from grounds up.
