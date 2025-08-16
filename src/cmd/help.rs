@@ -8,8 +8,18 @@ const NO_LORE_OR_ADMIN_ONLY: &str = "Well, unfortunately there is no recorded lo
 #[async_trait]
 impl Command for HelpCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+        let (quick, args) = {
+            let args = ctx.args.splitn(2, ' ').collect::<Vec<&str>>();
+            let quick = args[0] == "q";
+            if quick && args.len() > 1 {
+                (quick, args[1])
+            } else {
+                (false, ctx.args)
+            }
+        };
+
         let w = ctx.world.read().await;
-        if let Some(help_entry) = w.help_aliased.get(ctx.args) {
+        if let Some(help_entry) = w.help_aliased.get(args) {
             let help_entry = w.help.get(help_entry).unwrap();
             let (admin_only, builder_only) = {
                 let g = help_entry.read().await;
@@ -27,7 +37,11 @@ impl Command for HelpCommand {
             if (!admin_only || is_admin) &&
                (!builder_only || is_builder)
             {
-                tell_user!(ctx.writer, help_entry.read().await.to_string());
+                if quick {
+                    tell_user!(ctx.writer, "{}\n", help_entry.read().await.description);
+                } else {
+                    tell_user!(ctx.writer, help_entry.read().await.to_string());
+                }
                 resume_game!(ctx);
             }
         }
