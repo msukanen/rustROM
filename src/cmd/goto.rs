@@ -65,23 +65,25 @@ mod goto_tests {
         let a = Arc::new(RwLock::new(Area::blank()));
         w.write().await.areas.insert("root".to_string(), a);
         {
-            let w = w.read().await;
-            let mut a = w.areas.get("root").unwrap().write().await;
+            let mut w = w.write().await;
+            //let mut a = w.areas.get_mut("root").unwrap().write().await;
             
             let r = Arc::new(RwLock::new(Room::blank(Some("void"))));
-            r.write().await.description = "Alpha".to_string();
+            r.write().await.description = "Alpha".into();
             r.write().await.exits.insert(Direction::East, "clearing".into());
-            a.rooms.insert("void".to_string(), r);
+            //a.rooms.insert("void".into(), r.clone());
+            w.rooms.insert("void".into(), r.clone());
             
             let r = Arc::new(RwLock::new(Room::blank(Some("clearing"))));
             r.write().await.description = "Omega".to_string();
             r.write().await.exits.insert(Direction::West, "void".into());
-            a.rooms.insert("clearing".to_string(), r);
+            w.rooms.insert("clearing".into(), r.clone());
+            //a.rooms.insert("clearing".to_string(), r);
         }
         log::info!("World staged.");
 
         let p = Arc::new(RwLock::new(Player::new("ani")));
-        p.write().await.location = "void".to_string();
+        p.write().await.location = "void".into();
 
         let ip = IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap());
         w.write().await.players.insert(ip.clone(), p);
@@ -113,6 +115,7 @@ mod goto_tests {
             let mut server_reader = BufReader::new(server_reader);
             let mut line = String::new();
             let player_arc = w.read().await.players.get(&addr.ip()).unwrap().clone();
+            player_arc.write().await.push_state(ClientState::Playing);
 
             // Handle "look" command
             server_reader.read_line(&mut line).await.unwrap();

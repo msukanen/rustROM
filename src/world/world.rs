@@ -66,7 +66,7 @@ pub struct World {
     #[serde(skip, default)] pub players: HashMap<IpAddr, Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
     #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
-    #[serde(skip, default)] pub help_aliased: HashMap<String, Arc<RwLock<Help>>>,
+    #[serde(skip, default)] pub help_aliased: HashMap<String, String>,
 }
 
 /// Thread-shared world type.
@@ -222,12 +222,14 @@ mod world_tests {
     use super::*;
     use std::time::Duration;
     use log::debug;
-    use crate::game_loop::game_loop;
+    use crate::{game_loop::game_loop, DATA};
 
     /// Let's see how the threads react to the core world being super busy with global locks.
     #[tokio::test]
+    #[cfg(feature = "ittest")]
     async fn busy_world() {
         let _ = env_logger::try_init();
+        let _ = DATA.set("./data".into());
         let world = Arc::new(RwLock::new(World::new("rustrom").await.expect("ERROR: world dead or in fire?!")));
 
         tokio::spawn(game_loop(world.clone()));

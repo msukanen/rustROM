@@ -8,7 +8,9 @@ const NO_LORE_OR_ADMIN_ONLY: &str = "Well, unfortunately there is no recorded lo
 #[async_trait]
 impl Command for HelpCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        if let Some(help_entry) = ctx.world.read().await.help.get(ctx.args) {
+        let w = ctx.world.read().await;
+        if let Some(help_entry) = w.help_aliased.get(ctx.args) {
+            let help_entry = w.help.get(help_entry).unwrap();
             let (admin_only, builder_only) = {
                 let g = help_entry.read().await;
                 let a = g.admin;

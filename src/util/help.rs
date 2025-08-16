@@ -43,10 +43,10 @@ impl From<toml::de::Error> for HelpError { fn from(value: toml::de::Error) -> Se
 
 impl Help {
     /// Load all help files into hashmap, properly aliased too while at it.
-    pub(crate) async fn load_all() -> Result<HashMap<String, Arc<RwLock<Help>>>, HelpError> {
+    pub(crate) async fn load_all() -> Result<(HashMap<String, Arc<RwLock<Help>>>, HashMap<String, String>), HelpError> {
         let path = PathBuf::from_str((*HELP_PATH).as_str()).unwrap();
         let mut helps = HashMap::new();
-        tokio::fs::create_dir_all(&path).await?;
+        let mut aliases = HashMap::new();
         
         for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
             let path = entry.path();
@@ -57,13 +57,15 @@ impl Help {
                 let content = tokio::fs::read_to_string(&path).await?;
                 let help: Help = toml::from_str(&content)?;
                 let help = Arc::new(RwLock::new(help));
+                let primary_id = help.read().await.id.clone();
+                helps.insert(primary_id.clone(), help.clone());
                 for alias in &help.read().await.aliases {
-                    helps.insert(alias.clone(), help.clone());
+                    aliases.insert(alias.clone(), primary_id.clone());
                 }
             }
         }
 
-        Ok(helps)
+        Ok((helps, aliases))
     }
 
     /// Generate a brand new shiny help entry.

@@ -124,14 +124,14 @@ mod ansi_tests {
     use super::*;
     #[test]
     fn tagging() {
+        let _ = env_logger::try_init();
         let input_string = "This is <c yellow>Yellow text <bg cyan>on cyan bg</bg> which continues as yellow</c>, until it doesn't.";
         
         println!("--- Input String ---");
-        println!("{}", input_string);
+        log::debug!("{}", input_string);
         
         println!("\n--- Formatted Output ---");
         let formatted = format_color(input_string);
-        println!("{}", formatted);
-        panic!("flush");
+        log::debug!("{}", formatted);
     }
 }

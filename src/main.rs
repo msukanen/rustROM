@@ -35,8 +35,11 @@ impl Deref for ImmutablePath {
         DATA.get().expect("OOF")
     }
 }
+#[cfg(test)]
+pub(crate) static DATA: OnceCell<String> = OnceCell::new();
+#[cfg(not(test))]
 static DATA: OnceCell<String> = OnceCell::new();
-pub (crate) static DATA_PATH: ImmutablePath = ImmutablePath;
+pub(crate) static DATA_PATH: ImmutablePath = ImmutablePath;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -99,7 +102,9 @@ async fn main() {
     }
 
     // Load help files ...
-    world.write().await.help = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
+    let (help_core, help_aliases) = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
+    world.write().await.help = help_core;
+    world.write().await.help_aliased = help_aliases;
 
     tokio::spawn(game_loop(world.clone()));
 

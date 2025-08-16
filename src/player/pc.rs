@@ -260,6 +260,8 @@ impl Description for Player {
 
 #[cfg(test)]
 mod savefile_tests {
+    use crate::DATA;
+
     use super::*;
 
     const OK_PASSWORD: &str = "new passw0rd, A very intricate thing";
@@ -300,8 +302,12 @@ mod savefile_tests {
     #[tokio::test]
     async fn load_savefile_wrong_pwd() {
         let _ = env_logger::try_init();
+        let _ = DATA.set("./data".into());
         let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
         let savefile = Player::load("dummy", FAIL_PASSWD, &addr).await;
+        if let Err(e) = &savefile {
+            log::debug!("Err({:?})", e);
+        }
         assert!(savefile.is_err());
     }
 }

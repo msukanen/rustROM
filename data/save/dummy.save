@@ -1,1 +1,1 @@
-{"name":"dummy","passwd":"$argon2id$v=19$m=19456,t=2,p=1$6tYR8N2lsfE7Y2e7nFKmLQ$UJrXxwG7WfGzwkkxTf241rU+Xn2IyM67TV0NUUx2S2I","gender":"Indeterminate","access":"Dummy","location":"root"}
+{"name":"dummy","description":"Dummy!","passwd":"$argon2id$v=19$m=19456,t=2,p=1$+R4XsjV/j0F9LH6Wuz1DUQ$ZcI9+4GijpAddFbx3f2zzpzq+vDq1thRG+4wqFoQGyQ","gender":"Indeterminate","access":"Dummy","location":"root","hp":{"HP":{"current":100.0,"max":100.0}},"mp":{"MP":{"current":100.0,"max":100.0,"drain":0.0}},"hedit":null,"redit":null}
