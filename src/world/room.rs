@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{traits::Description, util::direction::Direction, world::area::Area, DATA_PATH};
+use crate::{player::Player, traits::Description, util::direction::Direction, world::area::Area, DATA_PATH};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 
@@ -66,6 +66,8 @@ pub struct Room {
     pub exits: HashMap<Direction, String>,
     #[serde(skip)]
     pub parent: Weak<RwLock<Area>>,
+    #[serde(skip, default)]
+    pub players: HashMap<String, Weak<RwLock<Player>>>,
 }
 
 impl Room {
@@ -116,6 +118,7 @@ impl Room {
         description: "".into(),
         exits: HashMap::new(),
         parent: Weak::new(),
+        players: HashMap::new(),
     }}
 }
 

@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{cmd::CommandCtx, mob::core::IsMob, traits::Description, util::{help::Help, ClientState}};
+use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, traits::Description, util::{help::Help, ClientState}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -203,16 +203,36 @@ async fn main() {
                             ClientState::EnteringPassword1{ name } => {
                                 match Player::load(&name, &input, &addr).await {
                                     Ok(mut save) => {
+                                        let mut translocated = false;
                                         log::info!("'{}' successfully logged in.", name);
-                                        let (msg, pr) = {
-                                            let mut w = world.write().await;
+                                        let (msg, prompt) = {
                                             save.erase_states(ClientState::Playing);
                                             let pr = save.prompt().await;
                                             let p = Arc::new(RwLock::new(save));
+
+                                            // Relocate player in case their saved location has evaporated...
+                                            let location = p.read().await.location.clone();
+                                            if !world.read().await.rooms.contains_key(&location) {
+                                                let root_room = world.read().await.root.room.clone();
+                                                let pg = p.read().await;
+                                                log::warn!("Player '{}' location '{}' invalid. Translocating to safety of '{}'.", pg.id(), location, root_room);
+                                                let source = pg.location.clone();
+                                                drop(pg);
+                                                let _ = translocate(&world, Some(source), root_room, p.clone()).await;
+                                                translocated = true;
+                                            }
+
+                                            let mut w = world.write().await;
                                             w.players.insert(addr.ip(), p.clone());
                                             (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), pr)
                                         };
-                                        tell_user!(&mut writer, "{}\n\n{}", msg, pr);
+                                        tell_user!(&mut writer, "{}\n\n{}{}",
+                                            msg,
+                                            if translocated {
+                                                format!("You notice something... odd - you're not where you were before... But such happens, apparently.\n\n")
+                                            } else {"".into()},
+                                            prompt,
+                                        );
                                         ClientState::Playing
                                     },
                                     Err(LoadError::NoSuchSave) => {
@@ -233,6 +253,7 @@ async fn main() {
                                         log::info!("New save being created for '{}'…", name);
                                         let prompt = get_prompt!(world, PromptType::Playing, PROMPT_PLAYING);
                                         player.set_access(Access::default());
+                                        player.location = world.read().await.root.room.clone();
                                         let save_err = player.save().await;
                                         if save_err.is_ok() {
                                             let msg = {world.read().await.welcome_new.clone().unwrap_or_else(|| WELCOME_NEW.to_string())};

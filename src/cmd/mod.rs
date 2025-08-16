@@ -11,7 +11,7 @@ mod set;
 mod look;
 mod dig;
 mod dmg;
-mod translocate;
+pub(crate) mod translocate;
 mod goto;
 mod help;
 mod r#return;
