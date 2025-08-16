@@ -68,14 +68,12 @@ mod goto_tests {
             let w = w.read().await;
             let mut a = w.areas.get("root").unwrap().write().await;
             
-            let r = Arc::new(RwLock::new(Room::blank()));
-            r.write().await.id = "void".to_string();
+            let r = Arc::new(RwLock::new(Room::blank(Some("void"))));
             r.write().await.description = "Alpha".to_string();
             r.write().await.exits.insert(Direction::East, "clearing".into());
             a.rooms.insert("void".to_string(), r);
             
-            let r = Arc::new(RwLock::new(Room::blank()));
-            r.write().await.id = "clearing".to_string();
+            let r = Arc::new(RwLock::new(Room::blank(Some("clearing"))));
             r.write().await.description = "Omega".to_string();
             r.write().await.exits.insert(Direction::West, "void".into());
             a.rooms.insert("clearing".to_string(), r);

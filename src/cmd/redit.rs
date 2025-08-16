@@ -1,45 +1,14 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
 use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
 
 pub struct ReditCommand;
 
-mod player_redit_serialization {
-    use std::sync::Arc;
-
-    use serde::{Deserialize, Deserializer, Serializer};
-    use tokio::sync::RwLock;
-
-    use crate::world::room::Room;
-
-    pub fn serialize<S: Serializer>(value: &Arc<RwLock<Room>>, serializer: S) -> Result<S::Ok, S::Error>
-    where S: Serializer,
-    {
-        tokio::task::block_in_place(|| {
-            let id = &value.blocking_read().id;
-            serializer.serialize_str(&id)
-        })
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<Arc<RwLock<Room>>, D::Error>
-    where D: Deserializer<'de>,
-    {
-        let temp = String::deserialize(deserializer)?;
-        let mut dummy = Room::blank();
-        dummy.id = temp;
-        Ok(Arc::new(RwLock::new(dummy)))
-    }
-}
-
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ReditState {
-    #[serde(with = "player_redit_serialization")]
-    pub lock: Arc<RwLock<Room>>,
+    pub entry: Room,
     pub dirty: bool,
 }
 
@@ -59,16 +28,12 @@ impl Command for ReditCommand {
         if g.redit.is_none() {
             if let Some(existing_entry) = ctx.world.read().await.rooms.get(ctx.args) {
                 g.redit = Some(ReditState {
-                    lock: existing_entry.clone(),
+                    entry: existing_entry.read().await.clone(),
                     dirty: false
                 });
             } else {
                 g.redit = Some(ReditState {
-                    lock: Arc::new(RwLock::new({
-                        let mut room = Room::blank();
-                        room.id = ctx.args.into();
-                        room
-                    })),
+                    entry: Room::blank(Some(ctx.args)),
                     dirty: true
                 });
             }

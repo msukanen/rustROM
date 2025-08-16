@@ -58,7 +58,7 @@ pub mod area_room_serialization {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Room {
     pub(crate) id: String,
     title: String,
@@ -110,8 +110,8 @@ impl Room {
     }
 
     /// Get an entirely blank slate.
-    pub(crate) fn blank() -> Self { Self {
-        id: "".into(),
+    pub(crate) fn blank(id: Option<&str>) -> Self { Self {
+        id: (if id.is_some() { id.unwrap() } else {""}).into(),
         title: "".into(),
         description: "".into(),
         exits: HashMap::new(),

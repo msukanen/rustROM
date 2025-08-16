@@ -70,8 +70,7 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
 async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str) -> bool {
     let p = ctx.player.read().await;
     let curr_id = p.location.clone();
-    let mut room = Room::blank();
-    room.id = id.into();
+    let mut room = Room::blank(Some(id));
     room.exits.insert(dir.opposite(), curr_id.clone());
     let lock = Arc::new(RwLock::new(room));
     let mut w = ctx.world.write().await;
