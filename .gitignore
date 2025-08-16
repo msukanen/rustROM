@@ -15,3 +15,5 @@ target
 *.save
 !.vscode/settings.json
 .vscode
+# data/help is rustROM-help submodule - ignore
+data/help
