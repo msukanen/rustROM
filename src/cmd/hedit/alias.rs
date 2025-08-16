@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::{HelpCommand, ERROR_SAVING_HELP}, Command, CommandCtx}, resume_game, tell_user, traits::save::DoesSave, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, validate_builder, ClientState};
 
 pub struct AliasCommand;
 
@@ -10,8 +10,8 @@ impl Command for AliasCommand {
 
         if ctx.args.is_empty() {
             let g = ctx.player.read().await;
-            let g = g.hedit.as_ref().unwrap().lock.read().await;
-            tell_user!(ctx.writer, "Alias{}: {:?}\n", if g.aliases.len() > 1 {"es"} else {""}, g.aliases);
+            let ed = &g.hedit.as_ref().unwrap().entry;
+            tell_user!(ctx.writer, "Alias{}: {:?}\n", if ed.aliases.len() > 1 {"es"} else {""}, ed.aliases);
             resume_game!(ctx);
         }
 
@@ -30,9 +30,8 @@ impl Command for AliasCommand {
                 .filter(|v| v.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_' || c == '+'))
                 .collect::<Vec<&str>>();
         let mut g = ctx.player.write().await;
-        let g = g.hedit.as_mut().unwrap();
-        let mut h = g.lock.write().await;
-        let orig_aliases = h.aliases.clone();
+        let ed = g.hedit.as_mut().unwrap();
+        let orig_aliases = ed.entry.aliases.clone();
         let mut req_change = orig_aliases.clone();
 
         for part in parts {
@@ -40,8 +39,8 @@ impl Command for AliasCommand {
                 req_change.insert(part[1..].into());
             }
             else if part.starts_with('-') {
-                if h.id == &part[1..] {
-                    tell_user!(ctx.writer, "<c red>Warning!</c> Help entry's primary ID '{}' cannot be unaliased!\n", h.id);
+                if ed.entry.id == &part[1..] {
+                    tell_user!(ctx.writer, "<c red>Warning!</c> Help entry's primary ID '{}' cannot be unaliased!\n", ed.entry.id);
                 } else {
                     req_change.remove(&part[1..]);
                 }
@@ -54,8 +53,8 @@ impl Command for AliasCommand {
         let net_add: Vec<_> = req_change.difference(&orig_aliases).cloned().collect();
         let net_rem: Vec<_> = orig_aliases.difference(&req_change).cloned().collect();
         if !net_add.is_empty() || !net_rem.is_empty() {
-            g.dirty = true;
-            h.aliases = req_change;
+            ed.dirty = true;
+            ed.entry.aliases = req_change;
         }
 
         if !net_add.is_empty() {
@@ -65,10 +64,6 @@ impl Command for AliasCommand {
             tell_user!(ctx.writer, "Removed alias{}: {:?}\n", if net_rem.len() == 1 {""} else {"es"}, net_rem);
         }
         
-        if let Err(_) = h.save().await {
-            tell_user!(ctx.writer, ERROR_SAVING_HELP);
-        }
-
         resume_game!(ctx);
     }
 }

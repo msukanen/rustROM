@@ -11,7 +11,7 @@ use crate::{traits::{save::{DoesSave, SaveError}, Description}, DATA_PATH};
 static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *DATA_PATH)));
 
 /// Generic help/manual/doc struct.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Help {
     /// Stem name, etc.
     pub id: String,
@@ -94,17 +94,28 @@ impl std::fmt::Display for Help {
 impl DoesSave for Help {
     async fn save(&mut self) -> Result<(), SaveError> {
         if self.id().is_empty() { return Err(SaveError::NoIdProvided); }
-        let path = PathBuf::from_str(&format!("{}/{}.toml", *HELP_PATH, self.id())).unwrap();
+
+        let filename = format!("{}/{}.toml", *HELP_PATH, self.id());
+        let tmp_filename = format!("{}.tmp", filename);
+        let path = PathBuf::from_str(&tmp_filename).unwrap();
+        
         let contents = toml::to_string_pretty(&self);
         if let Err(e) = contents {
             log::error!("TOML format error with '{}': {:?}", self.id(), e);
             return Err(e.into());
         }
+        // Save the .tmp file first...
         let err = tokio::fs::write(path, contents.unwrap()).await;
         if let Err(e) = err {
             log::error!("File error with '{}': {:?}", self.id(), e);
             return Err(e.into());
         }
+        // Copy .tmp over (potentially existing) original...
+        if let Err(e) = tokio::fs::copy(&tmp_filename, &filename).await {
+            log::error!("FATAL ERROR - cannot copy temporary file '{}' over '{}': {:?}", tmp_filename, filename, e);
+            return Err(e.into());
+        }
+        tokio::fs::remove_file(&tmp_filename).await?;// this *should* succeed, but who knows...
         Ok(())
     }
 }

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::{HelpCommand, ERROR_SAVING_HELP}, Command, CommandCtx}, rerun_with_help, resume_game, string::boolean::BooleanCheckExt, tell_user, traits::save::DoesSave, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, resume_game, string::boolean::BooleanCheckExt, tell_user, validate_builder, ClientState};
 
 pub struct BuilderCommand;
 
@@ -9,9 +9,7 @@ impl Command for BuilderCommand {
         validate_builder!(ctx);
 
         if ctx.args.is_empty() {
-            let g = ctx.player.read().await;
-            let g = g.hedit.as_ref().unwrap().lock.read().await;
-            tell_user!(ctx.writer, "Builder-only: {}\n", g.builder);
+            tell_user!(ctx.writer, "Builder-only: {}\n", ctx.player.read().await.hedit.as_ref().unwrap().entry.builder);
             resume_game!(ctx);
         }
 
@@ -25,14 +23,10 @@ impl Command for BuilderCommand {
         }
 
         let mut g = ctx.player.write().await;
-        let g = g.hedit.as_mut().unwrap();
-        g.dirty = true;
-        let mut h = g.lock.write().await;
-        h.builder = ctx.args.is_true();
-        tell_user!(ctx.writer, "Builder flag is now {}.\n", if h.builder {"set"} else {"unset"});
-        if let Err(_) = h.save().await {
-            tell_user!(ctx.writer, ERROR_SAVING_HELP);
-        }
+        let ed = g.hedit.as_mut().unwrap();
+        ed.dirty = true;
+        ed.entry.builder = ctx.args.is_true();
+        tell_user!(ctx.writer, "Builder flag is now {}.\n", if ed.entry.builder {"set"} else {"unset"});
 
         resume_game!(ctx);
     }

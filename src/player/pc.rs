@@ -232,16 +232,12 @@ impl IsMob for Player {
             ClientState::Playing => format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current()),
             ClientState::Editing { mode} => format!("<c green>[<c cyan>{}</c><c green>]</c>?> ", match mode {
                 EditorMode::Help => {
-                    let g = self.hedit.clone().unwrap();
-                    let dirty = g.dirty;
-                    let g = g.lock.read().await;
-                    format!("HELP(<c yellow>{}{}</c>)", g.id(), dirty_mark(dirty))
+                    let h = self.hedit.as_ref().unwrap();
+                    format!("HELP(<c yellow>{}{}</c>)", h.entry.id(), dirty_mark(h.dirty))
                 },
                 EditorMode::Room => {
-                    let g = self.redit.clone().unwrap();
-                    let dirty = g.dirty;
-                    let g = g.lock.read().await;
-                    format!("ROOM(<c yellow>{}{}</c>)", g.id(), dirty_mark(dirty))
+                    let r = self.redit.as_ref().unwrap();
+                    format!("ROOM(<c yellow>{}{}</c>)", r.entry.id(), dirty_mark(r.dirty))
                 },
             }),
             _ => "#> ".into()

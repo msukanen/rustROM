@@ -1,7 +1,7 @@
 use std::{num::{IntErrorKind, NonZeroU32, NonZeroUsize, ParseIntError}, usize};
 
 use async_trait::async_trait;
-use crate::{cmd::{help::ERROR_SAVING_HELP, Command, CommandCtx}, resume_game, string::styling::RULER_LINE, tell_user, traits::save::DoesSave, validate_builder, ClientState};
+use crate::{cmd::{Command, CommandCtx}, resume_game, string::styling::RULER_LINE, tell_user, validate_builder, ClientState};
 
 pub struct DescCommand;
 pub const MAX_HELP_DESCRIPTION_LINES: usize = 21; // a modest number, sort of fits on a tiny 80x24 terminal thingydoodah. Takes header, title, etc. into account.
@@ -15,7 +15,7 @@ impl Command for DescCommand {
             tell_user!(ctx.writer,
                 "{}\n{}<c red>// END</c>\n",
                 RULER_LINE,
-                ctx.player.read().await.hedit.as_ref().unwrap().lock.read().await.description
+                ctx.player.read().await.hedit.as_ref().unwrap().entry.description
             );
             resume_game!(ctx);
         }
@@ -47,13 +47,9 @@ impl Command for DescCommand {
             };
             {
                 let mut g = ctx.player.write().await;
-                let g = g.hedit.as_mut().unwrap();
-                g.dirty = true;
-                let mut h = g.lock.write().await;
-                h.description = insert_nth_line(&h.description, lno, if args.len() < 2 {""} else {args[1]});
-                if let Err(_) = h.save().await {
-                    tell_user!(ctx.writer, ERROR_SAVING_HELP);
-                }
+                let ed = g.hedit.as_mut().unwrap();
+                ed.dirty = true;
+                ed.entry.description = insert_nth_line(&ed.entry.description, lno, if args.len() < 2 {""} else {args[1]});
             }
             if verbose {
                 let cmd = DescCommand;
@@ -65,19 +61,15 @@ impl Command for DescCommand {
         else if args.starts_with('-') {
             let changed = {
             let mut g = ctx.player.write().await;
-            let g = g.hedit.as_mut().unwrap();
-            let mut h = g.lock.write().await;
-            let res = remove_nth_line(&h.description, &args[1..]);
+            let ed = g.hedit.as_mut().unwrap();
+            let res = remove_nth_line(&ed.entry.description, &args[1..]);
             let mut changed = false;
             match res {
                 Ok((dirty, desc)) => {
-                    g.dirty = dirty;
-                    if g.dirty {
+                    ed.dirty = dirty;
+                    if ed.dirty {
                         changed = true;
-                        h.description = desc;
-                        if let Err(_) = h.save().await {
-                            tell_user!(ctx.writer, ERROR_SAVING_HELP);
-                        }
+                        ed.entry.description = desc;
                     } else {
                         tell_user!(ctx.writer, "Nothing to change - not that many lines to begin with.\n");
                     }
@@ -98,13 +90,9 @@ impl Command for DescCommand {
         else if args.starts_with('=') {
             {
                 let mut g = ctx.player.write().await;
-                let g = g.hedit.as_mut().unwrap();
-                g.dirty = true;
-                let mut h = g.lock.write().await;
-                h.description = format!("{}\n", &args[1..]);
-                if let Err(_) = h.save().await {
-                    tell_user!(ctx.writer, ERROR_SAVING_HELP);
-                }
+                let ed = g.hedit.as_mut().unwrap();
+                ed.dirty = true;
+                ed.entry.description = format!("{}\n", &args[1..]);
             }
             if verbose {
                 let cmd = DescCommand;
@@ -117,13 +105,9 @@ impl Command for DescCommand {
         else {
             {
                 let mut g = ctx.player.write().await;
-                let g = g.hedit.as_mut().unwrap();
-                g.dirty = true;
-                let mut h = g.lock.write().await;
-                h.description.push_str(&format!("{}\n", args));
-                if let Err(_) = h.save().await {
-                    tell_user!(ctx.writer, ERROR_SAVING_HELP);
-                }
+                let ed = g.hedit.as_mut().unwrap();
+                ed.dirty = true;
+                ed.entry.description.push_str(&format!("{}\n", args));
             }
             if verbose {
                 let cmd = DescCommand;
