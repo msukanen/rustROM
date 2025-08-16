@@ -98,8 +98,10 @@ async fn main() {
         w.rooms = collected_rooms_to_add;
     }
 
+    // Bootstrap helps, if needed ...
+    Help::bootstrap(args.bootstrap_url).await.expect("Bootstrapping failed?!");
     // Load help files ...
-    let (help_core, help_aliases) = Help::load_all(&args.bootstrap_url).await.expect("Oopsie - we're helpless - no help available?!");
+    let (help_core, help_aliases) = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
     world.write().await.help = help_core;
     world.write().await.help_aliased = help_aliases;
 

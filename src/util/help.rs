@@ -44,8 +44,7 @@ impl From<toml::de::Error> for HelpError { fn from(value: toml::de::Error) -> Se
 
 impl Help {
     /// Load all help files into hashmap, properly aliased too while at it.
-    pub(crate) async fn load_all(bootstrap_url: &Option<String>)
-    -> Result<(HashMap<String, Arc<RwLock<Help>>>, HashMap<String, String>), HelpError>
+    pub(crate) async fn load_all() -> Result<(HashMap<String, Arc<RwLock<Help>>>, HashMap<String, String>), HelpError>
     {
         let path = PathBuf::from_str((*HELP_PATH).as_str()).unwrap();
         let mut helps = HashMap::new();
@@ -58,12 +57,13 @@ impl Help {
 
             if let Some(_) = path.file_stem().and_then(|s| s.to_str()) {
                 let content = tokio::fs::read_to_string(&path).await?;
-                let help: Help = toml::from_str(&content)?;
-                let help = Arc::new(RwLock::new(help));
-                let primary_id = help.read().await.id.clone();
-                helps.insert(primary_id.clone(), help.clone());
-                for alias in &help.read().await.aliases {
-                    aliases.insert(alias.clone(), primary_id.clone());
+                if let Ok(help) = toml::from_str::<Help>(&content) {
+                    let help = Arc::new(RwLock::new(help));
+                    let primary_id = help.read().await.id.clone();
+                    helps.insert(primary_id.clone(), help.clone());
+                    for alias in &help.read().await.aliases {
+                        aliases.insert(alias.clone(), primary_id.clone());
+                    }
                 }
             }
         }
@@ -84,7 +84,7 @@ impl Help {
     }
 
     /// Fetch the default help files from a GitHub repo.
-    async fn bootstrap(url: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    pub(crate) async fn bootstrap(url: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Fetching default help files from GitHub…");
 
         #[derive(Deserialize)]
@@ -94,11 +94,13 @@ impl Help {
         }
 
         let client = reqwest::Client::builder().user_agent("RustROM MUD").build()?;
-        let repo_url = url.unwrap_or(GITHUB_HELP_REPO);
+        let repo_url = url.unwrap_or(GITHUB_HELP_REPO.into()).clone();
         
         // get list of files...
         let res = client.get(repo_url).send().await?;
-        log::debug!("response {:?}", res);
+        #[cfg(feature = "ittest")]{
+            log::debug!("response {:?}", res);
+        }
         let res = res.json::<Vec<GitHubFile>>().await?;
 
         for file in res {
@@ -117,20 +119,17 @@ impl Help {
                 #[cfg(feature = "ittest")]{
                     log::debug!("{}", content);
                 }
-                //#[cfg(not(test))]
-                {
-                    let help = toml::from_str::<Help>(&content);
-                    if let Ok(mut help) = help {
-                        help.save().await?;
-                        log::info!("  ✓ help file '{}' from '{}' stored.", filepath, file.download_url);
-                    } else {
-                        log::info!("  ✗ file '{}' was not recognized as a help entry. Skipping.", file.download_url);
-                    }
+                let help = toml::from_str::<Help>(&content);
+                if let Ok(mut help) = help {
+                    help.save().await?;
+                    log::info!("  ✓ help file '{}' from '{}' stored.", filepath, file.download_url);
+                } else {
+                    log::info!("  ✗ file '{}' was not recognized as a help entry. Skipping.", file.download_url);
                 }
             }
         }
 
-        log::info!("Help files downloaded successfully.");
+        log::debug!("Help files downloaded successfully.");
         Ok(())
     }
 }
