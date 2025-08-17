@@ -10,8 +10,8 @@ use tokio::{
 
 mod player;
 mod mob;
-mod game_loop;
-use game_loop::game_loop;
+mod game_loop;  use game_loop::game_loop;
+mod io;         use io::io_loop;
 pub mod world;
 pub mod traits;
 pub mod string;
@@ -105,6 +105,7 @@ async fn main() {
     world.write().await.help_aliased = help_aliases;
 
     tokio::spawn(game_loop(world.clone()));
+    tokio::spawn(io_loop(world.clone()));
 
     // Create a listener that will accept incoming connections.
     let listen_on = format!("{}:{}", args.host_listen_addr, args.port);
@@ -154,15 +155,7 @@ async fn main() {
                 if let ClientState::Logout = &state {
                     let mut w = world.write().await;
                     if let Some(p) = w.players.remove(&addr) {
-                        if let Some(r) = w.rooms.get(p.read().await.location.as_str()) {
-                            r.write().await.players.remove(p.read().await.id());
-                            log::debug!("Removed disconnected player '{}' from '{}'", p.read().await.id(), r.read().await.id());
-                        }
-                        let mut p = p.write().await;
-                        log::info!("Player '{}' logging out.", p.id());
-                        if let Err(e) = p.save().await {
-                            log::error!("Error saving '{}'! {:?}", p.id(), e);
-                        }
+                        w.players_to_logout.push(p);
                         if !abrupt_dc {
                             tell_user!(&mut writer, "<c cyan>Goodbye! See you soon again!</c>\n");
                         }

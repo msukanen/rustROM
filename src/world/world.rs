@@ -64,6 +64,7 @@ pub struct World {
     pub root: WorldEntrance,
     pub prompts: HashMap<PromptType, String>,
     #[serde(skip, default)] pub players: HashMap<SocketAddr, Arc<RwLock<Player>>>,
+    #[serde(skip, default)] pub players_to_logout: Vec<Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
     #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
     #[serde(skip, default)] pub help_aliased: HashMap<String, String>,
@@ -126,6 +127,7 @@ impl World {
         root: WorldEntrance::new(),
         prompts: HashMap::new(),
         players: HashMap::new(),
+        players_to_logout: vec![],
         rooms: HashMap::new(),
         help: HashMap::new(),
         help_aliased: HashMap::new(),
@@ -219,31 +221,30 @@ impl Tickable for World {
 
 #[cfg(test)]
 mod world_tests {
-    use super::*;
-    use std::time::Duration;
-    use log::debug;
-    use crate::{game_loop::game_loop, DATA};
-
     /// Let's see how the threads react to the core world being super busy with global locks.
     #[tokio::test]
     #[cfg(feature = "ittest")]
     async fn busy_world() {
         let _ = env_logger::try_init();
-        let _ = DATA.set("./data".into());
-        let world = Arc::new(RwLock::new(World::new("rustrom").await.expect("ERROR: world dead or in fire?!")));
+        let _ = crate::DATA.set("./data".into());
+        let world = std::sync::Arc::new(
+            tokio::sync::RwLock::new(
+                crate::world::World::new("rustrom").await.expect("ERROR: world dead or in fire?!")
+            )
+        );
 
-        tokio::spawn(game_loop(world.clone()));
+        tokio::spawn(crate::game_loop::game_loop(world.clone()));
         {
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            debug!("Enter guard...");
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            log::debug!("Enter guard...");
             {
                 let w = world.write().await;
                 w.do_busy_stuff().await;
-                debug!("Exit guard...");
+                log::debug!("Exit guard...");
             }
-            debug!("Waited busy stuff...");
-            tokio::time::sleep(Duration::from_secs(10)).await;
+            log::debug!("Waited busy stuff...");
+            tokio::time::sleep(std::time::Duration::from_secs(10)).await;
         }
-        debug!("Lazing about.");
+        log::debug!("Lazing about.");
     }
 }
