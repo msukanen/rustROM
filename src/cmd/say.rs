@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, resume_game, traits::Description, ClientState};
+use crate::{cmd::{Command, CommandCtx}, resume_game, traits::Description, util::BroadcastMessage, ClientState};
 
 pub struct SayCommand;
 
@@ -7,8 +7,12 @@ pub struct SayCommand;
 impl Command for SayCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if !ctx.args.is_empty() {
-            let msg = format!("[{}] says: {}\n", ctx.player.read().await.id(), ctx.args);
-            ctx.tx.send(msg).unwrap();
+            let p = ctx.player.read().await;
+            let message = format!("\n<c blue>[<c cya>{}</c>]</c> says: {}\n", p.id(), ctx.args);
+            let from_player = p.id().into();
+            let room_id = p.location.clone();
+            drop(p);
+            ctx.tx.send(BroadcastMessage::Say { room_id, message, from_player }).unwrap();
         }
         resume_game!(ctx);
     }
