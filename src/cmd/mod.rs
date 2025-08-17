@@ -8,7 +8,7 @@ pub mod macros;
 mod quit;
 
 pub(crate) mod say;
-
+pub(crate) mod ask;
 mod set;
 mod look;
 mod dig;
