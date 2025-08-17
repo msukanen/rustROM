@@ -8,7 +8,7 @@ impl Command for AskCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         if !ctx.args.is_empty() {
             let p = ctx.player.read().await;
-            let message = format!("\n<c blue>[<c cyan>{}</c>]</c> asks: {}\n", p.id(), ctx.args);
+            let message = format!("\n<c blue>[<c cyan>{}</c>]</c> asks: {}{}\n", p.id(), ctx.args, if ctx.args.ends_with('?') {""} else {"?"});
             let from_player = p.id().into();
             let room_id = p.location.clone();
             drop(p);
