@@ -120,6 +120,39 @@ impl Room {
         parent: Weak::new(),
         players: HashMap::new(),
     }}
+
+    /// Add a [Player] to the [Room].
+    /// 
+    /// # Arguments
+    /// - `player`— Some [Player].
+    /// 
+    /// # Returns
+    /// `true` if player was *really* transferred into the room from elsewhere.
+    pub async fn add_player(&mut self, player: &Arc<RwLock<Player>>) -> bool {
+        let id: String = player.read().await.id().into();
+        if self.players.contains_key(&id) {
+            // already present, nothing to do.
+            return false;
+        }
+        // FYI: it's irrelevant if something was replaced or not and thus we ignore .insert() result.
+        self.players.insert(id.clone(), Arc::downgrade(&player));
+        log::debug!("Player '{}' added to room '{}'", id, self.id());
+        return true;
+    }
+
+    /// Remove [Player] from the [Room].
+    /// 
+    /// Note that it is *not* considered an error to try remove [Player] which is
+    /// not in this particular room. We'll just silently ignore the call.
+    /// 
+    /// # Arguments
+    /// - `player`— Some [Player].
+    pub async fn remove_player(&mut self, player: &Arc<RwLock<Player>>) {
+        let id = player.read().await.id().to_string();
+        if let Some(_) = self.players.remove(&id) {
+            log::debug!("Player '{}' removed from room '{}'", id, self.id());
+        }
+    }
 }
 
 impl Description for Room {

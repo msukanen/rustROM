@@ -49,11 +49,11 @@ fn goto_directions() -> String {r#"
 
 #[cfg(test)]
 mod goto_tests {
-    use std::{net::{IpAddr, Ipv4Addr}, str::FromStr, sync::Arc};
+    use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, str::FromStr, sync::Arc};
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{player::Player, world::{area::Area, room::Room, World}};
+    use crate::{player::Player, util::BroadcastMessage, world::{area::Area, room::Room, World}};
 
     use super::*;
 
@@ -85,12 +85,12 @@ mod goto_tests {
         let p = Arc::new(RwLock::new(Player::new("ani")));
         p.write().await.location = "void".into();
 
-        let ip = IpAddr::V4(Ipv4Addr::from_str("127.0.0.1").unwrap());
+        let ip = SocketAddr::from_str("127.0.0.1:12345").unwrap();
         w.write().await.players.insert(ip.clone(), p);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let (tx, _) = broadcast::channel::<String>(1);
+        let (tx, _) = broadcast::channel::<BroadcastMessage>(1);
 
         let client_task = tokio::spawn(async move {
             let (reader, mut writer) = TcpStream::connect(addr).await.unwrap().into_split();
@@ -114,7 +114,7 @@ mod goto_tests {
             let (server_reader, mut server_writer) = server_socket.into_split();
             let mut server_reader = BufReader::new(server_reader);
             let mut line = String::new();
-            let player_arc = w.read().await.players.get(&addr.ip()).unwrap().clone();
+            let player_arc = w.read().await.players.get(&addr).unwrap().clone();
             player_arc.write().await.push_state(ClientState::Playing);
 
             // Handle "look" command

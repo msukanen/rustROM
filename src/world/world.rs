@@ -9,7 +9,7 @@
 //! cause e.g. saved locations in player saves to be invalid.
 //! 
 //! If one or the other file is missing… Bad Things™ will happen!
-use std::{collections::HashMap, fs::read_to_string, net::IpAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fs::read_to_string, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -63,7 +63,7 @@ pub struct World {
     pub areas: HashMap<String, Arc<RwLock<Area>>>,
     pub root: WorldEntrance,
     pub prompts: HashMap<PromptType, String>,
-    #[serde(skip, default)] pub players: HashMap<IpAddr, Arc<RwLock<Player>>>,
+    #[serde(skip, default)] pub players: HashMap<SocketAddr, Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
     #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
     #[serde(skip, default)] pub help_aliased: HashMap<String, String>,
