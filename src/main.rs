@@ -337,8 +337,8 @@ async fn main() {
                                         },
                                         BroadcastMessage::Shout { room_id, message, from_player } => {
                                             let nearby = find_nearby_rooms(&world, &room_id, 2).await;
-                                            for _ in nearby {
-                                                if p.id() != from_player {
+                                            for r_id in nearby {
+                                                if p.location == r_id && p.id() != from_player {
                                                     tell_user!(&mut writer, "{}{}", message, p.prompt().await);
                                                 }
                                             }
