@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, do_in_current_room, resume_game, tell_user, util::direction::Direction, ClientState};
+use crate::{cmd::{help::HelpCommand, look::LookCommand, translocate::translocate, Command, CommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, util::direction::Direction, ClientState};
 
 pub struct GotoCommand;
 
@@ -22,12 +22,12 @@ impl Command for GotoCommand {
         let exit = exit.unwrap();
 
         // See if room has corresponding exit...
+        let mut do_translocate_to = None;
         do_in_current_room!(ctx, |room|{
-            if let Some(exit) = room.read().await.exits.get(&exit) {
+            if let Some(exit) = room.read().await.exits.get(&exit).cloned() {
                 if ctx.world.read().await.rooms.get(&exit.destination).is_some() {
-                    ctx.player.write().await.location = exit.destination.clone();
-                    let cmd = LookCommand;
-                    cmd.exec(ctx).await;
+                    // translocate afterwards so that all currently held locks are released first.
+                    do_translocate_to = Some((room.read().await.id().to_string(), exit.destination.clone()));
                 } else {
                     log::warn!("Room error: access to '{}' from '{}' is dysfunctional!", &exit.destination, room.read().await.id);
                     tell_user!(ctx.writer, "You could've sworn there is something that way, but there isn't...\n");
@@ -36,6 +36,12 @@ impl Command for GotoCommand {
                 tell_user!(ctx.writer, "Cannot go that way …");
             }
         });
+
+        if let Some((source, destination)) = do_translocate_to {
+            let _ = translocate(&ctx.world, Some(source), destination, ctx.player.clone()).await;
+            let cmd = LookCommand;
+            cmd.exec(ctx).await;
+        }
 
         resume_game!(ctx);
     }
