@@ -330,7 +330,7 @@ async fn main() {
                                 if let Some(p) = w.players.get(&addr) {
                                     let p = p.read().await;
                                     match msg {
-                                        BroadcastMessage::Say { room_id, message, from_player } => {
+                                        BroadcastMessage::Say { room_id, message, from_player, .. } => {
                                             if p.location == room_id && p.id() != from_player {
                                                 tell_user!(&mut writer, "{}{}", message, p.prompt().await);
                                             }

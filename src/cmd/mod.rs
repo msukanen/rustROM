@@ -6,7 +6,9 @@ use crate::{player::Player, resume_game, tell_user, util::{clientstate::EditorMo
 pub mod macros;
 //--- 'mod' all the commands ---
 mod quit;
-mod say;
+
+pub(crate) mod say;
+
 mod set;
 mod look;
 mod dig;
