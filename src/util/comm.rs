@@ -8,5 +8,10 @@ pub enum BroadcastMessage {
         message: String,
         from_player: String,
     },
+    Shout {
+        room_id: String,
+        message: String,
+        from_player: String,
+    }
     // TODO: add other types here later, e.g., Combat, Emote, etc.
 }
