@@ -20,6 +20,7 @@ mod r#return;
 pub(crate) mod hedit;
 pub(crate) mod redit;
 mod abort;
+mod shout;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
