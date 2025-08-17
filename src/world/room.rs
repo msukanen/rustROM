@@ -182,7 +182,7 @@ impl Description for Room {
 }
 
 /// Finds all rooms within a given distance of a starting room using BFS.
-pub async fn find_nearby_rooms(world: &SharedWorld, start_room_id: &str, max_distance: u32) -> HashSet<String> {
+pub(crate) async fn find_nearby_rooms(world: &SharedWorld, start_room_id: &str, max_distance: u32) -> HashSet<String> {
     let mut visited = HashSet::new();
     let mut queue = VecDeque::new();
     let mut nearby = HashSet::new();

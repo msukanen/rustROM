@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, traits::Description, util::{help::Help, BroadcastMessage, ClientState}};
+use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, traits::Description, util::{help::Help, BroadcastMessage, ClientState}, world::room::find_nearby_rooms};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -334,7 +334,15 @@ async fn main() {
                                             if p.location == room_id && p.id() != from_player {
                                                 tell_user!(&mut writer, "{}{}", message, p.prompt().await);
                                             }
-                                        }
+                                        },
+                                        BroadcastMessage::Shout { room_id, message, from_player } => {
+                                            let nearby = find_nearby_rooms(&world, &room_id, 2).await;
+                                            for _ in nearby {
+                                                if p.id() != from_player {
+                                                    tell_user!(&mut writer, "{}{}", message, p.prompt().await);
+                                                }
+                                            }
+                                        },
                                     }
                                 }
                             }
