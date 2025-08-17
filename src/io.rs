@@ -3,6 +3,9 @@ use tokio::{sync::RwLock, time::{self}};
 use crate::{player::Player, traits::{save::DoesSave, Description}, world::SharedWorld};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
+#[cfg(feature = "localtest")]
+const AUTOSAVE_QUEUE_INTERVAL: u64 = 30; // once per 30 sec, about.
+#[cfg(not(feature = "localtest"))]
 const AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
 
 /// One heart of the machinery — I/O loop.
@@ -13,7 +16,10 @@ pub async fn io_loop(world: SharedWorld) {
     let mut logout_interval = time::interval(Duration::from_secs(LOGOUT_QUEUE_INTERVAL));
     let mut autosave_interval = time::interval(Duration::from_secs(AUTOSAVE_QUEUE_INTERVAL));
 
-    log::info!("io_loop firing up …");
+    log::info!("io_loop firing up … {} second{} logout queue, {} second{} auto-save queue.",
+            LOGOUT_QUEUE_INTERVAL, if LOGOUT_QUEUE_INTERVAL==1 {""} else {"s"},
+            AUTOSAVE_QUEUE_INTERVAL, if AUTOSAVE_QUEUE_INTERVAL==1 {""} else {"s"}
+        );
     loop {
         tokio::select! {
             _ = logout_interval.tick() => {
