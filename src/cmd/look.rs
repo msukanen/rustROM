@@ -21,6 +21,14 @@ pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState 
             r.description()
         );
 
+        // People in room?
+        for p in r.players.keys() {
+            desc.push_str(&format!("    <c blue>[<c cyan>{}</c>]</c>\n", p));
+        }
+        if r.players.keys().len() > 0 {
+            desc.push_str("\n");
+        }
+
         if !r.exits.is_empty() {
             desc.push_str("<c green>Exits:</c> ");
             let exits: Vec<String> = r.exits.keys().map(|d| format!("{:?}", d).to_lowercase()).collect();
