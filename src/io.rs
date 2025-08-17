@@ -47,7 +47,25 @@ pub async fn io_loop(world: SharedWorld) {
             },
 
             _ = autosave_interval.tick() => {
-
+                log::info!("Auto-save cycle initiated …");
+                let players = world.read().await.players.clone();
+                if !players.is_empty() {
+                    log::debug!("Players collected …");
+                }
+                let mut saved = false;
+                for (_, p) in players {
+                    let mut p = p.write().await;
+                    if let Err(e) = p.save().await {
+                        log::error!("Failed to save player '{}': {:?}", p.id(), e);
+                    } else {
+                        saved = true;
+                    }
+                }
+                if saved {
+                    log::info!("Auto-save cycle complete.");
+                } else {
+                    log::info!("Nothing to do.");
+                }
             }
         }
     }
