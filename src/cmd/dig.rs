@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::Room, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}, ClientState};
 
 pub struct DigCommand;
 
@@ -71,14 +71,14 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
     let p = ctx.player.read().await;
     let curr_id = p.location.clone();
     let mut room = Room::blank(Some(id));
-    room.exits.insert(dir.opposite(), curr_id.clone());
+    room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open });
     let lock = Arc::new(RwLock::new(room));
     let mut w = ctx.world.write().await;
     w.rooms.insert(id.into(), lock.clone());
 
     if let Some(curr_arc) = w.rooms.get(&curr_id) {
         let mut r = curr_arc.write().await;
-        r.exits.insert(dir, id.into());
+        r.exits.insert(dir, Exit { destination: id.into(), state: ExitState::Open });
     } else {
         log::error!("Player '{}' was in a non-existent room '{}'", ctx.player.read().await.id(), curr_id);
         return false;

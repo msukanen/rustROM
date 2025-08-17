@@ -1,11 +1,11 @@
 //! "Make room!" - the [Room] live here.
-use std::{collections::HashMap, sync::{Arc, Weak}};
+use std::{collections::{HashMap, HashSet, VecDeque}, sync::{Arc, Weak}};
 
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{player::Player, traits::Description, util::direction::Direction, world::area::Area, DATA_PATH};
+use crate::{player::Player, traits::Description, util::direction::Direction, world::{area::Area, SharedWorld}, DATA_PATH};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 
@@ -59,11 +59,31 @@ pub mod area_room_serialization {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum ExitState {
+    Open,
+    Closed,
+    Locked { key_id: String }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Exit {
+    pub destination: String,
+    #[serde(default)]
+    pub state: ExitState,
+}
+
+impl Default for ExitState {
+    fn default() -> Self {
+        ExitState::Open
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Room {
     pub(crate) id: String,
     title: String,
     pub(crate) description: String,
-    pub exits: HashMap<Direction, String>,
+    pub exits: HashMap<Direction, Exit>,
     #[serde(skip)]
     pub parent: Weak<RwLock<Area>>,
     #[serde(skip, default)]
@@ -159,4 +179,38 @@ impl Description for Room {
     fn description(&self) -> &str { &self.description }
     fn title(&self) -> &str { &self.title }
     fn id(&self) -> &str { &self.id }
+}
+
+/// Finds all rooms within a given distance of a starting room using BFS.
+pub async fn find_nearby_rooms(world: &SharedWorld, start_room_id: &str, max_distance: u32) -> HashSet<String> {
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::new();
+    let mut nearby = HashSet::new();
+
+    // The queue stores tuples of (room_id, distance)
+    queue.push_back((start_room_id.to_string(), 0));
+    visited.insert(start_room_id.to_string());
+
+    let world_guard = world.read().await;
+
+    while let Some((current_room_id, distance)) = queue.pop_front() {
+        if distance > max_distance {
+            continue;
+        }
+        nearby.insert(current_room_id.clone());
+
+        if distance < max_distance {
+            if let Some(current_room_arc) = world_guard.rooms.get(&current_room_id) {
+                let current_room = current_room_arc.read().await;
+                for dest_exit in current_room.exits.values() {
+                    if !visited.contains(&dest_exit.destination) {
+                        visited.insert(dest_exit.destination.clone());
+                        queue.push_back((dest_exit.destination.clone(), distance + 1));
+                    }
+                }
+            }
+        }
+    }
+    
+    nearby
 }

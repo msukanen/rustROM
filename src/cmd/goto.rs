@@ -23,13 +23,13 @@ impl Command for GotoCommand {
 
         // See if room has corresponding exit...
         do_in_current_room!(ctx, |room|{
-            if let Some(droom_name) = room.read().await.exits.get(&exit) {
-                if ctx.world.read().await.rooms.get(droom_name.as_str()).is_some() {
-                    ctx.player.write().await.location = droom_name.clone();
+            if let Some(exit) = room.read().await.exits.get(&exit) {
+                if ctx.world.read().await.rooms.get(&exit.destination).is_some() {
+                    ctx.player.write().await.location = exit.destination.clone();
                     let cmd = LookCommand;
                     cmd.exec(ctx).await;
                 } else {
-                    log::warn!("Room error: access to '{}' from '{}' is dysfunctional!", &droom_name, room.read().await.id);
+                    log::warn!("Room error: access to '{}' from '{}' is dysfunctional!", &exit.destination, room.read().await.id);
                     tell_user!(ctx.writer, "You could've sworn there is something that way, but there isn't...\n");
                 }
             } else {
@@ -53,7 +53,7 @@ mod goto_tests {
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{player::Player, util::BroadcastMessage, world::{area::Area, room::Room, World}};
+    use crate::{player::Player, util::BroadcastMessage, world::{area::Area, room::{Exit, ExitState, Room}, World}};
 
     use super::*;
 
@@ -70,13 +70,13 @@ mod goto_tests {
             
             let r = Arc::new(RwLock::new(Room::blank(Some("void"))));
             r.write().await.description = "Alpha".into();
-            r.write().await.exits.insert(Direction::East, "clearing".into());
+            r.write().await.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: ExitState::Open });
             //a.rooms.insert("void".into(), r.clone());
             w.rooms.insert("void".into(), r.clone());
             
             let r = Arc::new(RwLock::new(Room::blank(Some("clearing"))));
             r.write().await.description = "Omega".to_string();
-            r.write().await.exits.insert(Direction::West, "void".into());
+            r.write().await.exits.insert(Direction::West, Exit { destination: "void".into(), state: ExitState::Open });
             w.rooms.insert("clearing".into(), r.clone());
             //a.rooms.insert("clearing".to_string(), r);
         }
