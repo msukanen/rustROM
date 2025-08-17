@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, traits::Description, util::{help::Help, ClientState}};
+use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, traits::Description, util::{help::Help, BroadcastMessage, ClientState}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -65,7 +65,6 @@ async fn main() {
     const PROMPT_LOGIN: &str = "What do we call you?: ";
     const PROMPT_PASSWD1: &str = "Password: ";
     const PROMPT_PASSWDV: &str = "Re-type same password: ";
-    const PROMPT_PLAYING: &str = "#> ";
     const WELCOME_BACK: &str = "Welcome back!";
     const WELCOME_NEW: &str = "May your adventures be prosperous!";
 
@@ -114,7 +113,7 @@ async fn main() {
 
     // A broadcast channel is used to send messages to all connected clients.
     // Here, we're just broadcasting chat messages.
-    let (tx, _) = broadcast::channel::<String>(16);
+    let (tx, _) = broadcast::channel::<BroadcastMessage>(16);
     
     loop {
         // Wait for a new client to connect.
@@ -154,7 +153,11 @@ async fn main() {
                 // Check if player is logging out...
                 if let ClientState::Logout = &state {
                     let mut w = world.write().await;
-                    if let Some(p) = w.players.remove(&addr.ip()) {
+                    if let Some(p) = w.players.remove(&addr) {
+                        if let Some(r) = w.rooms.get(p.read().await.location.as_str()) {
+                            r.write().await.players.remove(p.read().await.id());
+                            log::debug!("Removed disconnected player '{}' from '{}'", p.read().await.id(), r.read().await.id());
+                        }
                         let mut p = p.write().await;
                         log::info!("Player '{}' logging out.", p.id());
                         if let Err(e) = p.save().await {
@@ -207,24 +210,23 @@ async fn main() {
                                         log::info!("'{}' successfully logged in.", name);
                                         let (msg, prompt) = {
                                             save.erase_states(ClientState::Playing);
-                                            let pr = save.prompt().await;
                                             let p = Arc::new(RwLock::new(save));
 
-                                            // Relocate player in case their saved location has evaporated...
                                             let location = p.read().await.location.clone();
+                                            let root_room = world.read().await.root.room.clone();
                                             if !world.read().await.rooms.contains_key(&location) {
-                                                let root_room = world.read().await.root.room.clone();
                                                 let pg = p.read().await;
                                                 log::warn!("Player '{}' location '{}' invalid. Translocating to safety of '{}'.", pg.id(), location, root_room);
-                                                let source = pg.location.clone();
-                                                drop(pg);
-                                                let _ = translocate(&world, Some(source), root_room, p.clone()).await;
                                                 translocated = true;
                                             }
 
+                                            let source = location;
+                                            // Relocate player in case their saved location has evaporated...
+                                            let _ = translocate(&world, Some(source), root_room, p.clone()).await;
                                             let mut w = world.write().await;
-                                            w.players.insert(addr.ip(), p.clone());
-                                            (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), pr)
+                                            w.players.insert(addr.clone(), p.clone());
+                                            let prompt = p.read().await.prompt().await;
+                                            (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), prompt)
                                         };
                                         tell_user!(&mut writer, "{}\n\n{}{}",
                                             msg,
@@ -251,16 +253,19 @@ async fn main() {
                                     let mut player = Player::new(&name);
                                     if player.set_passwd(input).await.is_ok() {
                                         log::info!("New save being created for '{}'…", name);
-                                        let prompt = get_prompt!(world, PromptType::Playing, PROMPT_PLAYING);
                                         player.set_access(Access::default());
                                         player.location = world.read().await.root.room.clone();
                                         let save_err = player.save().await;
                                         if save_err.is_ok() {
                                             let msg = {world.read().await.welcome_new.clone().unwrap_or_else(|| WELCOME_NEW.to_string())};
-                                            tell_user!(&mut writer, "{}\n{}", msg, prompt);
                                             let p = Arc::new(RwLock::new(player));
-                                            world.write().await.players.insert(addr.ip(), p.clone());
-                                            p.write().await.erase_states(ClientState::Playing)
+                                            let root_room = world.read().await.root.room.clone();
+                                            let _ = translocate(&world, None, root_room, p.clone()).await;
+                                            log::info!("New player '{}' instantiated and translocated to '{}'.", p.read().await.id(), p.read().await.location);
+                                            world.write().await.players.insert(addr.clone(), p.clone());
+                                            let state = p.write().await.erase_states(ClientState::Playing);
+                                            tell_user!(&mut writer, "{}\n{}", msg, p.read().await.prompt().await);
+                                            state
                                         } else {
                                             // Some strange error happened with save...
                                             // Notify user and "gracefully" disconnect them.
@@ -287,7 +292,7 @@ async fn main() {
                             _ => {
                                 let p = {
                                     let w = world.read().await;
-                                    w.players.get(&addr.ip()).cloned()
+                                    w.players.get(&addr).cloned()
                                 };
                                 let prompt: String;
                                 if let Some(p) = p {
@@ -314,12 +319,23 @@ async fn main() {
 
                     // --- Second Branch: Receive broadcast messages from other clients ---
                     result = rx.recv() => {
+                        /*
+                        We handle *majority* of broadcast messages in Playing state only, which avoids
+                        e.g. editor modes from being disturbed.
+                        */
                         if let ClientState::Playing = &state {
                             if let Ok(msg) = result {
                                 // If we receive a message from the broadcast channel, write it to our client.
                                 let w = world.read().await;
-                                if let Some(p) = w.players.get(&addr.ip()) {
-                                    tell_user!(&mut writer, "{}{}", msg, p.read().await.prompt().await);
+                                if let Some(p) = w.players.get(&addr) {
+                                    let p = p.read().await;
+                                    match msg {
+                                        BroadcastMessage::Say { room_id, message, from_player } => {
+                                            if p.location == room_id && p.id() != from_player {
+                                                tell_user!(&mut writer, "{}{}", message, p.prompt().await);
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
