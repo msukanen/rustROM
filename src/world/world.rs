@@ -9,7 +9,7 @@
 //! cause e.g. saved locations in player saves to be invalid.
 //! 
 //! If one or the other file is missing… Bad Things™ will happen!
-use std::{collections::{HashMap, HashSet}, fs::read_to_string, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fs::read_to_string, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
