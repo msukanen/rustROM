@@ -1,4 +1,4 @@
-use std::{collections::{HashMap, HashSet}, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::{HashMap, HashSet}, fmt::Display, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
@@ -39,8 +39,17 @@ pub enum HelpError {
     Format(toml::de::Error),
 }
 
+impl std::error::Error for HelpError {}
 impl From<std::io::Error> for HelpError { fn from(value: std::io::Error) -> Self { Self::Io(value) }}
 impl From<toml::de::Error> for HelpError { fn from(value: toml::de::Error) -> Self { Self::Format(value) }}
+impl Display for HelpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Format(e) => write!(f, "TOML format error: {:?}", e),
+            Self::Io(e) => write!(f, "I/O error: {:?}", e),
+        }
+    }
+}
 
 impl Help {
     /// Load all help files into hashmap, properly aliased too while at it.
