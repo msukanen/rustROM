@@ -1,11 +1,11 @@
-use std::{fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashSet, fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use argon2::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::styling::dirty_mark, traits::{save::{DoesSave, SaveError}, Description}, util::{clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::styling::dirty_mark, traits::{save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -17,14 +17,23 @@ pub enum LoadError {
     Format(serde_json::Error),
     NoSuchSave,
     InvalidLockId(String),
+    InvalidName,
 }
 
-impl From<std::io::Error> for LoadError {
-    fn from(value: std::io::Error) -> Self { Self::Io(value)}
-}
-
-impl From<serde_json::Error> for LoadError {
-    fn from(value: serde_json::Error) -> Self { Self::Format(value)}
+impl std::error::Error for LoadError {}
+impl From<std::io::Error> for LoadError { fn from(value: std::io::Error) -> Self { Self::Io(value)}}
+impl From<serde_json::Error> for LoadError { fn from(value: serde_json::Error) -> Self { Self::Format(value)}}
+impl Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Format(e) => write!(f, "{:?}", e),
+            Self::InvalidLockId(id) => write!(f, "Invalid lock ID: {}", id),
+            Self::InvalidLogin => write!(f, "Invalid login - name/password failure"),
+            Self::InvalidName => write!(f, "Given name deemed unusable"),
+            Self::Io(e) => write!(f, "I/O error! {:?}", e),
+            Self::NoSuchSave => write!(f, "Notice: no such save"),
+        }
+    }
 }
 
 static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
@@ -137,7 +146,7 @@ impl Player {
     /// - `plaintext_passwd`— password.
     /// - `_addr`— `IP:port` of incoming connection.
     ///            Used *exclusively* in non-release modes *and* only with '`localtest`' feature switched on.
-    pub async fn load(name: &str, plaintext_passwd: &str, _addr: &SocketAddr) -> Result<Player, LoadError> {
+    pub async fn load(wordhash: &HashSet<String>, name: &str, plaintext_passwd: &str, _addr: &SocketAddr) -> Result<Player, LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let save = match std::fs::read_to_string(&path) {
@@ -145,7 +154,11 @@ impl Player {
             Err(_) => {
                 log::warn!("Attempt to load non-existent save '{}' by '{}'…", filename, name);
                 let _ = DUMMY_SAVE.verify_passwd(plaintext_passwd);
-                return Err(LoadError::NoSuchSave);
+                if filter_bad_name(wordhash, name) {
+                    return Err(LoadError::InvalidName);
+                } else {
+                    return Err(LoadError::NoSuchSave);
+                }
             }
         };
         let save: Player = serde_json::from_str(&save)?;
@@ -292,7 +305,7 @@ mod savefile_tests {
     async fn load_savefile() {
         let _ = env_logger::try_init();
         let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
-        let savefile = Player::load("dummy", OK_PASSWORD, &addr).await;
+        let savefile = Player::load(&HashSet::new(), "dummy", OK_PASSWORD, &addr).await;
         if let Err(e) = &savefile {
             log::error!("SAV: {:?}", e);
         }
@@ -304,7 +317,7 @@ mod savefile_tests {
         let _ = env_logger::try_init();
         let _ = DATA.set("./data".into());
         let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
-        let savefile = Player::load("dummy", FAIL_PASSWD, &addr).await;
+        let savefile = Player::load(&HashSet::new(), "dummy", FAIL_PASSWD, &addr).await;
         if let Err(e) = &savefile {
             log::debug!("Err({:?})", e);
         }

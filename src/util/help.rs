@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use walkdir::WalkDir;
 
-use crate::{traits::{save::{DoesSave, SaveError}, Description}, DATA_PATH};
+use crate::{traits::{save::{DoesSave, SaveError}, Description}, util::GithubContent, DATA_PATH};
 
 static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *DATA_PATH)));
 static GITHUB_HELP_REPO: &str = "https://api.github.com/repos/msukanen/rustROM-help/contents";
@@ -87,12 +87,6 @@ impl Help {
     pub(crate) async fn bootstrap(url: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         log::info!("Fetching default help files from GitHub…");
 
-        #[derive(Deserialize)]
-        struct GitHubFile {
-            name: String,
-            download_url: String,
-        }
-
         let client = reqwest::Client::builder().user_agent("RustROM MUD").build()?;
         let repo_url = url.unwrap_or(GITHUB_HELP_REPO.into()).clone();
         
@@ -101,30 +95,31 @@ impl Help {
         #[cfg(feature = "ittest")]{
             log::debug!("response {:?}", res);
         }
-        let res = res.json::<Vec<GitHubFile>>().await?;
+        let res = res.json::<Vec<GithubContent>>().await?;
 
         for file in res {
             if file.name.ends_with(".toml") {
                 let filepath = format!("{}/{}", *HELP_PATH, file.name);
+                let download_url = file.download_url.unwrap();
                 match tokio::fs::try_exists(&filepath).await {
                     Ok(true) => {
-                        log::info!("Skipping download of '{}'. Corresponding entry '{}' already exists.", file.download_url, filepath);
+                        log::info!("Skipping download of '{}'. Corresponding entry '{}' already exists.", download_url, filepath);
                         continue;
                     }
                     _ => {}
                 }
 
                 log::info!("  → downloading {}…", file.name);
-                let content = client.get(&file.download_url).send().await?.text().await?;
+                let content = client.get(&download_url).send().await?.text().await?;
                 #[cfg(feature = "ittest")]{
                     log::debug!("{}", content);
                 }
                 let help = toml::from_str::<Help>(&content);
                 if let Ok(mut help) = help {
                     help.save().await?;
-                    log::info!("  ✓ help file '{}' from '{}' stored.", filepath, file.download_url);
+                    log::info!("  ✓ help file '{}' from '{}' stored.", filepath, download_url);
                 } else {
-                    log::info!("  ✗ file '{}' was not recognized as a help entry. Skipping.", file.download_url);
+                    log::info!("  ✗ file '{}' was not recognized as a help entry. Skipping.", download_url);
                 }
             }
         }

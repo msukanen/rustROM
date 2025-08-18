@@ -1,15 +1,19 @@
-pub mod clientstate;
+pub(crate) mod clientstate;
 pub(crate) use clientstate::ClientState;
 
-pub mod contact;
-pub mod direction;
-pub mod password;
+pub(crate) mod contact;
+pub(crate) mod direction;
+pub(crate) mod password;
 
-pub mod help;
+pub(crate) mod help;
 pub(crate) use help::Help;
 
 pub(crate) mod comm;
 pub(crate) use comm::BroadcastMessage;
+
+pub mod badname;
+pub mod github;
+pub(crate) use github::GithubContent;
 
 #[macro_export]
 macro_rules! get_prompt {

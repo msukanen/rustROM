@@ -17,3 +17,4 @@ target
 .vscode
 # data/help is rustROM-help submodule - ignore
 data/help
+data/badwords.txt

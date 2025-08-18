@@ -21,6 +21,7 @@ pub(crate) mod hedit;
 pub(crate) mod redit;
 mod abort;
 mod shout;
+mod badname;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;

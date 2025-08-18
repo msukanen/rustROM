@@ -197,7 +197,7 @@ async fn main() {
                                 }
                             },
                             ClientState::EnteringPassword1{ name } => {
-                                match Player::load(&name, &input, &addr).await {
+                                match Player::load(&world.read().await.bad_names, &name, &input, &addr).await {
                                     Ok(mut save) => {
                                         let mut translocated = false;
                                         log::info!("'{}' successfully logged in.", name);
