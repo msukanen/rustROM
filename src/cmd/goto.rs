@@ -55,7 +55,7 @@ fn goto_directions() -> String {r#"
 
 #[cfg(test)]
 mod goto_tests {
-    use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, str::FromStr, sync::Arc};
+    use std::{net::SocketAddr, str::FromStr, sync::Arc};
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
