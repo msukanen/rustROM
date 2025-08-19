@@ -310,7 +310,8 @@ async fn main() {
                             },
                             _ => {
                                 let prompt: String;
-                                if let Some(p) = world.read().await.players_by_sockaddr.get(&addr).cloned() {
+                                let p = world.read().await.players_by_sockaddr.get(&addr).cloned();
+                                if let Some(p) = p {
                                     let ctx = CommandCtx {
                                         player: p.clone(),
                                         state: p.read().await.state(),
@@ -365,6 +366,9 @@ async fn main() {
                                             // everything else but 'force' goes through Broadcast's message().
                                             tell_user!(&mut writer, "{}{}", msg.message(), prompt);
                                         }
+                                    }
+                                    #[cfg(feature = "localtest")] {
+                                        log::debug!("Broadcast '{}' dispatched.", msg.message());
                                     }
                                 }
                             }
