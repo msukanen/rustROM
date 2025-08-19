@@ -15,6 +15,9 @@ pub mod badname;
 pub mod github;
 pub(crate) use github::GithubContent;
 
+pub mod ed;
+pub(crate) use ed::Editor;
+
 #[macro_export]
 macro_rules! get_prompt {
     ($w:ident, $pt:expr, $default:tt) => {

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Description, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
+use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
 
 pub(crate) mod desc;
 pub(crate) mod data;

@@ -37,14 +37,24 @@ impl Command for ReditCommand {
             }
         }
 
-        if let Some(existing_entry) = ctx.world.read().await.rooms.get(ctx.args) {
+        let id = if ctx.args == "this" {
+            g.location.clone()
+        } else {
+            ctx.args.to_string()
+        };
+
+        if let Some(existing_entry) = ctx.world.read().await.rooms.get(&id) {
+            log::info!("Player '{}' editing existing room '{}'", g.id(), id);
+
             g.redit = Some(ReditState {
                 entry: existing_entry.read().await.clone(),
                 dirty: false
             });
         } else {
+            log::info!("Player '{}' editing new room '{}'", g.id(), id);
+
             g.redit = Some(ReditState {
-                entry: Room::blank(Some(ctx.args)),
+                entry: Room::blank(Some(&id)),
                 dirty: true
             });
         }
