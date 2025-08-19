@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::CommandCtx, player::Player, string::{prompt::PromptType, WordSet}, traits::tickable::Tickable, util::{badname::{load_bad_names, BAD_NAMES_FILEPATH}, contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
+use crate::{cmd::CommandCtx, player::Player, string::{prompt::PromptType, WordSet}, traits::{tickable::Tickable, Description}, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MotD {
@@ -63,12 +63,12 @@ pub struct World {
     pub areas: HashMap<String, Arc<RwLock<Area>>>,
     pub root: WorldEntrance,
     pub prompts: HashMap<PromptType, String>,
-    #[serde(skip, default)] pub players: HashMap<SocketAddr, Arc<RwLock<Player>>>,
+    #[serde(skip, default)] pub players_by_sockaddr: HashMap<SocketAddr, Arc<RwLock<Player>>>,
+    #[serde(skip, default)] pub players: HashMap<String, Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub players_to_logout: Vec<Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
     #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
     #[serde(skip, default)] pub help_aliased: HashMap<String, String>,
-    #[serde(skip, default)] pub bad_names: WordSet,
 }
 
 /// Thread-shared world type.
@@ -108,7 +108,6 @@ impl World {
         };
         let mut world: World = serde_json::from_str(&content)?;
         world.filename = filename;
-        world.bad_names = load_bad_names(&BAD_NAMES_FILEPATH).await;
         Ok(world)
     }
 
@@ -128,12 +127,12 @@ impl World {
         areas: HashMap::new(),
         root: WorldEntrance::new(),
         prompts: HashMap::new(),
+        players_by_sockaddr: HashMap::new(),
         players: HashMap::new(),
         players_to_logout: vec![],
         rooms: HashMap::new(),
         help: HashMap::new(),
         help_aliased: HashMap::new(),
-        bad_names: WordSet::new(),
     }}
 
     /// Bootstrap MUD from grounds up.
@@ -208,6 +207,17 @@ impl World {
             ctx.player.write().await.location = "root".to_string();
             true
         }
+    }
+
+    /// Find player by name.
+    pub async fn find_player(&self, name: &str) -> Option<Arc<RwLock<Player>>> {
+        for (_, lock) in &self.players_by_sockaddr {
+            if lock.read().await.id() == name {
+                return Some(lock.clone());
+            }
+        }
+
+        None
     }
 }
 

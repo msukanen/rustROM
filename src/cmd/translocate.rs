@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, player::Player, resume_game, tell_user, tell_user_unk, traits::{save::DoesSave, Description}, validate_admin, world::{room::Room, SharedWorld}, ClientState};
+use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, player::Player, resume_game, tell_user, traits::{save::DoesSave, Description}, validate_admin, world::SharedWorld, ClientState};
 
 pub struct TranslocateCommand;
 
@@ -33,27 +33,30 @@ impl Command for TranslocateCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
         validate_admin!(ctx);
 
-        let args: Vec<&str> = ctx.args.splitn(2, ' ').collect();
-        if args.len() < 2 {
-            let cmd = HelpCommand;
-            return cmd.exec({ctx.args = "translocate"; ctx}).await;
-        }
+        let (who, where_to) = {
+            let args: Vec<&str> = ctx.args.splitn(2, ' ').collect();
+            if args.len() < 2 {
+                let cmd = HelpCommand;
+                return cmd.exec({ctx.args = "translocate"; ctx}).await;
+            }
+            (args[0], args[1])
+        };
 
-        let room = args[1];
-        if ctx.world.read().await.rooms.get(room).is_none() {
+        if ctx.world.read().await.rooms.get(where_to).is_none() {
             tell_user!(ctx.writer, "No such room exists.\n");
             resume_game!(ctx);
         }
 
         // Who's being translocated?
-        match args[0] {
+        match who {
             "self" => {
                 let source = ctx.player.read().await.location.clone();
-                let _ = translocate(ctx.world, Some(source), room.into(), ctx.player.clone()).await;
+                let _ = translocate(ctx.world, Some(source), where_to.into(), ctx.player.clone()).await;
                 let look = LookCommand;
                 look.exec({ctx.args = ""; ctx}).await;
             },
             _ => {
+                let who = ctx.world.read().await.find_player(who).await.clone();
                 todo!("Translocate another player.")
             }
         }

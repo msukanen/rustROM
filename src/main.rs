@@ -1,5 +1,5 @@
 //! A little MUD project in Rust.
-use std::{collections::HashMap, ops::Deref, sync::Arc};
+use std::{collections::{HashMap, HashSet}, ops::Deref, sync::Arc};
 use clap::Parser;
 use once_cell::sync::OnceCell;
 use tokio::{
@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, traits::Description, util::{help::Help, BroadcastMessage, ClientState}, world::room::find_nearby_rooms};
+use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::Description, util::{help::Help, BroadcastMessage, ClientState}, world::room::find_nearby_rooms};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -74,6 +74,8 @@ async fn main() {
     // Initialize the logger
     env_logger::init();
 
+    let bad_words: Arc<RwLock<WordSet>> = Arc::new(RwLock::new(HashSet::new()));
+
     // Load the world ...
     let world = Arc::new(RwLock::new({
         let w = World::new(&args.world).await.expect("ERROR: world dead or in fire?!");
@@ -105,7 +107,7 @@ async fn main() {
     world.write().await.help_aliased = help_aliases;
 
     tokio::spawn(game_loop(world.clone()));
-    tokio::spawn(io_loop(world.clone()));
+    tokio::spawn(io_loop(world.clone(), bad_words.clone()));
 
     // Create a listener that will accept incoming connections.
     let listen_on = format!("{}:{}", args.host_listen_addr, args.port);
@@ -127,6 +129,7 @@ async fn main() {
         // Get a receiver for this client to listen for messages from others.
         let mut rx = tx.subscribe();
         let world = world.clone();
+        let bad_words = bad_words.clone();
 
         // Spawn a new task to handle this client's connection.
         // This allows the server to handle multiple clients concurrently.
@@ -154,7 +157,9 @@ async fn main() {
                 // Check if player is logging out...
                 if let ClientState::Logout = &state {
                     let mut w = world.write().await;
-                    if let Some(p) = w.players.remove(&addr) {
+                    if let Some(p) = w.players_by_sockaddr.remove(&addr) {
+                        // drop the named mapping here as it's not needed for logout.
+                        w.players.remove(p.read().await.id());
                         w.players_to_logout.push(p);
                         if !abrupt_dc {
                             tell_user!(&mut writer, "<c cyan>Goodbye! See you soon again!</c>\n");
@@ -192,12 +197,17 @@ async fn main() {
                                     state
                                 } else {
                                     log::info!("Login attempt on '{}'…", input);
-                                    tell_user!(&mut writer, get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1));
-                                    ClientState::EnteringPassword1 { name: input.to_string() }
+                                    if let Err(LoadError::InvalidName) = Player::load_is_possible(bad_words.clone(), &input).await {
+                                        tell_user!(&mut writer, "Name '{}' is reserved, please try another.\n\n{}", input, get_prompt!(world, PromptType::Login, PROMPT_LOGIN));
+                                        ClientState::EnteringName
+                                    } else {
+                                        tell_user!(&mut writer, get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1));
+                                        ClientState::EnteringPassword1 { name: input.to_string() }
+                                    }
                                 }
                             },
                             ClientState::EnteringPassword1{ name } => {
-                                match Player::load(&world.read().await.bad_names, &name, &input, &addr).await {
+                                match Player::load(&name, &input, &addr).await {
                                     Ok(mut save) => {
                                         let mut translocated = false;
                                         log::info!("'{}' successfully logged in.", name);
@@ -212,13 +222,16 @@ async fn main() {
                                                 log::warn!("Player '{}' location '{}' invalid. Translocating to safety of '{}'.", pg.id(), location, root_room);
                                                 translocated = true;
                                             }
-
                                             let source = location;
                                             // Relocate player in case their saved location has evaporated...
                                             let _ = translocate(&world, Some(source), root_room, p.clone()).await;
                                             let mut w = world.write().await;
-                                            w.players.insert(addr.clone(), p.clone());
-                                            let prompt = p.read().await.prompt().await;
+                                            w.players_by_sockaddr.insert(addr.clone(), p.clone());
+                                            let prompt = {
+                                                let pl = p.read().await;
+                                                w.players.insert(pl.id().into(), p.clone());
+                                                pl.prompt().await
+                                            };
                                             (w.welcome_back.clone().unwrap_or_else(|| WELCOME_BACK.to_string()), prompt)
                                         };
                                         tell_user!(&mut writer, "{}\n\n{}{}",
@@ -229,6 +242,10 @@ async fn main() {
                                             prompt,
                                         );
                                         ClientState::Playing
+                                    },
+                                    Err(LoadError::InvalidName) => {
+                                        tell_user!(&mut writer, "Name '{}' is reserved, please try another.\n\n{}", name, get_prompt!(world, PromptType::Login, PROMPT_LOGIN));
+                                        ClientState::EnteringName
                                     },
                                     Err(LoadError::NoSuchSave) => {
                                         tell_user!(&mut writer, "{}", get_prompt!(world, PromptType::PasswordV, PROMPT_PASSWDV));
@@ -254,10 +271,19 @@ async fn main() {
                                             let p = Arc::new(RwLock::new(player));
                                             let root_room = world.read().await.root.room.clone();
                                             let _ = translocate(&world, None, root_room, p.clone()).await;
-                                            log::info!("New player '{}' instantiated and translocated to '{}'.", p.read().await.id(), p.read().await.location);
-                                            world.write().await.players.insert(addr.clone(), p.clone());
-                                            let state = p.write().await.erase_states(ClientState::Playing);
-                                            tell_user!(&mut writer, "{}\n{}", msg, p.read().await.prompt().await);
+                                            let (p_id, prompt, state) = {
+                                                let mut pl = p.write().await;
+                                                let p_id = pl.id().to_string();
+                                                let prompt = pl.prompt().await;
+                                                log::info!("New player '{}' instantiated and translocated to '{}'.", p_id, &pl.location);
+                                                (p_id, prompt, pl.erase_states(ClientState::Playing))
+                                            };
+                                            {
+                                                let mut w = world.write().await;
+                                                w.players_by_sockaddr.insert(addr.clone(), p.clone());
+                                                w.players.insert(p_id, p.clone());
+                                            }
+                                            tell_user!(&mut writer, "{}\n{}", msg, prompt);
                                             state
                                         } else {
                                             // Some strange error happened with save...
@@ -285,7 +311,7 @@ async fn main() {
                             _ => {
                                 let p = {
                                     let w = world.read().await;
-                                    w.players.get(&addr).cloned()
+                                    w.players_by_sockaddr.get(&addr).cloned()
                                 };
                                 let prompt: String;
                                 if let Some(p) = p {
@@ -320,7 +346,7 @@ async fn main() {
                             if let Ok(msg) = result {
                                 // If we receive a message from the broadcast channel, write it to our client.
                                 let w = world.read().await;
-                                if let Some(p) = w.players.get(&addr) {
+                                if let Some(p) = w.players_by_sockaddr.get(&addr) {
                                     let p = p.read().await;
                                     match msg {
                                         BroadcastMessage::Say { room_id, message, from_player, .. } => {

@@ -1,6 +1,7 @@
-use std::{fs::OpenOptions, io::Write};
+use std::{fs::OpenOptions, io::Write, sync::Arc};
 
 use once_cell::sync::Lazy;
+use tokio::sync::RwLock;
 
 use crate::{string::WordSet, util::GithubContent, DATA_PATH};
 
@@ -21,8 +22,8 @@ pub(crate) static BAD_NAMES_FILEPATH: Lazy<String> = Lazy::new(|| format!("{}/ba
 /// 
 /// # Returns
 /// `true` if given `name` is considered to be a Bad Name™.
-pub fn filter_bad_name(wordhash: &WordSet, name: &str) -> bool {
-    if wordhash.contains(&name.trim().to_lowercase()) { return true; }
+pub async fn filter_bad_name(badname_lock: Arc<RwLock<WordSet>>, name: &str) -> bool {
+    if badname_lock.read().await.contains(&name.trim().to_lowercase()) { return true; }
 
     let checks: Vec<fn(&str) -> bool> = vec![
         is_reserved_name,
@@ -96,7 +97,9 @@ pub(crate) async fn load_bad_names(path: &str) -> WordSet {
             words
         }
         _ => {
-            fetch_bad_names_from_github(GITHUB_BAD_NAMES_REPO_URL, path).await;
+            fetch_bad_names_from_github(GITHUB_BAD_NAMES_REPO_URL, path)
+                .await
+                .expect("Error fetching from github!");
             Box::pin(load_bad_names(path)).await
         }
     }

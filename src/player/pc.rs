@@ -1,11 +1,12 @@
-use std::{collections::HashSet, fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use argon2::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::styling::dirty_mark, traits::{save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::{styling::dirty_mark, WordSet}, traits::{save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -146,7 +147,7 @@ impl Player {
     /// - `plaintext_passwd`— password.
     /// - `_addr`— `IP:port` of incoming connection.
     ///            Used *exclusively* in non-release modes *and* only with '`localtest`' feature switched on.
-    pub async fn load(wordhash: &HashSet<String>, name: &str, plaintext_passwd: &str, _addr: &SocketAddr) -> Result<Player, LoadError> {
+    pub async fn load(name: &str, plaintext_passwd: &str, _addr: &SocketAddr) -> Result<Player, LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         let path = PathBuf::from_str(&filename).unwrap();
         let save = match std::fs::read_to_string(&path) {
@@ -154,11 +155,7 @@ impl Player {
             Err(_) => {
                 log::warn!("Attempt to load non-existent save '{}' by '{}'…", filename, name);
                 let _ = DUMMY_SAVE.verify_passwd(plaintext_passwd);
-                if filter_bad_name(wordhash, name) {
-                    return Err(LoadError::InvalidName);
-                } else {
-                    return Err(LoadError::NoSuchSave);
-                }
+                return Err(LoadError::NoSuchSave);
             }
         };
         let save: Player = serde_json::from_str(&save)?;
@@ -174,6 +171,19 @@ impl Player {
         } else {
             log::warn!("Password failure for user '{}'", name);
             Err(LoadError::InvalidLogin)
+        }
+    }
+
+    pub async fn load_is_possible(badname_lock: Arc<RwLock<WordSet>>, name: &str) -> Result<(), LoadError> {
+        let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
+        if let Ok(true) = tokio::fs::try_exists(&filename).await {
+            Ok(())
+        } else {
+            if filter_bad_name(badname_lock, name).await {
+                Err(LoadError::InvalidName)
+            } else {
+                Ok(())
+            }
         }
     }
     
@@ -273,6 +283,8 @@ impl Description for Player {
 
 #[cfg(test)]
 mod savefile_tests {
+    use std::collections::HashSet;
+
     use crate::DATA;
 
     use super::*;
@@ -305,7 +317,7 @@ mod savefile_tests {
     async fn load_savefile() {
         let _ = env_logger::try_init();
         let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
-        let savefile = Player::load(&HashSet::new(), "dummy", OK_PASSWORD, &addr).await;
+        let savefile = Player::load("dummy", OK_PASSWORD, &addr).await;
         if let Err(e) = &savefile {
             log::error!("SAV: {:?}", e);
         }
@@ -317,7 +329,7 @@ mod savefile_tests {
         let _ = env_logger::try_init();
         let _ = DATA.set("./data".into());
         let addr = SocketAddr::from_str(FAKE_ADDR).unwrap();
-        let savefile = Player::load(&HashSet::new(), "dummy", FAIL_PASSWD, &addr).await;
+        let savefile = Player::load("dummy", FAIL_PASSWD, &addr).await;
         if let Err(e) = &savefile {
             log::debug!("Err({:?})", e);
         }

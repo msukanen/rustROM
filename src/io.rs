@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::RwLock, time::{self}};
-use crate::{player::Player, traits::{save::DoesSave, Description}, world::SharedWorld};
+use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Description}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
 #[cfg(feature = "localtest")]
@@ -12,7 +12,10 @@ const AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
 /// 
 /// # Arguments
 /// - `world`— shared world, shared pain ;-)
-pub async fn io_loop(world: SharedWorld) {
+pub async fn io_loop(
+    world: SharedWorld,
+    bad_words: Arc<RwLock<WordSet>>,
+) {
     let mut logout_interval = time::interval(Duration::from_secs(LOGOUT_QUEUE_INTERVAL));
     let mut autosave_interval = time::interval(Duration::from_secs(AUTOSAVE_QUEUE_INTERVAL));
 
@@ -20,6 +23,14 @@ pub async fn io_loop(world: SharedWorld) {
             LOGOUT_QUEUE_INTERVAL, if LOGOUT_QUEUE_INTERVAL==1 {""} else {"s"},
             AUTOSAVE_QUEUE_INTERVAL, if AUTOSAVE_QUEUE_INTERVAL==1 {""} else {"s"}
         );
+
+    {
+        log::info!("Initializing bad words...");
+        let mut bwl = bad_words.write().await;
+        bwl.clone_from(&load_bad_names(&BAD_NAMES_FILEPATH).await);
+        log::info!("Bad words ready → releasing lock for public use.");
+    }
+
     loop {
         tokio::select! {
             _ = logout_interval.tick() => {
@@ -54,7 +65,7 @@ pub async fn io_loop(world: SharedWorld) {
 
             _ = autosave_interval.tick() => {
                 log::debug!("Auto-save cycle initiated …");
-                let players = world.read().await.players.clone();
+                let players = world.read().await.players_by_sockaddr.clone();
                 if !players.is_empty() {
                     log::info!("Auto-save players collected …");
                 }

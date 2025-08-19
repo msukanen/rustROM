@@ -92,7 +92,7 @@ mod goto_tests {
         p.write().await.location = "void".into();
 
         let ip = SocketAddr::from_str("127.0.0.1:12345").unwrap();
-        w.write().await.players.insert(ip.clone(), p);
+        w.write().await.players_by_sockaddr.insert(ip.clone(), p);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -120,7 +120,7 @@ mod goto_tests {
             let (server_reader, mut server_writer) = server_socket.into_split();
             let mut server_reader = BufReader::new(server_reader);
             let mut line = String::new();
-            let player_arc = w.read().await.players.get(&addr).unwrap().clone();
+            let player_arc = w.read().await.players_by_sockaddr.get(&addr).unwrap().clone();
             player_arc.write().await.push_state(ClientState::Playing);
 
             // Handle "look" command
