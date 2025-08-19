@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use walkdir::WalkDir;
 
-use crate::{traits::{save::{DoesSave, SaveError}, Description}, util::GithubContent, DATA_PATH};
+use crate::{traits::{save::{DoesSave, SaveError}, Description}, util::{Editor, GithubContent}, DATA_PATH};
 
 static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *DATA_PATH)));
 static GITHUB_HELP_REPO: &str = "https://api.github.com/repos/msukanen/rustROM-help/contents";
@@ -180,6 +180,12 @@ impl DoesSave for Help {
         tokio::fs::remove_file(&tmp_filename).await?;// this *should* succeed, but who knows...
 
         Ok(())
+    }
+}
+
+impl Editor for Help {
+    fn set_description(&mut self, desc: &str) {
+        self.description = desc.into();
     }
 }
 

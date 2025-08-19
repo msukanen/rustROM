@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, string::styling::RULER_LINE, tell_user, util::ed::{edit_text, EdResult}, validate_builder};
+use crate::{cmd::{Command, CommandCtx}, show_help, string::styling::RULER_LINE, tell_user, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
 
 pub struct DescCommand;
 
@@ -18,12 +18,9 @@ impl Command for DescCommand {
 
         let res = edit_text(ctx.writer, ctx.args, &ctx.player.read().await.hedit.as_ref().unwrap().entry.description).await;
         let verbose = match res {
-            Ok(EdResult::ContentReady { text, dirty, verbose }) => {
+            Ok(EdResult::ContentReady { text, verbose, .. }) => {
                 let mut g = ctx.player.write().await;
-                let ed = g.hedit.as_mut().unwrap();
-                ed.dirty = dirty;
-                ed.entry.description = text;
-                log::debug!("Edited:\n{}", ed.entry.description);
+                g.hedit.set_description(&text);
                 verbose
             },
             Ok(EdResult::NoChanges(true)) => true,
@@ -33,7 +30,7 @@ impl Command for DescCommand {
             _ => false
         };
         
-        if verbose {
+        if verbose {// re-run argless to pretty-print current description.
             let cmd = DescCommand;
             cmd.exec({ctx.args = ""; ctx}).await;
         }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
+use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, util::{clientstate::EditorMode, Editor, Help}, validate_builder, ClientState};
 
 pub(crate) mod desc;
 pub(crate) mod data;
@@ -62,5 +62,20 @@ impl Command for HeditCommand {
         }
 
         pg.push_state(ClientState::Editing { mode: EditorMode::Help });
+    }
+}
+
+impl Editor for HeditState {
+    fn set_description(&mut self, desc: &str) {
+        self.dirty = true;
+        self.entry.description = desc.into();
+    }
+}
+
+impl Editor for Option<HeditState> {
+    fn set_description(&mut self, desc: &str) {
+        if let Some(state) = self {
+            state.set_description(desc);
+        }
     }
 }
