@@ -15,9 +15,8 @@ impl Command for DigCommand {
         if let Some((dir, id)) = vr {
             let id: String = id.into();
             if create_and_link_room(ctx, dir, &id).await {
-                log::debug!("CnLR valid ...");
                 let source = ctx.player.read().await.location.clone();
-                let _ = translocate(ctx.world, Some(source), id.into(), ctx.player.clone());
+                let _ = translocate(ctx.world, Some(source), id.into(), ctx.player.clone()).await;
                 let cmd = ReditCommand;
                 cmd.exec({ctx.args = "this"; ctx}).await;
             }
@@ -76,9 +75,7 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
     room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open });
     let lock = Arc::new(RwLock::new(room));
     
-    log::debug!("DL0 See if the World is locked ...");
     let mut w = ctx.world.write().await;
-    log::debug!("DL1 ... nope, not locked.");
     w.rooms.insert(id.into(), lock.clone());
     log::debug!("Room inserted.");
 
