@@ -1,4 +1,9 @@
-use crate::{cmd::say::Subtype, player::Player};
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use tokio::sync::RwLock;
+
+use crate::{cmd::say::Subtype, player::{self, Player}, traits::Description, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19,11 +24,12 @@ pub enum Channel {
 
 impl Channel {
     /// Check if the player has permission to listen to this channel.
-    pub fn can_listen(&self, player: &Player) -> bool {
+    pub async fn can_listen(&self, player: &Arc<RwLock<Player>>) -> bool {
+        let access = player.read().await.access;
         match self {
-            Self::Admin   => player.access.is_admin(),
-            Self::Builder => player.access.is_builder(),
-            Self::Event   => player.access.is_event_host(),
+            Self::Admin   => access.is_admin(),
+            Self::Builder => access.is_builder(),
+            Self::Event   => access.is_event_host(),
             Self::Newbie  |
             Self::Ooc     |
             Self::Qa      => true
@@ -64,8 +70,8 @@ pub enum Broadcast {
     }
 }
 
-/* pub(crate) trait MessagePayload {
-    fn message<'a>(&'a self) -> &'a str;
+pub(crate) trait MessagePayload {
+    fn message<'a>(&'a self) -> String;
     fn from_player(&self) -> String;
 }
 
@@ -80,14 +86,49 @@ impl MessagePayload for Broadcast {
         }
     }
 
-    fn message<'a>(&'a self) -> &'a str {
+    fn message<'a>(&'a self) -> String {
         match self {
-            Self::Channel { message, .. }|
+            Self::Channel { channel, message, from_player } => {
+                match channel {
+                    Channel::Admin => format!("[ADMIN-CHAT]({}): {}", from_player, message),
+                    Channel::Builder => format!("[BUILD-CHAT]({}): {}", from_player, message),
+                    Channel::Event => format!("[EVENT-CHAT]({}): {}", from_player, message),
+                    Channel::Newbie => format!("[NEW ONES]({}): {}", from_player, message),
+                    Channel::Ooc => format!("[OOC]({}): {}", from_player, message),
+                    Channel::Qa => format!("[Q&A]({}): {}", from_player, message),
+                }
+            }
             Self::Force { message, .. }|
             Self::Say { message, .. }|
             Self::Shout { message, .. }|
-            Self::Tell { message, .. } => &message
+            Self::Tell { message, .. } => message.clone()
         }
     }
 }
- */
+
+#[async_trait]
+pub trait IsRecipient {
+    async fn is_recipient(&self, player: &Arc<RwLock<Player>>, world: &SharedWorld) -> bool;
+}
+
+#[async_trait]
+impl IsRecipient for Broadcast {
+    async fn is_recipient(&self, player: &Arc<RwLock<Player>>, world: &SharedWorld) -> bool {
+        let p = player.read().await;
+        if p.id() == self.from_player() { return false ;}
+
+        match self {
+            Self::Say { room_id, ..} => p.location == *room_id,
+            Self::Shout { room_id, .. } => {
+                let nearby = find_nearby_rooms(world, &room_id, 2).await;
+                nearby.contains(&p.location)
+            },
+            Self::Tell { to_player, .. } => p.id() == *to_player,
+            Self::Force { to_player, .. } => {
+                if let Some(to) = to_player { *to == p.id() } else { true }
+            },
+            Self::Channel { channel, .. } => channel.can_listen(&player).await /* && p.listening_to(channel) */,
+            _ => false,
+        }
+    }
+}
