@@ -1,18 +1,17 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx, ShortCommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, ClientState};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, tell_user, traits::Description};
 
 pub struct LookCommand;
 
 #[async_trait]
 impl Command for LookCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        let mut ctx = ctx.short_ctx();
-        look_at_current_room(&mut ctx).await
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
+        look_at_current_room(ctx).await;
     }
 }
 
 /// The looking glass… used by e.g. 'look' command, etc.
-pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState {
+pub async fn look_at_current_room(ctx: &mut CommandCtx<'_>) {
     do_in_current_room!(ctx, |room| {
         let r = room.read().await;
         let mut desc = format!(
@@ -39,5 +38,4 @@ pub async fn look_at_current_room(ctx: &mut ShortCommandCtx<'_>) -> ClientState 
     } otherwise {
         tell_user!(ctx.writer, "You see... nothing much else than a wall of white text on a dark surface?\n");
     });
-    resume_game!(ctx);
 }

@@ -1,16 +1,15 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, resume_game, string::boolean::BooleanCheckExt, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, string::boolean::BooleanCheckExt, tell_user, validate_builder};
 
 pub struct AdminCommand;
 
 #[async_trait]
 impl Command for AdminCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
         if ctx.args.is_empty() {
-            tell_user!(ctx.writer, "Admin-only: {}\n", ctx.player.read().await.hedit.as_ref().unwrap().entry.admin);
-            resume_game!(ctx);
+            return tell_user!(ctx.writer, "Admin-only: {}\n", ctx.player.read().await.hedit.as_ref().unwrap().entry.admin);
         }
 
         if ctx.args.starts_with('?') {
@@ -27,7 +26,5 @@ impl Command for AdminCommand {
         ed.dirty = true;
         ed.entry.admin = ctx.args.is_true();
         tell_user!(ctx.writer, "Admin flag is now {}.\n", if ed.entry.admin {"set"} else {"unset"});
-
-        resume_game!(ctx);
     }
 }

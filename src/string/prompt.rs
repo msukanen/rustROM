@@ -12,7 +12,7 @@ pub enum PromptType {
 #[macro_export]
 macro_rules! tell_user {
     ($w:expr, $t:expr) => {
-        tokio::io::AsyncWriteExt::write_all($w, crate::string::styling::format_color($t).as_bytes()).await.unwrap();
+        tokio::io::AsyncWriteExt::write_all($w, crate::string::styling::format_color($t).as_bytes()).await.unwrap()
     };
 
     ($w:expr, $fmt:literal, $($arg:tt)*) => {{
@@ -24,6 +24,6 @@ macro_rules! tell_user {
 #[macro_export]
 macro_rules! tell_user_unk {
     ($w:expr) => {
-        crate::tell_user!($w, "Huh?\n");
+        crate::tell_user!($w, "Huh?\n")
     };
 }

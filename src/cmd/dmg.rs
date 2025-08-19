@@ -1,14 +1,13 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, mob::{core::IsMob, stat::StatValue}, resume_game, tell_user, tell_user_unk, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, mob::{core::IsMob, stat::StatValue}, tell_user, tell_user_unk};
 
 pub struct DmgCommand;
 
 #[async_trait]
 impl Command for DmgCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         if !ctx.player.read().await.access.is_admin() {
-            tell_user_unk!(ctx.writer);
-            resume_game!(ctx);
+            return tell_user_unk!(ctx.writer);
         }
 
         let args: Vec<&str> = ctx.args.split(' ').collect();
@@ -33,7 +32,5 @@ impl Command for DmgCommand {
                 }
             }
         }
-
-        resume_game!(ctx);
     }
 }

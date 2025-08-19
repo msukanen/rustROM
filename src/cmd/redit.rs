@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
+use crate::{cmd::{Command, CommandCtx}, tell_user, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
 
@@ -14,14 +14,13 @@ pub struct ReditState {
 
 #[async_trait]
 impl Command for ReditCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
         if ctx.args.is_empty() && ctx.player.read().await.redit.is_none() {
-            tell_user!(ctx.writer,
+            return tell_user!(ctx.writer,
                 "ROOM-ID missing and no previous REdit session stored.\n\
                 Which room you want to edit? In case of the current one, use '<c yellow>redit this</c>'\n");
-            resume_game!(ctx);
         }
 
         let mut g = ctx.player.write().await;
@@ -40,6 +39,5 @@ impl Command for ReditCommand {
         };
 
         g.push_state(ClientState::Editing { mode: EditorMode::Room });
-        g.state()
     }
 }

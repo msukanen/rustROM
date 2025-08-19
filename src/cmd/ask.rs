@@ -1,19 +1,20 @@
 use async_trait::async_trait;
-use crate::{cmd::{say::Subtype, Command, CommandCtx}, resume_game, traits::Description, util::BroadcastMessage, ClientState};
+use crate::{cmd::{help::HelpCommand, say::Subtype, Command, CommandCtx}, traits::Description, util::BroadcastMessage};
 
 pub struct AskCommand;
 
 #[async_trait]
 impl Command for AskCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        if !ctx.args.is_empty() {
-            let p = ctx.player.read().await;
-            let message = format!("\n<c blue>[<c cyan>{}</c>]</c> asks: {}{}\n", p.id(), ctx.args, if ctx.args.ends_with('?') {""} else {"?"});
-            let from_player = p.id().into();
-            let room_id = p.location.clone();
-            drop(p);
-            ctx.tx.send(BroadcastMessage::Say { subtype: Some(Subtype::Ask), room_id, message, from_player }).unwrap();
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
+        if ctx.args.is_empty() || ctx.args.starts_with('?') {
+            let cmd = HelpCommand;
+            return cmd.exec({ctx.args = "ask"; ctx}).await;
         }
-        resume_game!(ctx);
+
+        let p = ctx.player.read().await;
+        let message = format!("\n<c blue>[<c cyan>{}</c>]</c> asks: {}{}\n", p.id(), ctx.args, if ctx.args.ends_with('?') {""} else {"?"});
+        let from_player = p.id().into();
+        let room_id = p.location.clone();
+        ctx.tx.send(BroadcastMessage::Say { subtype: Some(Subtype::Ask), room_id, message, from_player }).unwrap();
     }
 }

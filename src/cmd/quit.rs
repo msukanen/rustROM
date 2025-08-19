@@ -5,7 +5,7 @@ pub struct QuitCommand;
 
 #[async_trait]
 impl Command for QuitCommand {
-    async fn exec(&self, _: &mut CommandCtx<'_>) -> ClientState {
-        ClientState::Logout
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
+        ctx.player.write().await.push_state(ClientState::Logout);
     }
 }

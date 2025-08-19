@@ -210,14 +210,8 @@ impl World {
     }
 
     /// Find player by name.
-    pub async fn find_player(&self, name: &str) -> Option<Arc<RwLock<Player>>> {
-        for (_, lock) in &self.players_by_sockaddr {
-            if lock.read().await.id() == name {
-                return Some(lock.clone());
-            }
-        }
-
-        None
+    pub fn find_player(&self, name: &str) -> Option<Arc<RwLock<Player>>> {
+        self.players.get(name).cloned()
     }
 }
 

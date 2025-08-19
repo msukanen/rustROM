@@ -1,18 +1,17 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, validate_builder};
 
 pub struct AliasCommand;
 
 #[async_trait]
 impl Command for AliasCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
         if ctx.args.is_empty() {
             let g = ctx.player.read().await;
             let ed = &g.hedit.as_ref().unwrap().entry;
-            tell_user!(ctx.writer, "Alias{}: {:?}\n", if ed.aliases.len() > 1 {"es"} else {""}, ed.aliases);
-            resume_game!(ctx);
+            return tell_user!(ctx.writer, "Alias{}: {:?}\n", if ed.aliases.len() > 1 {"es"} else {""}, ed.aliases);
         }
 
         // Display help entry.
@@ -63,7 +62,5 @@ impl Command for AliasCommand {
         if !net_rem.is_empty() {
             tell_user!(ctx.writer, "Removed alias{}: {:?}\n", if net_rem.len() == 1 {""} else {"es"}, net_rem);
         }
-        
-        resume_game!(ctx);
     }
 }

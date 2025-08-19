@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, traits::Description, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, traits::Description, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
 
 pub(crate) mod desc;
 pub(crate) mod data;
@@ -25,12 +25,11 @@ pub struct HeditState {
 
 #[async_trait]
 impl Command for HeditCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
         if ctx.args.is_empty() && ctx.player.read().await.hedit.is_none() {
-            tell_user!(ctx.writer, "Which help topic you'd like to edit/create?\n");
-            resume_game!(ctx);
+            return tell_user!(ctx.writer, "Which help topic you'd like to edit/create?\n");
         }
 
         if ctx.args.starts_with('?') {
@@ -43,13 +42,11 @@ impl Command for HeditCommand {
             let ed = pg.hedit.as_mut().unwrap();
             if !ctx.args.is_empty() && ed.entry.id() != ctx.args {
                 if ed.dirty {
-                    tell_user!(ctx.writer, "<c red>Warning!</c> Unsaved edits - '<c yellow>save</c>' or '<c yellow>abort</c>' first.\n");
-                    resume_game!(ctx);
+                    return tell_user!(ctx.writer, "<c red>Warning!</c> Unsaved edits - '<c yellow>save</c>' or '<c yellow>abort</c>' first.\n");
                 }
             } else {
-                tell_user!(ctx.writer, "Resuming edit session.\n");
                 pg.push_state(ClientState::Editing { mode: EditorMode::Help });
-                resume_game!(ctx);
+                return tell_user!(ctx.writer, "Resuming edit session.\n");
             }
         }
 
@@ -69,6 +66,5 @@ impl Command for HeditCommand {
         }
 
         pg.push_state(ClientState::Editing { mode: EditorMode::Help });
-        pg.state()
     }
 }

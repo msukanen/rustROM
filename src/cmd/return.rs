@@ -1,11 +1,11 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, resume_game, tell_user, tell_user_unk, util::clientstate::EditorMode, ClientState};
+use crate::{cmd::{Command, CommandCtx}, tell_user, tell_user_unk, util::clientstate::EditorMode, ClientState};
 
 pub struct ReturnCommand;
 
 #[async_trait]
 impl Command for ReturnCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         let old_state = ctx.player.read().await.state();
         match old_state {
             ClientState::Playing => {
@@ -15,8 +15,7 @@ impl Command for ReturnCommand {
             ClientState::Editing { ref mode } => match mode {
                 EditorMode::Help => {
                     if ctx.player.read().await.hedit.as_ref().unwrap().dirty {
-                        tell_user!(ctx.writer, "<c red>NOTE: Unsaved edits!</c>\nUse <c yellow>save</c> first and then <c yellow>return</c> again, or if you want to discard all edits, use <c yellow>abort</c> instead of return.\n");
-                        resume_game!(ctx);
+                        return tell_user!(ctx.writer, "<c red>NOTE: Unsaved edits!</c>\nUse <c yellow>save</c> first and then <c yellow>return</c> again, or if you want to discard all edits, use <c yellow>abort</c> instead of return.\n");
                     } else {
                         ctx.player.write().await.hedit = None;
                     }
@@ -27,6 +26,6 @@ impl Command for ReturnCommand {
             }
             _ => {}
         }
-        ctx.player.write().await.pop_state()
+        ctx.player.write().await.pop_state();
     }
 }

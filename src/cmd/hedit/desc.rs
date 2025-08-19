@@ -1,23 +1,22 @@
 use std::{num::{IntErrorKind, NonZeroU32, NonZeroUsize, ParseIntError}, usize};
 
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, resume_game, string::styling::RULER_LINE, tell_user, validate_builder, ClientState};
+use crate::{cmd::{Command, CommandCtx}, string::styling::RULER_LINE, tell_user, validate_builder};
 
 pub struct DescCommand;
 pub const MAX_HELP_DESCRIPTION_LINES: usize = 21; // a modest number, sort of fits on a tiny 80x24 terminal thingydoodah. Takes header, title, etc. into account.
 
 #[async_trait]
 impl Command for DescCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
         if ctx.args.is_empty() {
-            tell_user!(ctx.writer,
+            return tell_user!(ctx.writer,
                 "{}\n{}<c red>// END</c>\n",
                 RULER_LINE,
                 ctx.player.read().await.hedit.as_ref().unwrap().entry.description
             );
-            resume_game!(ctx);
         }
 
         let mut args = ctx.args;
@@ -33,16 +32,14 @@ impl Command for DescCommand {
             let lno = match lno {
                 Ok(lno) => {
                     if lno > MAX_HELP_DESCRIPTION_LINES {
-                        tell_user!(ctx.writer,
+                        return tell_user!(ctx.writer,
                             "<c red>Warning!</c> Maximum help entry description length is limited to {} lines.\nCommand cancelled - no changes made.\n",
                             MAX_HELP_DESCRIPTION_LINES);
-                        resume_game!(ctx);
                     }
                     lno
                 },
                 Err(e) => {
-                    tell_user!(ctx.writer, "<c red>Error! </c>{:?}\n", e);
-                    resume_game!(ctx);
+                    return tell_user!(ctx.writer, "<c red>Error! </c>{:?}\n", e);
                 }
             };
             {
@@ -55,7 +52,6 @@ impl Command for DescCommand {
                 let cmd = DescCommand;
                 return cmd.exec({ctx.args = ""; ctx}).await;
             }
-            resume_game!(ctx);
         }
         // '-' -- remove a line …
         else if args.starts_with('-') {
@@ -115,10 +111,7 @@ impl Command for DescCommand {
             } else {
                 tell_user!(ctx.writer, "OK - text appended.\n");
             }
-            resume_game!(ctx);
         }
-
-        resume_game!(ctx);
     }
 }
 

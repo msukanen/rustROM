@@ -1,12 +1,12 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, look::LookCommand, translocate::translocate, Command, CommandCtx}, do_in_current_room, resume_game, tell_user, traits::Description, util::direction::Direction, ClientState};
+use crate::{cmd::{help::HelpCommand, look::LookCommand, translocate::translocate, Command, CommandCtx}, do_in_current_room, tell_user, traits::Description, util::direction::Direction};
 
 pub struct GotoCommand;
 
 /// Translocate player to some other spot in the world.
 #[async_trait]
 impl Command for GotoCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         if ctx.args.is_empty() {
             ctx.args = "goto";
             let help = HelpCommand;
@@ -15,8 +15,7 @@ impl Command for GotoCommand {
 
         let exit: Result<Direction, _> = ctx.args.try_into();
         if exit.is_err() {
-            tell_user!(ctx.writer, "Unknown direction. Use one of:\n{}\n", goto_directions());
-            resume_game!(ctx);
+            return tell_user!(ctx.writer, "Unknown direction. Use one of:\n{}\n", goto_directions());
         }
         
         let exit = exit.unwrap();
@@ -42,8 +41,6 @@ impl Command for GotoCommand {
             let cmd = LookCommand;
             cmd.exec(ctx).await;
         }
-
-        resume_game!(ctx);
     }
 }
 
@@ -59,7 +56,7 @@ mod goto_tests {
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{player::Player, util::BroadcastMessage, world::{area::Area, room::{Exit, ExitState, Room}, World}};
+    use crate::{player::Player, util::{BroadcastMessage, ClientState}, world::{area::Area, room::{Exit, ExitState, Room}, World}};
 
     use super::*;
 
@@ -128,6 +125,7 @@ mod goto_tests {
             log::info!("client sent: \"{}\"", line);
             let ctx = CommandCtx {
                 player: player_arc.clone(),
+                state: player_arc.read().await.state(),
                 world: &w,
                 tx: &tx,
                 args: &line.trim(),
@@ -139,6 +137,7 @@ mod goto_tests {
             server_reader.read_line(&mut line).await.unwrap();
             let ctx = CommandCtx {
                 player: player_arc.clone(),
+                state: player_arc.read().await.state(),
                 world: &w,
                 tx: &tx,
                 args: &line.trim(),

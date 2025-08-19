@@ -317,6 +317,7 @@ async fn main() {
                                 if let Some(p) = p {
                                     let ctx = CommandCtx {
                                         player: p.clone(),
+                                        state: p.read().await.state(),
                                         world: &world,
                                         tx: &tx,
                                         args: &input,

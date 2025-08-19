@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{hedit::HeditState, Command, CommandCtx}, resume_game, tell_user, traits::save::{DoesSave, SaveError}, validate_builder, ClientState};
+use crate::{cmd::{hedit::HeditState, Command, CommandCtx}, tell_user, traits::save::{DoesSave, SaveError}, validate_builder};
 
 pub struct SaveCommand;
 
 #[async_trait]
 impl Command for SaveCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
         
         if let Some(ref mut hs) = ctx.player.write().await.hedit {
@@ -33,7 +33,6 @@ impl Command for SaveCommand {
         } else {
             tell_user!(ctx.writer, "Nothing to save here...\n");
         }
-        resume_game!(ctx);
     }
 }
 

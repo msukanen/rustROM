@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}};
 
 pub struct DigCommand;
 
 #[async_trait]
 impl Command for DigCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
         if let Some((dir, id)) = validate_args(ctx).await {
@@ -16,8 +16,6 @@ impl Command for DigCommand {
                 // no-op for now
             }
         }
-
-        resume_game!(ctx);
     }
 }
 

@@ -1,12 +1,3 @@
-/// Shorthand for returning from a variety of commands into 'playing'
-/// state of existence.
-#[macro_export]
-macro_rules! resume_game {
-    ($ctx:expr) => {
-        return ClientState::Playing;
-    };
-}
-
 /// Do something in current room of residence...
 /// 
 /// # Arguments

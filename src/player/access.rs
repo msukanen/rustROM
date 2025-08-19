@@ -49,8 +49,7 @@ impl Access {
 macro_rules! validate_builder {
     ($ctx:expr) => {
         if !$ctx.player.read().await.access.is_builder() {
-            crate::tell_user_unk!($ctx.writer);
-            crate::resume_game!($ctx);
+            return crate::tell_user_unk!($ctx.writer);
         }
     };
 }
@@ -59,8 +58,7 @@ macro_rules! validate_builder {
 macro_rules! validate_admin {
     ($ctx:expr) => {
         if !$ctx.player.read().await.access.is_admin() {
-            crate::tell_user_unk!($ctx.writer);
-            crate::resume_game!($ctx);
+            return crate::tell_user_unk!($ctx.writer);
         }
     };
 }

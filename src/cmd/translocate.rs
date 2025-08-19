@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, player::Player, resume_game, tell_user, traits::{save::DoesSave, Description}, validate_admin, world::SharedWorld, ClientState};
+use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, player::Player, tell_user, traits::{save::DoesSave, Description}, validate_admin, world::SharedWorld};
 
 pub struct TranslocateCommand;
 
@@ -30,7 +30,7 @@ impl Display for TranslocationError {
 /// Translocate player to some other spot in the world.
 #[async_trait]
 impl Command for TranslocateCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_admin!(ctx);
 
         let (who, where_to) = {
@@ -44,7 +44,7 @@ impl Command for TranslocateCommand {
 
         if ctx.world.read().await.rooms.get(where_to).is_none() {
             tell_user!(ctx.writer, "No such room exists.\n");
-            resume_game!(ctx);
+            return;
         }
 
         // Who's being translocated?
@@ -56,12 +56,22 @@ impl Command for TranslocateCommand {
                 look.exec({ctx.args = ""; ctx}).await;
             },
             _ => {
-                let who = ctx.world.read().await.find_player(who).await.clone();
-                todo!("Translocate another player.")
+                let other = ctx.world.read().await.find_player(who);
+                if let Some(found) = other {
+                        log::info!("Translocating other player, '{}'", found.read().await.id());
+                        let source = found.read().await.location.clone();
+                        let _ = translocate(ctx.world, Some(source), where_to.into(), found.clone()).await;
+/* TODO: convert this into "scry" command for later:
+                        let you = ctx.player.clone();
+                         ctx.player = found.clone();
+                        let look = LookCommand;
+                        look.exec({ctx.args = ""; ctx}).await;
+                        ctx.player = you;
+ */                } else {
+                    tell_user!(ctx.writer, "Could not locate '{}'", who);
+                }
             }
         }
-
-        resume_game!(ctx);
     }
 }
 

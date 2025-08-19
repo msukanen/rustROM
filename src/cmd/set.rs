@@ -1,11 +1,11 @@
 use async_trait::async_trait;
-use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, resume_game, tell_user, validate_admin, ClientState};
+use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, validate_admin};
 
 pub struct SetCommand;
 
 #[async_trait]
 impl Command for SetCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
+    async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_admin!(ctx);
 
         let parts: Vec<&str> = ctx.args.splitn(2, ' ').collect();
@@ -15,8 +15,7 @@ impl Command for SetCommand {
                 let help = HelpCommand;
                 return help.exec(ctx).await;
             }
-            tell_user!(ctx.writer, "<c green>Usage:</c> set <c cyan>[FIELD] [VALUE]</c>\n       set ro <c cyan>[FIELD]</c>\n");
-            resume_game!(ctx);
+            return tell_user!(ctx.writer, "<c green>Usage:</c> set <c cyan>[FIELD] [VALUE]</c>\n       set ro <c cyan>[FIELD]</c>\n");
         }
 
         let (field, value) = (parts[0], parts[1]);
@@ -29,7 +28,7 @@ impl Command for SetCommand {
                 "welcome_new" => check_ro_field!(ctx, "welcome_new", welcome_new),
                 _ => {tell_user!(ctx.writer, "<c red>Unknown [FIELD]</c>. See <c yellow>'set ?'</c> for a list of available options.\n");}
             }
-            resume_game!(ctx);
+            return ;
         }
 
         // Write logic…
@@ -49,6 +48,5 @@ impl Command for SetCommand {
             },
             _ => {tell_user!(ctx.writer, "<c red>Unknown [FIELD]</c>. See <c yellow>'set ?'</c> for a list of available options.\n");},
         }
-        resume_game!(ctx);
     }
 }
