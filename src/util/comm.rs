@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 
-use crate::{cmd::say::Subtype, player::{self, Player}, traits::Description, world::{room::find_nearby_rooms, SharedWorld}};
+use crate::{cmd::say::Subtype, player::Player, traits::Description, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -128,7 +128,6 @@ impl IsRecipient for Broadcast {
                 if let Some(to) = to_player { *to == p.id() } else { true }
             },
             Self::Channel { channel, .. } => channel.can_listen(&player).await /* && p.listening_to(channel) */,
-            _ => false,
         }
     }
 }
