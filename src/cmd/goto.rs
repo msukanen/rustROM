@@ -56,7 +56,7 @@ mod goto_tests {
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{player::Player, util::{BroadcastMessage, ClientState}, world::{area::Area, room::{Exit, ExitState, Room}, World}};
+    use crate::{player::Player, util::{Broadcast, ClientState}, world::{area::Area, room::{Exit, ExitState, Room}, World}};
 
     use super::*;
 
@@ -93,7 +93,7 @@ mod goto_tests {
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
-        let (tx, _) = broadcast::channel::<BroadcastMessage>(1);
+        let (tx, _) = broadcast::channel::<Broadcast>(1);
 
         let client_task = tokio::spawn(async move {
             let (reader, mut writer) = TcpStream::connect(addr).await.unwrap().into_split();
