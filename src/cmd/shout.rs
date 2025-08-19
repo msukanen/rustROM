@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, string::exclaim::exclaim_if_needed, traits::Description, util::BroadcastMessage};
+use crate::{cmd::{Command, CommandCtx}, string::exclaim::exclaim_if_needed, traits::Description, util::Broadcast};
 
 pub struct ShoutCommand;
 
@@ -12,7 +12,7 @@ impl Command for ShoutCommand {
             let from_player = p.id().into();
             let room_id = p.location.clone();
             drop(p);
-            ctx.tx.send(BroadcastMessage::Shout { room_id, message, from_player }).unwrap();
+            ctx.tx.send(Broadcast::Shout { room_id, message, from_player }).unwrap();
         }
     }
 }

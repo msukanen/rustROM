@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, tell_user, traits::Description, util::BroadcastMessage};
+use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, tell_user, traits::Description, util::Broadcast};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Subtype {
@@ -30,7 +30,7 @@ impl Command for SayCommand {
             let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), if exlaim {"exclaims"} else {"says"}, ctx.args);
             let from_player = p.id().into();
             let room_id = p.location.clone();
-            ctx.tx.send(BroadcastMessage::Say { subtype: Some(Subtype::Say), room_id, message, from_player }).unwrap();
+            ctx.tx.send(Broadcast::Say { subtype: Some(Subtype::Say), room_id, message, from_player }).unwrap();
         }
     }
 }

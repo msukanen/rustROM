@@ -9,7 +9,7 @@ pub(crate) mod help;
 pub(crate) use help::Help;
 
 pub(crate) mod comm;
-pub(crate) use comm::BroadcastMessage;
+pub(crate) use comm::Broadcast;
 
 pub mod badname;
 pub mod github;
