@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, show_help, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}};
 
 pub struct DigCommand;
 
@@ -22,9 +22,7 @@ impl Command for DigCommand {
 async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a str)> {
     let args: Vec<&str> = ctx.args.splitn(2, ' ').collect();
     if args.len() < 2 || args[0].starts_with('?') {
-        let cmd = HelpCommand;
-        cmd.exec({ctx.args = "dig"; ctx}).await;
-        return None;
+        show_help!(ctx, "dig"; None);
     }
 
     let dir = match Direction::from_standard_str(args[0]) {

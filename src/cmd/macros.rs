@@ -51,3 +51,41 @@ macro_rules! rerun_with_help {
         }
     };
 }
+
+/// Show help `$topic` and return from calling function.
+/// 
+/// # Calling
+/// 1. `show_help_if_needed(ctx, "topic")`
+///     … return with `()`, or
+/// 2. `show_help_if_needed(ctx, "topic"; $retval)`
+///     to return with `$retval`.
+#[macro_export]
+macro_rules! show_help_if_needed {
+    ($ctx:ident, $topic:expr) => {
+        if $ctx.args.is_empty() || $ctx.args.starts_with('?')
+        {   crate::show_help!($ctx, $topic); }
+    };
+
+    ($ctx:ident, $topic:expr; $retval:expr) => {
+        if $ctx.args.is_empty() || $ctx.args.starts_with('?')
+        {   crate::show_help!($ctx, $topic; $retval); }
+    };
+}
+
+#[macro_export]
+macro_rules! show_help {
+    ($ctx:ident, $topic:expr) => {
+        {
+            let cmd = crate::cmd::help::HelpCommand;
+            return cmd.exec({$ctx.args = &$topic; $ctx}).await;
+        }
+    };
+
+    ($ctx:ident, $topic:expr; $retval:expr) => {
+        {
+            let cmd = crate::cmd::help::HelpCommand;
+            let _ = cmd.exec({$ctx.args = &$topic; $ctx}).await;
+            return $retval;
+        }
+    };
+}

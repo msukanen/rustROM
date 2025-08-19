@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, traits::Description, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
+use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Description, util::{clientstate::EditorMode, Help}, validate_builder, ClientState};
 
 pub(crate) mod desc;
 pub(crate) mod data;
@@ -27,15 +27,10 @@ pub struct HeditState {
 impl Command for HeditCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
-
         if ctx.args.is_empty() && ctx.player.read().await.hedit.is_none() {
             return tell_user!(ctx.writer, "Which help topic you'd like to edit/create?\n");
         }
-
-        if ctx.args.starts_with('?') {
-            let cmd = HelpCommand;
-            return cmd.exec({ctx.args = "hedit-internal-commands"; ctx}).await;
-        }
+        show_help_if_needed!(ctx, "hedit-internal-commands");
 
         let mut pg = ctx.player.write().await;
         if pg.hedit.is_some() {

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, tell_user, traits::Description, util::Broadcast};
+use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Description, util::Broadcast};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Subtype {
@@ -16,9 +16,7 @@ impl Command for SayCommand {
         if ctx.args.is_empty() {
             return tell_user!(ctx.writer, "You hear... crickets?\n");
         }
-        if ctx.args.starts_with('?') {
-            return tell_user!(ctx.writer, "Say what?\n");
-        }
+        show_help_if_needed!(ctx, "say");
 
         if !ctx.args.is_empty() {
             if ctx.args.ends_with('?') {

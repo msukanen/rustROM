@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, tell_user, validate_admin};
+use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, show_help, tell_user, validate_admin};
 
 pub struct SetCommand;
 
@@ -11,9 +11,7 @@ impl Command for SetCommand {
         let parts: Vec<&str> = ctx.args.splitn(2, ' ').collect();
         if parts.len() < 2 {
             if parts[0].starts_with('?') {
-                ctx.args = "set";
-                let help = HelpCommand;
-                return help.exec(ctx).await;
+                show_help!(ctx, "set");
             }
             return tell_user!(ctx.writer, "<c green>Usage:</c> set <c cyan>[FIELD] [VALUE]</c>\n       set ro <c cyan>[FIELD]</c>\n");
         }

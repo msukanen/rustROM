@@ -1,15 +1,12 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, say::Subtype, Command, CommandCtx}, traits::Description, util::Broadcast};
+use crate::{cmd::{say::Subtype, Command, CommandCtx}, show_help_if_needed, traits::Description, util::Broadcast};
 
 pub struct AskCommand;
 
 #[async_trait]
 impl Command for AskCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
-        if ctx.args.is_empty() || ctx.args.starts_with('?') {
-            let cmd = HelpCommand;
-            return cmd.exec({ctx.args = "ask"; ctx}).await;
-        }
+        show_help_if_needed!(ctx, "ask");
 
         let p = ctx.player.read().await;
         let message = format!("\n<c blue>[<c cyan>{}</c>]</c> asks: {}{}\n", p.id(), ctx.args, if ctx.args.ends_with('?') {""} else {"?"});

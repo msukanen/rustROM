@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, look::LookCommand, translocate::translocate, Command, CommandCtx}, do_in_current_room, tell_user, traits::Description, util::direction::Direction};
+use crate::{cmd::{look::LookCommand, translocate::translocate, Command, CommandCtx}, do_in_current_room, show_help_if_needed, tell_user, traits::Description, util::direction::Direction};
 
 pub struct GotoCommand;
 
@@ -7,11 +7,7 @@ pub struct GotoCommand;
 #[async_trait]
 impl Command for GotoCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
-        if ctx.args.is_empty() {
-            ctx.args = "goto";
-            let help = HelpCommand;
-            return help.exec(ctx).await;
-        }
+        show_help_if_needed!(ctx, "goto");
 
         let exit: Result<Direction, _> = ctx.args.try_into();
         if exit.is_err() {
