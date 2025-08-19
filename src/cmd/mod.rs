@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}};
-use crate::{player::Player, tell_user, util::{clientstate::EditorMode, BroadcastMessage}, world::SharedWorld, ClientState};
+use crate::{player::Player, tell_user, util::{clientstate::EditorMode, Broadcast}, world::SharedWorld, ClientState};
 
 pub mod macros;
 //--- 'mod' all the commands ---
@@ -22,6 +22,7 @@ pub(crate) mod redit;
 mod abort;
 mod shout;
 mod badname;
+mod force;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
@@ -31,7 +32,7 @@ pub struct CommandCtx<'a> {
     pub player: PlayerLock,
     pub state: ClientState,
     pub world: &'a SharedWorld,
-    pub tx: &'a broadcast::Sender<BroadcastMessage>,
+    pub tx: &'a broadcast::Sender<Broadcast>,
     pub args: &'a str,
     pub writer: &'a mut OwnedWriteHalf,
 }
