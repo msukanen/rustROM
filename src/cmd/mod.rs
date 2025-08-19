@@ -23,6 +23,8 @@ mod abort;
 mod shout;
 mod badname;
 mod force;
+mod bc;
+mod ac;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
