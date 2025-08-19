@@ -283,8 +283,6 @@ impl Description for Player {
 
 #[cfg(test)]
 mod savefile_tests {
-    use std::collections::HashSet;
-
     use crate::DATA;
 
     use super::*;
