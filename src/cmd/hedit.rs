@@ -35,13 +35,14 @@ impl Command for HeditCommand {
         let mut pg = ctx.player.write().await;
         if pg.hedit.is_some() {
             let ed = pg.hedit.as_mut().unwrap();
-            if !ctx.args.is_empty() && ed.entry.id() != ctx.args {
+            if !ctx.args.is_empty() && ed.entry.id != ctx.args {
                 if ed.dirty {
                     return tell_user!(ctx.writer, "<c red>Warning!</c> Unsaved edits - '<c yellow>save</c>' or '<c yellow>abort</c>' first.\n");
                 }
             } else {
+                let id = ed.entry.id.clone();
                 pg.push_state(ClientState::Editing { mode: EditorMode::Help });
-                return tell_user!(ctx.writer, "Resuming edit session.\n");
+                return tell_user!(ctx.writer, "Resuming HEdit('{}') session.\n", id);
             }
         }
 

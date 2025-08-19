@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, show_help, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}};
+use crate::{cmd::{redit::ReditCommand, translocate::translocate, Command, CommandCtx}, show_help, tell_user, traits::Description, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}};
 
 pub struct DigCommand;
 
@@ -11,14 +11,21 @@ impl Command for DigCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
-        if let Some((dir, id)) = validate_args(ctx).await {
-            if create_and_link_room(ctx, dir, id).await {
-                // no-op for now
+        let vr = validate_args(ctx).await;
+        if let Some((dir, id)) = vr {
+            let id: String = id.into();
+            if create_and_link_room(ctx, dir, &id).await {
+                log::debug!("CnLR valid ...");
+                let source = ctx.player.read().await.location.clone();
+                let _ = translocate(ctx.world, Some(source), id.into(), ctx.player.clone());
+                let cmd = ReditCommand;
+                cmd.exec({ctx.args = "this"; ctx}).await;
             }
         }
     }
 }
 
+/// Validate 'dig' arguments.
 async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a str)> {
     let args: Vec<&str> = ctx.args.splitn(2, ' ').collect();
     if args.len() < 2 || args[0].starts_with('?') {
@@ -28,10 +35,8 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
     let dir = match Direction::from_standard_str(args[0]) {
         Ok(dir) => dir,
         Err(_) => {
-            tell_user!(ctx.writer, "<c red>Error!</c> '{}' is not a valid direction.\n\nFor valid values …:\n\n", args[0]);
-            let cmd = HelpCommand;
-            cmd.exec({ctx.args = "dir"; ctx}).await;
-            return None;
+            tell_user!(ctx.writer, "<c red>Error!</c> '{}' is not a valid direction.\n\n", args[0]);
+            show_help!(ctx, "q dir"; None);
         }
     };
 
@@ -43,8 +48,6 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
     }
 
     let w = ctx.world.read().await;
-    let p = ctx.player.read().await;
-
     if w.rooms.contains_key(new_room_id) {
         tell_user!(ctx.writer,
             "<c red>A room with that ID already exists!</c>\n\
@@ -53,7 +56,8 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
         return None;
     }
 
-    if let Some(curr_room) = w.rooms.get(&p.location) {
+    let location = ctx.player.read().await.location.clone();
+    if let Some(curr_room) = w.rooms.get(&location) {
         if curr_room.read().await.exits.contains_key(&dir) {
             tell_user!(ctx.writer, "That direction is already taken…\n");
             return None;
@@ -64,13 +68,19 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
 }
 
 async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str) -> bool {
-    let p = ctx.player.read().await;
-    let curr_id = p.location.clone();
+    let curr_id = {
+        let p = ctx.player.read().await;
+        p.location.clone()
+    };
     let mut room = Room::blank(Some(id));
     room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open });
     let lock = Arc::new(RwLock::new(room));
+    
+    log::debug!("DL0 See if the World is locked ...");
     let mut w = ctx.world.write().await;
+    log::debug!("DL1 ... nope, not locked.");
     w.rooms.insert(id.into(), lock.clone());
+    log::debug!("Room inserted.");
 
     if let Some(curr_arc) = w.rooms.get(&curr_id) {
         let mut r = curr_arc.write().await;
@@ -83,67 +93,3 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
     tell_user!(ctx.writer, format!("Blank room '<c cyan>{}</c>' created.\n", id));
     true
 }
-/* 
-#[async_trait]
-impl Command for DigCommand {
-    async fn exec(&self, ctx: &mut CommandCtx<'_>) -> ClientState {
-        let args: Vec<&str> = ctx.args.split(' ').collect();
-        
-        if args[0].trim().is_empty()
-        || args[0].starts_with('?')
-        || args.len() < 2
-        {
-            ctx.args = "dig";
-            let help = HelpCommand;
-            return help.exec(ctx).await;
-        }
-
-        // Direction to diggy-dig …
-        let dir = Direction::try_from(args[0]);
-        if let Err(_) = dir {
-            tell_user!(ctx.writer, "No such direction exists... See <c yellow>'help dir'</c>.\n");
-            resume_game!(ctx);
-        }
-        let dir = dir.unwrap();
-        
-        // Player room id …
-        let location = ctx.player.read().await.location.clone();
-        
-        // Requested ID already exists?
-        if ctx.world.read().await.rooms.get(args[1]).is_some() {
-            tell_user!(ctx.writer,
-                "Duplicate room ID '{}'. One with such name already exists.\n\
-                Please, choose another or use <c yellow>'redit {}'</c> to modify the existing one.\n",
-                args[1], args[1]);
-            resume_game!(ctx);
-        }
-        // Requested direction is already in use?
-        else if ctx.world.read().await.rooms.get(&location).unwrap().read().await.exits.contains_key(&dir) {
-            tell_user!(ctx.writer, "That direction, {:?}, is already occupied. Please, choose another direction.\n", dir);
-            resume_game!(ctx);
-        }
-
-        // Create a blank …
-        let mut room = Room::blank();
-        room.id = args[1].into();
-        // reverse-dir to current room.
-        room.exits.insert(dir.opposite(), ctx.world.read().await.rooms.get(location.as_str()).unwrap().read().await.id().into());
-        let state = ReditState {
-            lock: Arc::new(RwLock::new(room)),
-            dirty: true,
-        };
-        // Connect the blank …
-        {
-            let mut g = ctx.world.write().await;
-            g.rooms.get_mut(location.as_str()).unwrap().write().await.exits.insert(dir, args[1].into());
-            g.rooms.insert(args[1].into(), state.lock.clone());
-        }
-
-        let mut g = ctx.player.write().await;
-        g.redit = Some(state);
-        tell_user!(ctx.writer, "Blank room '{}' created.\n", g.redit.as_ref().unwrap().lock.read().await.id());
-
-        resume_game!(ctx);
-    }
-}
- */

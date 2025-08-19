@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::{cmd::{Command, CommandCtx}, tell_user, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
+use crate::{cmd::{Command, CommandCtx}, tell_user, traits::Description, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
 
@@ -24,19 +24,30 @@ impl Command for ReditCommand {
         }
 
         let mut g = ctx.player.write().await;
-        if g.redit.is_none() {
-            if let Some(existing_entry) = ctx.world.read().await.rooms.get(ctx.args) {
-                g.redit = Some(ReditState {
-                    entry: existing_entry.read().await.clone(),
-                    dirty: false
-                });
+        if g.redit.is_some() {
+            let ed = g.redit.as_mut().unwrap();
+            if !ctx.args.is_empty() && ed.entry.id() != ctx.args {
+                if ed.dirty {
+                    return tell_user!(ctx.writer, "<c red>Warning!</c> Unsaved edits - '<c yellow>save</c>' or '<c yellow>abort</c>' first.\n");
+                }
             } else {
-                g.redit = Some(ReditState {
-                    entry: Room::blank(Some(ctx.args)),
-                    dirty: true
-                });
+                let id = ed.entry.id.clone();
+                g.push_state(ClientState::Editing { mode: EditorMode::Room });
+                return tell_user!(ctx.writer, "Resuming REdit('{}') session.\n", id);
             }
-        };
+        }
+
+        if let Some(existing_entry) = ctx.world.read().await.rooms.get(ctx.args) {
+            g.redit = Some(ReditState {
+                entry: existing_entry.read().await.clone(),
+                dirty: false
+            });
+        } else {
+            g.redit = Some(ReditState {
+                entry: Room::blank(Some(ctx.args)),
+                dirty: true
+            });
+        }
 
         g.push_state(ClientState::Editing { mode: EditorMode::Room });
     }

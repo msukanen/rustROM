@@ -8,6 +8,7 @@ impl Command for DescCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
-        tell_user!(ctx.writer, "ROOM-EDIT :: DESC\n");
+        let desc = ctx.world.read().await.rooms.get(&ctx.player.read().await.location).unwrap().clone();
+        tell_user!(ctx.writer, "ROOM-EDIT :: DESC\n{}\n", desc.read().await.description);
     }
 }
