@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{check_ro_field, cmd::{help::HelpCommand, Command, CommandCtx}, show_help, tell_user, validate_admin};
+use crate::{check_ro_field, cmd::{Command, CommandCtx}, show_help, tell_user, validate_admin};
 
 pub struct SetCommand;
 

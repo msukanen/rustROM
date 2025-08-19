@@ -8,7 +8,7 @@ impl Command for ForceCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_admin!(ctx);
         show_help_if_needed!(ctx, "force");
-
+        todo!("TODO");
         let force = Broadcast::Force { message: "look".into(), to_player: None, from_player: "«test»".to_string().into() };
         let _ = ctx.tx.send(force);
     }

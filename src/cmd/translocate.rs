@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{help::HelpCommand, look::LookCommand, Command, CommandCtx}, player::Player, tell_user, traits::{save::DoesSave, Description}, validate_admin, world::SharedWorld};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::{save::DoesSave, Description}, validate_admin, world::SharedWorld};
 
 pub struct TranslocateCommand;
 
@@ -36,8 +36,7 @@ impl Command for TranslocateCommand {
         let (who, where_to) = {
             let args: Vec<&str> = ctx.args.splitn(2, ' ').collect();
             if args.len() < 2 {
-                let cmd = HelpCommand;
-                return cmd.exec({ctx.args = "translocate"; ctx}).await;
+                show_help!(ctx, "translocate");
             }
             (args[0], args[1])
         };

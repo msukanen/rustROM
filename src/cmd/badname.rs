@@ -7,5 +7,6 @@ pub struct BadnameCommand;
 impl Command for BadnameCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_admin!(ctx);
+        todo!("TODO");
     }
 }
