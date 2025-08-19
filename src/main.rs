@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::Description, util::{help::Help, BroadcastMessage, ClientState}, world::room::find_nearby_rooms};
+use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::Description, util::{help::Help, Broadcast, ClientState}, world::{room::find_nearby_rooms, SharedWorld}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -116,7 +116,7 @@ async fn main() {
 
     // A broadcast channel is used to send messages to all connected clients.
     // Here, we're just broadcasting chat messages.
-    let (tx, _) = broadcast::channel::<BroadcastMessage>(16);
+    let (tx, _) = broadcast::channel::<Broadcast>(16);
     
     loop {
         // Wait for a new client to connect.
@@ -323,7 +323,7 @@ async fn main() {
                                         args: &input,
                                         writer: &mut writer,
                                         };
-                                    state = cmd::parse_and_execute(ctx).await;//state, p.clone(), &world, &tx, &input, &mut writer).await;
+                                    state = cmd::parse_and_execute(ctx).await;
                                     prompt = p.read().await.prompt().await;
                                 } else {
                                     // player a goner?!
@@ -348,21 +348,53 @@ async fn main() {
                                 // If we receive a message from the broadcast channel, write it to our client.
                                 let w = world.read().await;
                                 if let Some(p) = w.players_by_sockaddr.get(&addr) {
-                                    let p = p.read().await;
+                                    let (id, prompt, location) = {
+                                        let p = p.read().await;
+                                        let id = p.id().to_string();
+                                        let prompt = p.prompt().await;
+                                        let location = p.location.clone();
+                                        (id, prompt, location)
+                                    };
+                                    // Message dispatch ...
                                     match msg {
-                                        BroadcastMessage::Say { room_id, message, from_player, .. } => {
-                                            if p.location == room_id && p.id() != from_player {
-                                                tell_user!(&mut writer, "{}{}", message, p.prompt().await);
+                                        Broadcast::Say { room_id, message, from_player, .. } => {
+                                            if location == room_id && id != from_player {
+                                                tell_user!(&mut writer, "{}{}", message, prompt);
                                             }
                                         },
-                                        BroadcastMessage::Shout { room_id, message, from_player } => {
+                                        Broadcast::Shout { room_id, message, from_player } => {
                                             let nearby = find_nearby_rooms(&world, &room_id, 2).await;
                                             for r_id in nearby {
-                                                if p.location == r_id && p.id() != from_player {
-                                                    tell_user!(&mut writer, "{}{}", message, p.prompt().await);
+                                                if location == r_id && id != from_player {
+                                                    tell_user!(&mut writer, "{}{}", message, prompt);
                                                 }
                                             }
                                         },
+                                        Broadcast::Tell { message, to_player, from_player, .. } => {
+                                            if id == to_player {
+                                                tell_user!(&mut writer, "{}{}", message, prompt);
+                                            }
+                                        },
+                                        Broadcast::Force { message, to_player, from_player } => {
+                                            let should_force = if let Some(to) = &to_player {
+                                                *to == id
+                                            } else { true };
+                                            
+                                            if should_force {
+                                                tell_user!(&mut writer, "\n");
+                                                let ctx = CommandCtx {
+                                                    player: p.clone(),
+                                                    state: p.read().await.state(),
+                                                    world: &world,
+                                                    tx: &tx,
+                                                    args: &message,
+                                                    writer: &mut writer,
+                                                    };
+                                                state = cmd::parse_and_execute(ctx).await;
+                                                let prompt = p.read().await.prompt().await;
+                                                tell_user!(&mut writer, "{}", prompt);
+                                            }
+                                        }
                                     }
                                 }
                             }
