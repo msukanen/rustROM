@@ -217,6 +217,7 @@ pub(crate) async fn find_nearby_rooms(world: &SharedWorld, start_room_id: &str, 
 
 impl Editor for Room {
     fn set_description(&mut self, desc: &str) {
+        log::debug!("Setting description as: {}", desc);
         self.description = desc.into();
     }
 }

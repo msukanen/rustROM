@@ -37,37 +37,48 @@ fn parse_color(name: &str) -> Option<Colour> {
         "purple" => Some(Colour::Purple),
         "cyan" => Some(Colour::Cyan),
         "white" => Some(Colour::White),
-        // You can add more colors or fixed RGB values here
+        // RGB stuff:
+        "gray"|"grey" => Some(Colour::Fixed(8)),
         _ => None,
     }
 }
 
 /// Formats a string with custom color tags into an ANSI-colored string.
-pub fn format_color<S: Display>(input: S) -> String
-{
+pub fn format_color<S: Display>(input: S) -> String {
     let input = input.to_string();
     let mut output = String::new();
     let mut style_stack = vec![Style::new()];
-    let mut last_index = 0;
+    
+    let mut text_buffer = String::new();
+    let mut tag_buffer = String::new();
+    let mut in_tag = false;
 
-    // This new loop manually finds '<' and '>' pairs, which is more robust
-    // than using `split`.
-    while let Some(tag_start) = input[last_index..].find('<') {
-        let absolute_tag_start = last_index + tag_start;
-
-        // 1. Append the plain text found before this tag.
-        let text_before = &input[last_index..absolute_tag_start];
-        if let Some(current_style) = style_stack.last() {
-            output.push_str(&current_style.paint(text_before).to_string());
-        }
-
-        // 2. Find the closing '>' for this tag.
-        if let Some(tag_end) = input[absolute_tag_start..].find('>') {
-            let absolute_tag_end = absolute_tag_start + tag_end;
-            let tag_content = &input[absolute_tag_start + 1..absolute_tag_end];
-            let tag_parts: Vec<&str> = tag_content.split_whitespace().collect();
-
+    for c in input.chars() {
+        if c == '<' {
+            if in_tag {
+                // We found a '<' while already inside a tag. This means the previous
+                // '<' and the buffered tag content were literal text.
+                if let Some(current_style) = style_stack.last() {
+                    output.push_str(&current_style.paint(format!("<{}", tag_buffer)).to_string());
+                }
+                tag_buffer.clear();
+            } else {
+                // This is the start of a new tag. Paint any buffered text first.
+                if !text_buffer.is_empty() {
+                    if let Some(current_style) = style_stack.last() {
+                        output.push_str(&current_style.paint(&text_buffer).to_string());
+                    }
+                    text_buffer.clear();
+                }
+            }
+            in_tag = true;
+        } else if c == '>' && in_tag {
+            // We're ending a tag. Process it.
+            in_tag = false;
+            
+            let tag_parts: Vec<&str> = tag_buffer.split_whitespace().collect();
             let mut tag_processed = false;
+
             if let Some(tag_name) = tag_parts.first() {
                 let is_closing = tag_name.starts_with('/');
                 let actual_tag = if is_closing { &tag_name[1..] } else { *tag_name };
@@ -79,7 +90,7 @@ pub fn format_color<S: Display>(input: S) -> String
                             style_stack.pop();
                         }
                     } else {
-                        let mut new_style = style_stack.last().cloned().unwrap_or_else(Style::new);
+                        let mut new_style = style_stack.last().cloned().unwrap_or_default();
                         if let Some(color_name) = tag_parts.get(1) {
                             if let Some(color) = parse_color(color_name) {
                                 match *tag_name {
@@ -94,45 +105,51 @@ pub fn format_color<S: Display>(input: S) -> String
                 }
             }
 
-            // If the tag was not valid (e.g., "<not a tag>"), treat it as literal text.
             if !tag_processed {
-                 if let Some(current_style) = style_stack.last() {
-                    let literal_text = &input[absolute_tag_start..=absolute_tag_end];
-                    output.push_str(&current_style.paint(literal_text).to_string());
+                // Not a valid tag, treat it as literal text.
+                if let Some(current_style) = style_stack.last() {
+                    output.push_str(&current_style.paint(format!("<{}>", tag_buffer)).to_string());
                 }
             }
+            tag_buffer.clear();
 
-            last_index = absolute_tag_end + 1;
+        } else if in_tag {
+            tag_buffer.push(c);
         } else {
-            // Malformed tag (e.g., "<..."), treat the rest of the string as literal text.
-            break;
+            text_buffer.push(c);
         }
     }
 
-    // 3. Append any remaining text after the last tag.
-    if last_index < input.len() {
-        let final_text = &input[last_index..];
+    // Append any remaining text
+    if !text_buffer.is_empty() {
         if let Some(current_style) = style_stack.last() {
-            output.push_str(&current_style.paint(final_text).to_string());
+            output.push_str(&current_style.paint(&text_buffer).to_string());
+        }
+    }
+    // Handle unterminated tag
+    if !tag_buffer.is_empty() {
+        if let Some(current_style) = style_stack.last() {
+            output.push_str(&current_style.paint(format!("<{}", tag_buffer)).to_string());
         }
     }
 
     output
 }
-
 #[cfg(test)]
 mod ansi_tests {
-    use super::*;
     #[test]
-    fn tagging() {
+    fn format_color() {
         let _ = env_logger::try_init();
         let input_string = "This is <c yellow>Yellow text <bg cyan>on cyan bg</bg> which continues as yellow</c>, until it doesn't.";
         
-        println!("--- Input String ---");
+        log::debug!("--- Input String ---");
         log::debug!("{}", input_string);
         
-        println!("\n--- Formatted Output ---");
-        let formatted = format_color(input_string);
-        log::debug!("{}", formatted);
+        log::debug!("\n--- Formatted Output ---");
+        log::debug!("{}", super::format_color(input_string));
+
+        let tricky_string = "<c green>Usage:</c> force <c blue>[-]</c> <c cyan><TARGET> <COMMAND <c blue>[ARGS]</c>></c>";
+        log::debug!("\n--- Tricky String ---");
+        log::debug!("{}", super::format_color(tricky_string));
     }
 }
