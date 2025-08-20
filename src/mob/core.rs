@@ -1,4 +1,4 @@
-use crate::{mob::{stat::StatValue, CombatStat}, traits::Description};
+use crate::{mob::{stat::StatValue, CombatStat}, traits::{Description, Identity}};
 
 pub trait IsMob {
     /// Name of a mob.
@@ -19,6 +19,9 @@ pub struct MobCore {
 
 impl Description for MobCore {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn id<'a>(&'a self) -> &'a str { &self.name }
     fn title<'a>(&'a self) -> &'a str { &self.title }
+}
+
+impl Identity for MobCore {
+    fn id<'a>(&'a self) -> &'a str { &self.name }
 }

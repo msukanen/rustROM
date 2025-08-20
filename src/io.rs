@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::RwLock, time::{self}};
-use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Description}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld};
+use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
 #[cfg(feature = "localtest")]

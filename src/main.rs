@@ -18,7 +18,7 @@ pub mod string;
 pub mod util;
 mod cmd;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::Description, util::{comm::{IsRecipient, MessagePayload}, help::Help, Broadcast, ClientState}};
+use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{comm::{IsRecipient, MessagePayload}, help::Help, Broadcast, ClientState}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
