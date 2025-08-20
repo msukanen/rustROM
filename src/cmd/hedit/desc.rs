@@ -8,14 +8,6 @@ impl Command for DescCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
-        if ctx.args.is_empty() {
-            return tell_user!(ctx.writer,
-                "{}\n{}<c red>// END</c>\n",
-                RULER_LINE,
-                ctx.player.read().await.hedit.as_ref().unwrap().entry.description
-            );
-        }
-
         let res = edit_text(ctx.writer, ctx.args, &ctx.player.read().await.hedit.as_ref().unwrap().entry.description).await;
         let verbose = match res {
             Ok(EdResult::ContentReady { text, verbose, .. }) => {
@@ -25,7 +17,7 @@ impl Command for DescCommand {
             },
             Ok(EdResult::NoChanges(true)) => true,
             Ok(EdResult::HelpRequested) => {
-                show_help!(ctx, "hedit-desc");
+                show_help!(ctx, "edit-desc");
             },
             _ => false
         };
