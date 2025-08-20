@@ -3,7 +3,7 @@ use crate::{cmd::{translocate::translocate, Command, CommandCtx}, cmd_exec, do_i
 
 pub struct GotoCommand;
 
-/// Translocate player to some other spot in the world.
+/// Go some direction (or portal, etc.).
 #[async_trait]
 impl Command for GotoCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
@@ -11,7 +11,8 @@ impl Command for GotoCommand {
 
         let exit: Result<Direction, _> = ctx.args.try_into();
         if exit.is_err() {
-            return tell_user!(ctx.writer, "Unknown direction. Use one of:\n{}\n", goto_directions());
+            tell_user!(ctx.writer, "Unknown direction.\n");
+            return cmd_exec!(ctx, help, "q dir");
         }
         
         let exit = exit.unwrap();
@@ -28,7 +29,7 @@ impl Command for GotoCommand {
                     tell_user!(ctx.writer, "You could've sworn there is something that way, but there isn't...\n");
                 }
             } else {
-                tell_user!(ctx.writer, "Cannot go that way …");
+                tell_user!(ctx.writer, "You have no idea how to go there … Find another route?\n");
             }
         });
 
@@ -38,12 +39,6 @@ impl Command for GotoCommand {
         }
     }
 }
-
-fn goto_directions() -> String {r#"
-
-    North, East, South, West,
-    NorthEast, NorthWest, SouthEast, SouthWest,
-    Up, Down."#.to_string()}
 
 #[cfg(test)]
 mod goto_tests {
