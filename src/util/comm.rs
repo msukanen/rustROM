@@ -1,12 +1,13 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::{cmd::{force::ForceSource, say::Subtype}, player::Player, traits::describe::Identity, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub enum Channel {
     /// Channel for questions & answers.
     Qa,
@@ -33,6 +34,27 @@ impl Channel {
             Self::Newbie  |
             Self::Ooc     |
             Self::Qa      => true
+        }
+    }
+
+    /// Default channels to listen to.
+    pub fn default_listens() -> HashSet<Channel> {
+        let mut channels = HashSet::new();
+        channels.insert(Channel::Qa);
+        channels.insert(Channel::Newbie);
+        channels.insert(Channel::Ooc);
+        channels
+    }
+
+    /// Some channels are "always on", some are opt-in.
+    pub fn is_always_on(&self) -> bool {
+        match self {
+            Self::Admin   |
+            Self::Builder |
+            Self::Event   => true,
+            Self::Newbie  |
+            Self::Ooc     |
+            Self::Qa      => false,
         }
     }
 }
@@ -124,10 +146,13 @@ impl IsRecipient for Broadcast {
                 nearby.contains(&p.location)
             },
             Self::Tell { to_player, .. } => p.id() == *to_player,
-            Self::Force { to_player, .. } => {
-                if let Some(to) = to_player { *to == p.id() } else { true }
+            Self::Force { to_player, from_player, .. } => {
+                if let Some(to) = to_player { *to == p.id() } else {
+                    // prevent force from affecting self.
+                    from_player.id() != p.id()
+                }
             },
-            Self::Channel { channel, .. } => channel.can_listen(&player).await /* && p.listening_to(channel) */,
+            Self::Channel { channel, .. } => channel.can_listen(&player).await && (p.listening_to(channel) || channel.is_always_on()),
         }
     }
 }

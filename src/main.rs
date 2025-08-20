@@ -12,11 +12,12 @@ mod player;
 mod mob;
 mod game_loop;  use game_loop::game_loop;
 mod io;         use io::io_loop;
-pub mod world;
+pub(crate) mod world;
 pub mod traits;
 pub mod string;
 pub mod util;
 mod cmd;
+mod item;
 
 use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{comm::{IsRecipient, MessagePayload}, help::Help, Broadcast, ClientState}};
 use crate::player::{access::Access, LoadError, Player};

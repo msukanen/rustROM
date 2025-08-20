@@ -1,4 +1,4 @@
-use std::{fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashSet, fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use argon2::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::{styling::dirty_mark, WordSet}, traits::{describe::Identity, save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::{styling::dirty_mark, WordSet}, traits::{describe::Identity, save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -50,6 +50,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         state_stack: vec![ClientState::Logout],
         hedit: None,
         redit: None,
+        listening_to: HashSet::new(),
     }));
 
 /// Player data lives here!
@@ -67,6 +68,7 @@ pub struct Player {
     #[serde(skip, default)] state_stack: Vec<ClientState>,
     #[serde(default)] pub hedit: Option<HeditState>,
     #[serde(default)] pub redit: Option<ReditState>,
+    #[serde(default)] pub listening_to: HashSet<Channel>,
 }
 
 impl Player {
@@ -88,6 +90,7 @@ impl Player {
             state_stack: vec![ClientState::EnteringName],
             hedit: None,
             redit: None,
+            listening_to: Channel::default_listens(),
         }
     }
 
@@ -230,6 +233,11 @@ impl Player {
     pub fn erase_states(&mut self, state: ClientState) -> ClientState {
         self.state_stack = vec![state.clone()];
         state
+    }
+
+    /// Check if the player is listening… Monkeys always are, but is the player?
+    pub fn listening_to(&self, channel: &Channel) -> bool {
+        self.listening_to.contains(channel)
     }
 }
 
