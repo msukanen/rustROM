@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{player::Player, traits::Description, util::direction::Direction, world::{area::Area, SharedWorld}, DATA_PATH};
+use crate::{player::Player, traits::Description, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 
@@ -213,4 +213,10 @@ pub(crate) async fn find_nearby_rooms(world: &SharedWorld, start_room_id: &str, 
     }
     
     nearby
+}
+
+impl Editor for Room {
+    fn set_description(&mut self, desc: &str) {
+        self.description = desc.into();
+    }
 }
