@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{look::LookCommand, translocate::translocate, Command, CommandCtx}, do_in_current_room, show_help_if_needed, tell_user, traits::Description, util::direction::Direction};
+use crate::{cmd::{translocate::translocate, Command, CommandCtx}, cmd_exec, do_in_current_room, show_help_if_needed, tell_user, traits::Description, util::direction::Direction};
 
 pub struct GotoCommand;
 
@@ -34,8 +34,7 @@ impl Command for GotoCommand {
 
         if let Some((source, destination)) = do_translocate_to {
             let _ = translocate(&ctx.world, Some(source), destination, ctx.player.clone()).await;
-            let cmd = LookCommand;
-            cmd.exec(ctx).await;
+            cmd_exec!(ctx, look);
         }
     }
 }

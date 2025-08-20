@@ -22,6 +22,12 @@ pub(crate) trait Editor {
 }
 
 /// A versatile text editing function.
+/// 
+/// Modus operandi is determined by the first character in `args`.
+/// 
+/// - `+` — insert line.
+/// - `-` — remove line.
+/// - `=` — ignore source, use replacement.
 pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) -> Result<EdResult, EditorError> {
     if args.is_empty() {
         return {

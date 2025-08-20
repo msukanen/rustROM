@@ -52,7 +52,8 @@ macro_rules! rerun_with_help {
     };
 }
 
-/// Show help `$topic` and return from calling function.
+/// Show help `$topic` and return from calling function if args for given
+/// `$ctx` were empty or start with `?`.
 /// 
 /// # Calling
 /// 1. `show_help_if_needed(ctx, "topic")`
@@ -72,20 +73,38 @@ macro_rules! show_help_if_needed {
     };
 }
 
+/// Show help `$topic` and return from calling function.
+/// 
+/// # Calling
+/// 1. `show_help!(ctx, "topic")`
+///     … return with `()`, or
+/// 2. `show_help!(ctx, "topic"; $retval)`
+///     to return with `$retval`.
 #[macro_export]
 macro_rules! show_help {
     ($ctx:ident, $topic:expr) => {
-        {
-            let cmd = crate::cmd::help::HelpCommand;
-            return cmd.exec({$ctx.args = &$topic; $ctx}).await;
-        }
+        return crate::cmd_exec!($ctx, help, &$topic);
     };
 
-    ($ctx:ident, $topic:expr; $retval:expr) => {
-        {
-            let cmd = crate::cmd::help::HelpCommand;
-            let _ = cmd.exec({$ctx.args = &$topic; $ctx}).await;
-            return $retval;
-        }
+    ($ctx:ident, $topic:expr; $retval:expr) => {{
+        crate::cmd_exec!($ctx, help, &$topic);
+        return $retval;
+    }};
+}
+
+#[macro_export]
+macro_rules! cmd_exec {
+    ($ctx:ident, $cmd:ident, $args:expr) => {
+        {paste::paste! {
+            let cmd = crate::cmd::[<$cmd:lower>]::[<$cmd:camel Command>];
+            cmd.exec({$ctx.args = $args; $ctx}).await
+        }}
+    };
+
+    ($ctx:ident, $cmd:ident) => {
+        {paste::paste! {
+            let cmd = crate::cmd::[<$cmd:lower>]::[<$cmd:camel Command>];
+            cmd.exec({$ctx.args = ""; $ctx}).await
+        }}
     };
 }

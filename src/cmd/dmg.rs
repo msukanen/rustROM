@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, mob::{core::IsMob, stat::StatValue}, tell_user, tell_user_unk};
+use crate::{cmd::{Command, CommandCtx}, cmd_exec, mob::{core::IsMob, stat::StatValue}, tell_user, tell_user_unk};
 
 pub struct DmgCommand;
 
@@ -13,9 +13,7 @@ impl Command for DmgCommand {
         let args: Vec<&str> = ctx.args.split(' ').collect();
         log::info!("ARGL: {} '{}'", args.len(), args[0]);
         if args.len() == 1 {
-            ctx.args = "dmg";
-            let help = HelpCommand;
-            return help.exec(ctx).await;
+            return cmd_exec!(ctx, help, "dmg");
         } else {
             match args[0] {
                 "self" => {
