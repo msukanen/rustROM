@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, string::unicode::CHECKMARK, tell_user, traits::Identity, util::comm::Channel};
+use crate::{cmd::{Command, CommandCtx}, show_help, string::unicode::{FAILMARK, CHECKMARK}, tell_user, traits::Identity, util::comm::Channel};
 
 pub struct ChannelsCommand;
 
@@ -15,7 +15,7 @@ impl Command for ChannelsCommand {
         if ctx.args.is_empty() {
             let mut out: Vec<String> = vec!["<c green>CHANNELS:</c>".into()];
             for ch in chlist {
-                out.push(format!(" <c blue>*</c> {}", ch.id()));
+                out.push(format!(" <c gray>*</c> {}", ch.id()));
             }
             out.push("\n".into());
             tell_user!(ctx.writer, "{}", out.join("\n"));
@@ -43,18 +43,18 @@ impl Command for ChannelsCommand {
         // Opt-out?
         if !optin {
             if ch.is_always_on() || access.is_admin() {
-                tell_user!(ctx.writer, "Channel '{}' is always on and cannot be opted out from.\n", ch.id());
+                tell_user!(ctx.writer, "{FAILMARK} channel '{}' is always on and cannot be opted out from.\n", ch.id());
             } else {
                 ctx.player.write().await.listening_to_optout(&ch);
-                tell_user!(ctx.writer, "\u{2713} opt-out from '{}' successful.\n", ch.id());
+                tell_user!(ctx.writer, "{CHECKMARK} opt-out from '{}' successful.\n", ch.id());
             }
             return ;
         }
         
         if ctx.player.write().await.listening_to_optin(&ch) {
-            tell_user!(ctx.writer, "\u{2713} opt-in to '{}' successful.\n", ch.id())
+            tell_user!(ctx.writer, "{CHECKMARK} opt-in to '{}' successful.\n", ch.id())
         } else {
-            tell_user!(ctx.writer, "\u{2717} opt-in to '{}' didn't work out too well...\n", ch.id())
+            tell_user!(ctx.writer, "{FAILMARK} opt-in to '{}' didn't work out too well...\n", ch.id())
         }
     }
 }
