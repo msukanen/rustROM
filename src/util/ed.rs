@@ -21,12 +21,17 @@ pub(crate) trait Editor {
     fn set_description(&mut self, desc: &str);
 }
 
+/// A versatile text editing function.
 pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) -> Result<EdResult, EditorError> {
     if args.is_empty() {
         return {
             tell_user!(writer, "{}\n{}<c red>// END</c>\n", RULER_LINE, source );
-            Ok(EdResult::HelpRequested)
+            Ok(EdResult::NoChanges(false))
         };
+    }
+
+    if args.starts_with('?') {
+        return Ok(EdResult::HelpRequested);
     }
 
     let mut args = args;
@@ -98,7 +103,6 @@ pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) ->
                     Err(EditorError::ParseIntError(e))
                 }
             }
-                        log::debug!("minused:\n\"\"\"\n{}\"\"\"", text);
             (text, ed_dirty)
         };
         
