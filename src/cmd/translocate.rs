@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::{save::DoesSave, Description}, validate_admin, world::SharedWorld};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::{save::DoesSave, Identity}, validate_admin, world::SharedWorld};
 
 pub struct TranslocateCommand;
 

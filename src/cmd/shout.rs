@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, string::exclaim::exclaim_if_needed, traits::Description, util::Broadcast};
+use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, string::exclaim::exclaim_if_needed, traits::Identity, util::Broadcast};
 
 pub struct ShoutCommand;
 

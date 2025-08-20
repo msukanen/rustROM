@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Description, util::Broadcast};
+use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Identity, util::Broadcast};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Subtype {

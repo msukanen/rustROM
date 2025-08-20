@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use walkdir::WalkDir;
 
-use crate::{traits::{save::{DoesSave, SaveError}, Description}, util::{Editor, GithubContent}, DATA_PATH};
+use crate::{traits::{describe::Identity, save::{DoesSave, SaveError}, Description}, util::{Editor, GithubContent}, DATA_PATH};
 
 static HELP_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/help", *DATA_PATH)));
 static GITHUB_HELP_REPO: &str = "https://api.github.com/repos/msukanen/rustROM-help/contents";
@@ -29,8 +29,11 @@ pub struct Help {
 
 impl Description for Help {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn id<'a>(&'a self) -> &'a str { &self.id }
     fn title<'a>(&'a self) -> &'a str { &self.title }
+}
+
+impl Identity for Help {
+    fn id<'a>(&'a self) -> &'a str { &self.id }
 }
 
 #[derive(Debug)]

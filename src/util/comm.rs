@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 
-use crate::{cmd::say::Subtype, player::Player, traits::Description, world::{room::find_nearby_rooms, SharedWorld}};
+use crate::{cmd::{force::ForceSource, say::Subtype}, player::Player, traits::describe::Identity, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -61,7 +61,7 @@ pub enum Broadcast {
     Force {
         message: String,
         to_player: Option<String>,
-        from_player: Option<String>,
+        from_player: ForceSource,
     },
     Channel {
         channel: Channel,
@@ -82,7 +82,7 @@ impl MessagePayload for Broadcast {
             Self::Shout { from_player , ..}|
             Self::Say { from_player, .. }|
             Self::Tell { from_player , ..} => from_player.clone(),
-            Self::Force { from_player, .. } => from_player.clone().unwrap_or("".into()),
+            Self::Force { from_player, .. } => from_player.id().to_string(),
         }
     }
 

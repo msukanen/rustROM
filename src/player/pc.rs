@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::{styling::dirty_mark, WordSet}, traits::{save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::access::Access, string::{styling::dirty_mark, WordSet}, traits::{describe::Identity, save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -275,10 +275,13 @@ impl IsMob for Player {
 }
 
 impl Description for Player {
-    fn id<'a>(&'a self) -> &'a str { &self.name }
     fn description<'a>(&'a self) -> &'a str { &self.description }
     /// For [Player], 'title' is the same as their name.
     fn title<'a>(&'a self) -> &'a str { &self.name }
+}
+
+impl Identity for Player {
+    fn id<'a>(&'a self) -> &'a str { &self.name }
 }
 
 #[cfg(test)]

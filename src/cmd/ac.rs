@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, traits::Description, util::{comm::Channel, Broadcast}, validate_admin};
+use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, traits::Identity, util::{comm::Channel, Broadcast}, validate_admin};
 
 pub struct AcCommand;
 

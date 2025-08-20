@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::{cmd::{Command, CommandCtx}, tell_user, traits::Description, util::{clientstate::EditorMode, Editor}, validate_builder, world::room::Room, ClientState};
+use crate::{cmd::{Command, CommandCtx}, tell_user, traits::Identity, util::{clientstate::EditorMode, Editor}, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
 

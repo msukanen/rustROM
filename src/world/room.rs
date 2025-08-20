@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{player::Player, traits::Description, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
+use crate::{player::Player, traits::{describe::Identity, Description}, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 
@@ -178,7 +178,10 @@ impl Room {
 impl Description for Room {
     fn description(&self) -> &str { &self.description }
     fn title(&self) -> &str { &self.title }
-    fn id(&self) -> &str { &self.id }
+}
+
+impl Identity for Room {
+    fn id<'a>(&'a self) -> &'a str { &self.id }
 }
 
 /// Finds all rooms within a given distance of a starting room using BFS.

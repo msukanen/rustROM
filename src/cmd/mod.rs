@@ -22,7 +22,7 @@ pub(crate) mod redit;
 mod abort;
 mod shout;
 mod badname;
-mod force;
+pub(crate) mod force;
 mod bc;
 mod ac;
 
