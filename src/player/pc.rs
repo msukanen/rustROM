@@ -72,7 +72,6 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn placeholder() -> Self { Self::new("placeholder") }
     /// Generate a new, blank [SaveFile] skeleton.
     pub fn new<S>(name: S) -> Self
     where S: Display,

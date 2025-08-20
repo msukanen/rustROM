@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, tell_user, traits::Identity, util::comm::Channel, ClientState};
+use crate::{cmd::{Command, CommandCtx}, show_help, tell_user, traits::Identity, util::comm::Channel};
 
 pub struct ChannelsCommand;
 

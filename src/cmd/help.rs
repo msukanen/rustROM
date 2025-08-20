@@ -43,6 +43,8 @@ impl Command for HelpCommand {
                     tell_user!(ctx.writer, help_entry.read().await.to_string());
                 };
             }
+        } else {
+            log::debug!("Requested help entry '{}' doesn't exist?", args);
         }
 
         tell_user!(ctx.writer, NO_LORE_OR_ADMIN_ONLY);

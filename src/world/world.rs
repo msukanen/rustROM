@@ -9,13 +9,13 @@
 //! cause e.g. saved locations in player saves to be invalid.
 //! 
 //! If one or the other file is missing… Bad Things™ will happen!
-use std::{collections::HashMap, fs::read_to_string, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashMap, fmt::Display, fs::read_to_string, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::CommandCtx, player::Player, string::prompt::PromptType , traits::tickable::Tickable, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
+use crate::{player::Player, string::prompt::PromptType , traits::tickable::Tickable, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MotD {
@@ -31,15 +31,8 @@ pub struct WorldEntrance {
     pub room: String,
 }
 
+#[cfg(test)]
 impl WorldEntrance {
-    /// Generate default entrance entry.
-    pub fn default() -> Self {
-        Self {
-            area: "root".into(),
-            room: "root".into()
-        }
-    }
-
     /// A blank entrance.
     pub fn new() -> Self {
         Self { area: "".into(), room: "".into() }
@@ -80,12 +73,17 @@ pub enum WorldError {
     Format(serde_json::Error),
 }
 
-impl From<std::io::Error> for WorldError {
-    fn from(value: std::io::Error) -> Self { Self::Io(value)}
-}
+impl std::error::Error for WorldError {}
+impl From<std::io::Error> for WorldError { fn from(value: std::io::Error) -> Self { Self::Io(value)}}
+impl From<serde_json::Error> for WorldError { fn from(value: serde_json::Error) -> Self { Self::Format(value)}}
 
-impl From<serde_json::Error> for WorldError {
-    fn from(value: serde_json::Error) -> Self { Self::Format(value)}
+impl Display for WorldError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Format(e) => write!(f, "{:?}", e),
+            Self::Io(e)     => write!(f, "{:?}", e),
+        }
+    }
 }
 
 impl World {
@@ -169,7 +167,7 @@ impl World {
         Ok(world)
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, feature = "localtest"))]
     pub async fn do_busy_stuff(&self) {
         use std::time::Duration;
 
@@ -195,18 +193,6 @@ impl World {
             )))
         }
         r.or(Some(Ok(self))).unwrap()
-    }
-
-    /// Transfer to a valid room if 'room' is None.
-    /// 
-    /// # Returns
-    /// `true` if transfer actually had to be done.
-    pub async fn transfer_to_safety(&self, ctx: &mut CommandCtx<'_>, room: &Option<Arc<Room>>) -> bool {
-        if room.is_some() {false}
-        else {
-            ctx.player.write().await.location = "root".to_string();
-            true
-        }
     }
 
     /// Find player by name.

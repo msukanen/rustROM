@@ -69,13 +69,19 @@ impl Help {
 
             if let Some(_) = path.file_stem().and_then(|s| s.to_str()) {
                 let content = tokio::fs::read_to_string(&path).await?;
+
                 if let Ok(help) = toml::from_str::<Help>(&content) {
                     let help = Arc::new(RwLock::new(help));
                     let primary_id = help.read().await.id.clone();
-                    helps.insert(primary_id.clone(), help.clone());
+                    let x = helps.insert(primary_id.clone(), help.clone());
+                    if x.is_some() {
+                        log::warn!("Overlapping - '{}' and '{}'", x.unwrap().read().await.id(), help.read().await.id());
+                    }
                     for alias in &help.read().await.aliases {
                         aliases.insert(alias.clone(), primary_id.clone());
                     }
+                } else {
+                    log::warn!("Help file '{}' malformed …", path.display());
                 }
             }
         }
