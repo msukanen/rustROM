@@ -2,7 +2,7 @@ use std::num::{IntErrorKind, NonZeroU32, NonZeroUsize, ParseIntError};
 
 use tokio::net::tcp::OwnedWriteHalf;
 
-use crate::{string::styling::{MAX_DESCRIPTION_LINES, RULER_LINE}, tell_user};
+use crate::{string::{styling::{MAX_DESCRIPTION_LINES, RULER_LINE}, LineEndingExt}, tell_user};
 
 pub enum EditorError {
     MaxLineCount,
@@ -31,7 +31,7 @@ pub(crate) trait Editor {
 pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) -> Result<EdResult, EditorError> {
     if args.is_empty() {
         return {
-            tell_user!(writer, "{}\n{}<c red>// END</c>\n", RULER_LINE, source );
+            tell_user!(writer, "{}\n{}<c red>// END</c>\n", RULER_LINE, source.ensure_lf());
             Ok(EdResult::NoChanges(false))
         };
     }
