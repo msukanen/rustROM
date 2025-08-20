@@ -88,6 +88,27 @@ impl Identity for Channel {
     }
 }
 
+impl TryFrom<&str> for Channel {
+    type Error = String;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_lowercase().as_str() {
+            "admin"|"adm"|"achat"
+                => Ok(Self::Admin),
+            "build"|"builder"
+                => Ok(Self::Builder),
+            "event"|"eventhost"|"event-host"
+                => Ok(Self::Event),
+            "newbie"|"noob"|"n00b"|"newcomer"|"new"
+                => Ok(Self::Newbie),
+            "ooc"|"out-of-character"|"chat"
+                => Ok(Self::Ooc),
+            "qa"|"q&a"
+                => Ok(Self::Qa),
+            _ => Err(format!("Channel '{}' not recognized", value))
+        }
+    }
+}
+
 /// Various broadcast types.
 #[derive(Clone, Debug)]
 pub enum Broadcast {

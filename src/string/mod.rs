@@ -12,3 +12,5 @@ pub(crate) use slug::Sluggable;
 
 use std::collections::HashSet;
 pub(crate) type WordSet = HashSet<String>;
+
+pub(crate) mod unicode;
