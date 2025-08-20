@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, string::styling::RULER_LINE, tell_user, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
+use crate::{cmd::{Command, CommandCtx}, show_help, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
 
 pub struct DescCommand;
 
