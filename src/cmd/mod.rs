@@ -25,6 +25,7 @@ mod badname;
 pub(crate) mod force;
 mod bc;
 mod ac;
+mod channels;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
