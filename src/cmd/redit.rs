@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use crate::{cmd::{Command, CommandCtx}, tell_user, traits::Description, util::clientstate::EditorMode, validate_builder, world::room::Room, ClientState};
+use crate::{cmd::{Command, CommandCtx}, tell_user, traits::Description, util::{clientstate::EditorMode, Editor}, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
 
@@ -60,5 +60,20 @@ impl Command for ReditCommand {
         }
 
         g.push_state(ClientState::Editing { mode: EditorMode::Room });
+    }
+}
+
+impl Editor for ReditState {
+    fn set_description(&mut self, desc: &str) {
+        self.dirty = true;
+        self.entry.set_description(desc);
+    }
+}
+
+impl Editor for Option<ReditState> {
+    fn set_description(&mut self, desc: &str) {
+        if let Some(state) = self {
+            state.set_description(desc);
+        }
     }
 }
