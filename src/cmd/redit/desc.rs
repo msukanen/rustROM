@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, tell_user, validate_builder};
+use crate::{cmd::{Command, CommandCtx}, show_help, tell_user, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
 
 pub struct DescCommand;
 
@@ -7,11 +7,30 @@ pub struct DescCommand;
 impl Command for DescCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
+
+        let res = edit_text(ctx.writer, ctx.args,
+            &ctx.world.read().await.rooms.get(&ctx.player.read().await.location).unwrap().read().await.description
+            ).await;
+        let verbose = match res {
+            Ok(EdResult::ContentReady { text, verbose, .. }) => {
+                ctx.player.write().await.redit.set_description(&text);
+                verbose
+            },
+            Ok(EdResult::NoChanges(true)) => true,
+            Ok(EdResult::HelpRequested) => {
+                show_help!(ctx, "edit-desc");
+            },
+            _ => false
+        };
+        
+        if verbose {// re-run argless to pretty-print current description.
+            let cmd = DescCommand;
+            cmd.exec({ctx.args = ""; ctx}).await;
+        }
+
+
         if ctx.args.starts_with('?') {
             show_help!(ctx, "edit-desc");
         }
-
-        let desc = ctx.world.read().await.rooms.get(&ctx.player.read().await.location).unwrap().clone();
-        tell_user!(ctx.writer, "ROOM-EDIT :: DESC\n{}\n", desc.read().await.description);
     }
 }
