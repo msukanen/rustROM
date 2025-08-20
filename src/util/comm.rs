@@ -61,6 +61,31 @@ impl Channel {
             Self::Qa      => false,
         }
     }
+
+    /// List all channels in some sort of sorted'ish order.
+    pub fn list() -> Vec<Channel> {
+        vec![
+            Self::Admin,
+            Self::Builder,
+            Self::Event,
+            Self::Newbie,
+            Self::Ooc,
+            Self::Qa,
+        ]
+    }
+}
+
+impl Identity for Channel {
+    fn id<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Admin => "admin",
+            Self::Builder => "builder",
+            Self::Event => "event-host",
+            Self::Newbie => "newbie",
+            Self::Ooc => "OOC",
+            Self::Qa => "Q&A",
+        }
+    }
 }
 
 /// Various broadcast types.
