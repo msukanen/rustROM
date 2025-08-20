@@ -239,6 +239,22 @@ impl Player {
     pub fn listening_to(&self, channel: &Channel) -> bool {
         self.listening_to.contains(channel)
     }
+
+    /// Opt-in to listen to some channel.
+    /// 
+    /// # Returns
+    /// `true` if opt-in succeeds.
+    pub fn listening_to_optin(&mut self, channel: &Channel) -> bool {
+        if channel.allows_listen(&self.access) {
+            self.listening_to.insert(channel.clone());
+            true
+        } else {false}
+    }
+
+    /// Opt-out from listening some channel.
+    pub fn listening_to_optout(&mut self, channel: &Channel) {
+        self.listening_to.remove(channel);
+    }
 }
 
 #[async_trait]

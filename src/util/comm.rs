@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{force::ForceSource, say::Subtype}, player::Player, traits::describe::Identity, world::{room::find_nearby_rooms, SharedWorld}};
+use crate::{cmd::{force::ForceSource, say::Subtype}, player::{access::Access, Player}, traits::describe::Identity, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -26,7 +26,11 @@ pub enum Channel {
 impl Channel {
     /// Check if the player has permission to listen to this channel.
     pub async fn can_listen(&self, player: &Arc<RwLock<Player>>) -> bool {
-        let access = player.read().await.access;
+        self.allows_listen(&player.read().await.access)
+    }
+
+    /// Check if the access level is right to listen to this channel.
+    pub fn allows_listen(&self, access: &Access) -> bool {
         match self {
             Self::Admin   => access.is_admin(),
             Self::Builder => access.is_builder(),
