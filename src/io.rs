@@ -4,9 +4,6 @@ use tokio::{sync::RwLock, time::{self}};
 use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld, AUTOSAVE_QUEUE_INTERVAL};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
-#[cfg(feature = "localtest")]
-pub(crate) const DEFAULT_AUTOSAVE_QUEUE_INTERVAL: u64 = 30; // once per 30 sec, about.
-#[cfg(not(feature = "localtest"))]
 pub(crate) const DEFAULT_AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
 pub(crate) const DEFAULT_AUTOSAVE_ACT_COUNT_THRESHOLD: usize = 16;
 
