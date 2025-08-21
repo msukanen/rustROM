@@ -3,9 +3,13 @@ use uuid::Uuid;
 
 use crate::{item::{Item, ItemError}, traits::{Description, Identity, Owned}};
 
-pub(crate) type StorageCapacity = usize;
+pub(crate) trait StorageCapacity {
+    fn space(&self) -> usize;
+    fn items(&self) -> usize {0}
+    fn capacity(&self) -> usize {0}
+}
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum BaseContainerType {
     Pouch,
     Bag,
@@ -19,10 +23,21 @@ pub enum BaseContainerType {
 }
 
 impl BaseContainerType {
+    /// Generates a random ID.
+    pub fn uuid(&self) -> String {
+        format!("{}-{}", self.title(), Uuid::new_v4())
+    }
+
+    pub fn can_be_carried(&self) -> bool {
+        self.capacity() <= Self::PlayerInventory.capacity()
+    }
+}
+
+impl StorageCapacity for BaseContainerType {
     /// Base capacity of base container types.
     /// 
     // TODO: the values are entirely arbitrary at this point in time, and are bound to change Whenever™.
-    pub fn capacity(&self) -> usize {
+    fn capacity(&self) -> usize {
         match self {
             Self::Pouch => 8,
             Self::Bag => 24,
@@ -36,18 +51,25 @@ impl BaseContainerType {
         }
     }
 
-    /// Generates a random ID.
-    pub fn uuid(&self) -> String {
-        format!("{}-{}", self.title(), Uuid::new_v4())
+    /// This function should not be called on a `BaseContainerType`.
+    ///
+    /// `BaseContainerType` is a template and does not hold items itself.
+    /// This implementation will log an error and return 0.
+    fn items(&self) -> usize {
+        log::error!(".items() should not be called on [BaseContainerType]."); 0
     }
 
-    pub fn can_be_carried(&self) -> bool {
-        self.capacity() <= Self::PlayerInventory.capacity()
+    /// This function should not be called on a `BaseContainerType`.
+    ///
+    /// `BaseContainerType` is a template and does not hold items itself.
+    /// This implementation will log an error and return 0.
+    fn space(&self) -> usize {
+        log::error!(".space() should not be called on [BaseContainerType]."); 0
     }
 }
 
 /// Container core.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Container {
     id: String,
     title: String,
@@ -56,7 +78,7 @@ pub struct Container {
 
     owner: String,
     
-    capacity: StorageCapacity,
+    capacity: usize,
 
     items: Vec<Item>,
     subcontainers: Vec<Container>,
@@ -96,9 +118,6 @@ impl Container {
         }
     }
 
-    /// Get max. number of items the container can hold.
-    pub fn max_items(&self) -> usize { self.capacity.into() }
-
     /// Try insert an `item` into the container. In case of failure, `item` is
     /// returned along an [ItemError] and must be extracted from it or deemed
     /// lost forever.
@@ -107,7 +126,7 @@ impl Container {
     /// - `item`— some [Item].
     #[must_use = "If fails - item will be lost if not retrieved from Err."]
     pub fn try_insert(&mut self, item: Item) -> Result<(), ItemError> {
-        if self.items.len() >= self.max_items() {
+        if self.items.len() >= self.capacity() {
             return Err(ItemError::NoItemSpace(item));
         }
         self.items.push(item);
@@ -133,24 +152,23 @@ impl Container {
         self.subcontainers.push(container);
         Ok(())
     }
-
-    /// Gets number of items in the container (+ what is contained in containers within).
-    pub fn items(&self) -> StorageCapacity {
-        let mut count = self.items.len();
-        for c in &self.subcontainers {
-            count += c.items();
-        }
-        (count + self.subcontainers.len()) as StorageCapacity
-    }
-
-    /// Gets capacity left.
-    pub fn space(&self) -> StorageCapacity {
-        self.capacity - self.items()
-    }
 }
 
 impl Owned for Container {
     fn owner(&self) -> &str { &self.owner }
+}
+
+impl StorageCapacity for Container {
+    fn capacity(&self) -> usize { self.capacity }
+    fn space(&self) -> usize { self.capacity - self.items() }
+    /// Gets number of items in the container (+ what is contained in containers within).
+    fn items(&self) -> usize {
+        let mut count = self.items.len();
+        for c in &self.subcontainers {
+            count += c.items();
+        }
+        count + self.subcontainers.len()
+    }
 }
 
 impl Description for BaseContainerType {
@@ -179,6 +197,68 @@ impl Description for BaseContainerType {
             Self::Warehouse => "warehouse",
             //
             Self::PlayerInventory => "inventory",
+        }
+    }
+}
+
+#[cfg(test)]
+mod container_tests {
+    use crate::{item::{inventory::{BaseContainerType, StorageCapacity}, Container, Item, ItemError}, traits::{Description, Identity}};
+
+    #[test]
+    fn inventory_created() {
+        let _ = env_logger::try_init();
+        let i = Container::from(BaseContainerType::PlayerInventory);
+        assert_eq!("inventory", i.title());
+    }
+
+    #[test]
+    fn inventory_insert_item() {
+        let _ = env_logger::try_init();
+        let item = Item::blank();
+        let mut i = Container::from(BaseContainerType::PlayerInventory);
+        let res = i.try_insert(item);
+        match res {
+            Err(e) => match e {
+                ItemError::NoContainerSpace(_) => {
+                    panic!("A bug in the system - [Item] insert should not result with Err(..container..)!");
+                },
+                ItemError::NoItemSpace(_) => {
+                    panic!("Should not happen - out of inventory space?");
+                },
+                ItemError::TooLarge(_) => {
+                    panic!("a blank() item should fit in {:?}", BaseContainerType::PlayerInventory);
+                }
+            }, _=> {}
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn inventory_insert_item_spam() {
+        let _ = env_logger::try_init();
+        let item = Item::blank();
+        let mut items = vec![];
+        const ENSURED_OVERFLOW: usize = 10_000;
+        for _ in 0..ENSURED_OVERFLOW { items.push(item.clone()); }
+        let mut inv = Container::from(BaseContainerType::PlayerInventory);
+        for (xth, item) in items.into_iter().enumerate() {
+            let res = inv.try_insert(item);
+            if let Err(ItemError::NoItemSpace(_)) = res {
+                log::debug!("Ran out of space at {} items (from {ENSURED_OVERFLOW}). Capacity of {}.", xth, inv.capacity());
+                panic!("Whee!")
+            }
+        }
+        panic!("Bag of Holding?! Should NOT happen!");
+    }
+
+    #[test]
+    fn basecontainertype_log_error() {
+        let _ = env_logger::try_init();
+        let item = BaseContainerType::Backpack;
+        let x = item.space();
+        if x != 0 {
+            panic!("BaseContainerType should return 0 here!");
         }
     }
 }

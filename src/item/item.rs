@@ -8,7 +8,7 @@ pub enum ItemError {
     TooLarge(Container),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Item {
     id: String,
     title: String,
@@ -28,5 +28,19 @@ impl Description for Item {
 impl Owned for Item {
     fn owner(&self) -> &str {
         &self.owner
+    }
+}
+
+impl Item {
+    #[cfg(test)]
+    pub fn blank() -> Self {
+        use uuid::Uuid;
+
+        Self {
+            id: format!("test-item-{}", Uuid::new_v4()),
+            title: "test item".into(),
+            description: "a very testful item this is, yes".into(),
+            owner: "test".into()
+        }
     }
 }
