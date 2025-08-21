@@ -269,12 +269,21 @@ impl Player {
     /// Get number of "meaningful" actions since last save.
     /// 
     /// This value is in general used for determining auto-save requirement.
-    pub fn act_count(&self) -> usize { self.act_count }
+    pub fn act_count(&self) -> usize {
+        self.act_count
+    }
 
-    #[cfg(feature = "localtest")]
-    pub fn test_inventory(&mut self) {
-        use crate::io::AUTOSAVE_ACT_COUNT_THRESHOLD;
-        self.act_count = AUTOSAVE_ACT_COUNT_THRESHOLD + 1;
+    /// Increase act count `by` …
+    /// 
+    /// # Arguments
+    /// - `by`— increment to act_count (an intentionally smaller unit arg than the underlying act_count itself).
+    pub fn add_act_count(&mut self, by: u32) {
+        self.act_count += by as usize;
+    }
+
+    /// Increase act count by one …
+    pub fn inc_act_count(&mut self) {
+        self.add_act_count(1);
     }
 }
 

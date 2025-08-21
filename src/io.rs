@@ -1,14 +1,14 @@
 use std::{sync::Arc, time::Duration};
 use futures::{stream, StreamExt};
 use tokio::{sync::RwLock, time::{self}};
-use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld};
+use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld, AUTOSAVE_QUEUE_INTERVAL};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
 #[cfg(feature = "localtest")]
-const AUTOSAVE_QUEUE_INTERVAL: u64 = 30; // once per 30 sec, about.
+pub(crate) const DEFAULT_AUTOSAVE_QUEUE_INTERVAL: u64 = 30; // once per 30 sec, about.
 #[cfg(not(feature = "localtest"))]
-const AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
-pub const AUTOSAVE_ACT_COUNT_THRESHOLD: usize = 16;
+pub(crate) const DEFAULT_AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
+pub(crate) const DEFAULT_AUTOSAVE_ACT_COUNT_THRESHOLD: usize = 16;
 
 /// One heart of the machinery — I/O loop.
 /// 
@@ -19,11 +19,11 @@ pub async fn io_loop(
     bad_words: Arc<RwLock<WordSet>>,
 ) {
     let mut logout_interval = time::interval(Duration::from_secs(LOGOUT_QUEUE_INTERVAL));
-    let mut autosave_interval = time::interval(Duration::from_secs(AUTOSAVE_QUEUE_INTERVAL));
+    let mut autosave_interval = time::interval(Duration::from_secs(*AUTOSAVE_QUEUE_INTERVAL.read().await));
 
     log::info!("io_loop firing up … {} second{} logout queue, {} second{} auto-save queue.",
             LOGOUT_QUEUE_INTERVAL, if LOGOUT_QUEUE_INTERVAL==1 {""} else {"s"},
-            AUTOSAVE_QUEUE_INTERVAL, if AUTOSAVE_QUEUE_INTERVAL==1 {""} else {"s"}
+            DEFAULT_AUTOSAVE_QUEUE_INTERVAL, if DEFAULT_AUTOSAVE_QUEUE_INTERVAL==1 {""} else {"s"}
         );
 
     {
@@ -69,7 +69,7 @@ pub async fn io_loop(
                 log::trace!("Auto-save cycle initiated …");
                 let players = world.read().await.players_by_sockaddr.clone();
                 let players = stream::iter(players);
-                let players = players.filter(|(_,p)|{ let p = p.clone(); async move { p.read().await.act_count() >= AUTOSAVE_ACT_COUNT_THRESHOLD }});
+                let players = players.filter(|(_,p)|{ let p = p.clone(); async move { p.read().await.act_count() >= DEFAULT_AUTOSAVE_ACT_COUNT_THRESHOLD }});
                 let mut saved_any = false;
                 players.for_each(|(_,p)| { saved_any = true; async move {
                     let mut w = p.write().await;

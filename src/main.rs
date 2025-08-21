@@ -1,7 +1,7 @@
 //! A MUD project in Rust.
 use std::{collections::{HashMap, HashSet}, ops::Deref, sync::Arc};
 use clap::Parser;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     net::TcpListener,
@@ -19,7 +19,7 @@ pub mod util;
 mod cmd;
 mod item;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{comm::{IsRecipient, MessagePayload}, help::Help, Broadcast, ClientState}};
+use crate::{cmd::{translocate::translocate, CommandCtx}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{comm::{IsRecipient, MessagePayload}, help::Help, Broadcast, ClientState}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -41,6 +41,7 @@ pub(crate) static DATA: OnceCell<String> = OnceCell::new();
 #[cfg(not(test))]
 static DATA: OnceCell<String> = OnceCell::new();
 pub(crate) static DATA_PATH: ImmutablePath = ImmutablePath;
+pub(crate) static AUTOSAVE_QUEUE_INTERVAL: Lazy<Arc<RwLock<u64>>> = Lazy::new(|| Arc::new(RwLock::new(DEFAULT_AUTOSAVE_QUEUE_INTERVAL)));
 
 #[derive(Parser, Debug)]
 #[command(
@@ -58,6 +59,7 @@ struct CmdLineArgs {
     #[arg(long, default_value = "rustrom")]                     world: String,
     #[arg(long, env = "RUSTROM_DATA", default_value = "data")]  data_path: String,
     #[arg(long)]                                                bootstrap_url: Option<String>,
+    #[arg(long)]                                                autosave_queue_interval: Option<u64>,
 }
 
 #[tokio::main]
@@ -70,6 +72,9 @@ async fn main() {
     const WELCOME_NEW: &str = "May your adventures be prosperous!";
 
     let args = CmdLineArgs::parse();
+    if let Some(duration) = args.autosave_queue_interval {
+        *AUTOSAVE_QUEUE_INTERVAL.write().await = duration;
+    }
     let _ = DATA.set(args.data_path);
 
     // Initialize the logger

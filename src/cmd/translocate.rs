@@ -111,8 +111,7 @@ pub(crate) async fn translocate(
                 let mut p = player.write().await;
                 if !is_same && p.location != r_id {
                     p.location = r_id.clone();
-                    // Save the player right here and right now after translocation.
-                    let _ = p.save().await;
+                    p.inc_act_count();
                 }
             }
         } else {
@@ -125,7 +124,7 @@ pub(crate) async fn translocate(
     let mut ok_err = None;
     if let Some(source) = source {
         if is_same {
-            log::debug!("Skipping source extraction - target == source");
+            log::trace!("Skipping source extraction - target == source");
             return Ok(Some(TranslocationError::NoMoveRequired));
         }
         
@@ -133,11 +132,11 @@ pub(crate) async fn translocate(
         if let Some(r) = w.rooms.get(&source) {
             r.write().await.remove_player(&player).await;
         } else {
-            log::debug!("Source room '{}' not found for translocation. Player '{}' still successfully translocated.", source, player.read().await.id());
+            log::info!("Source room '{}' not found for translocation. Player '{}' still successfully translocated.", source, player.read().await.id());
             ok_err = Some(TranslocationError::SourceNotFound)
         }
     } else {
-        log::debug!("Player '{}' successfully translocated to safety from The Void.", player.read().await.id());
+        log::trace!("Player '{}' successfully translocated to safety from The Void.", player.read().await.id());
         ok_err = Some(TranslocationError::SourceNotFound)
     }
 
