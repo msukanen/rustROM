@@ -21,7 +21,7 @@ pub async fn io_loop(
 
     log::info!("io_loop firing up … {} second{} logout queue, {} second{} auto-save queue.",
             LOGOUT_QUEUE_INTERVAL, if LOGOUT_QUEUE_INTERVAL==1 {""} else {"s"},
-            DEFAULT_AUTOSAVE_QUEUE_INTERVAL, if DEFAULT_AUTOSAVE_QUEUE_INTERVAL==1 {""} else {"s"}
+            autosave_interval.period().as_secs(), if autosave_interval.period().as_secs()==1 {""} else {"s"}
         );
 
     {
