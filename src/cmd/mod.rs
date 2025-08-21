@@ -26,6 +26,7 @@ pub(crate) mod force;
 mod bc;
 mod ac;
 mod channels;
+mod inventory;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;

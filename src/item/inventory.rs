@@ -84,6 +84,12 @@ pub struct Container {
     subcontainers: Vec<Container>,
 }
 
+impl Default for Container {
+    fn default() -> Self {
+        Self::new("", BaseContainerType::PlayerInventory)
+    }
+}
+
 impl Identity for Container {
     fn id<'a>(&'a self) -> &'a str { &self.id }
 }

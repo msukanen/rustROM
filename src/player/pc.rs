@@ -52,11 +52,13 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         redit: None,
         listening_to: HashSet::new(),
         inventory: Container::from(BaseContainerType::PlayerInventory),
+        act_count: 0,
     }));
 
 /// Player data lives here!
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Player {
+    #[serde(skip, default)] act_count: usize,
     name: String,
     description: String,
     passwd: String,// argon2 hash
@@ -70,7 +72,7 @@ pub struct Player {
     #[serde(default)] pub hedit: Option<HeditState>,
     #[serde(default)] pub redit: Option<ReditState>,
     #[serde(default)] pub listening_to: HashSet<Channel>,
-    pub inventory: Container,
+    #[serde(default)] pub inventory: Container,
 }
 
 impl Player {
@@ -93,6 +95,7 @@ impl Player {
             redit: None,
             listening_to: Channel::default_listens(),
             inventory: Container::from(BaseContainerType::PlayerInventory),
+            act_count: 0,
         }
     }
 
@@ -262,6 +265,17 @@ impl Player {
     pub fn listening_to_optout(&mut self, channel: &Channel) {
         self.listening_to.remove(channel);
     }
+
+    /// Get number of "meaningful" actions since last save.
+    /// 
+    /// This value is in general used for determining auto-save requirement.
+    pub fn act_count(&self) -> usize { self.act_count }
+
+    #[cfg(feature = "localtest")]
+    pub fn test_inventory(&mut self) {
+        use crate::io::AUTOSAVE_ACT_COUNT_THRESHOLD;
+        self.act_count = AUTOSAVE_ACT_COUNT_THRESHOLD + 1;
+    }
 }
 
 #[async_trait]
@@ -276,6 +290,8 @@ impl DoesSave for Player {
         let file = std::fs::File::create(path)?;
         let _ = serde_json::to_writer(file, &self)?;
         log::info!("Saved '{}'.", filename);
+        // Reset act count.
+        self.act_count = 0;
         Ok(())
     }
 }
