@@ -1,23 +1,39 @@
+use std::fmt::Display;
+
 use sha1::{Digest, Sha1};
 
 #[derive(Debug)]
 pub enum PasswordError {
     TooShort,
-    TooSimple,
     NoLowercase, NoUppercase, NoDigit, NoSpecial,
     Argon2Failure(argon2::password_hash::Error),
     NetworkFailure(reqwest::Error),
     HIBPPwned,
 }
 
-const MIN_PASSWD_LENGTH: usize = 8;
+const MIN_PASSWD_LENGTH: usize = 12;
 
+impl std::error::Error for PasswordError {}
 impl From<argon2::password_hash::Error> for PasswordError {
     fn from(value: argon2::password_hash::Error) -> Self { Self::Argon2Failure(value)}
 }
-
 impl From<reqwest::Error> for PasswordError {
     fn from(value: reqwest::Error) -> Self { Self::NetworkFailure(value)}
+}
+
+impl Display for PasswordError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Argon2Failure(e) => write!(f, "Argon2: {:?}", e),
+            Self::HIBPPwned => write!(f, "HIBPPwned password"),
+            Self::NetworkFailure(e) => write!(f, "Network failure: {:?}", e),
+            Self::NoDigit => write!(f, "Password must contain at least one digit"),
+            Self::NoLowercase => write!(f, "Password must contain at least one lowercase letter"),
+            Self::NoSpecial => write!(f, "Password must contain at leasat one special character"),
+            Self::NoUppercase => write!(f, "Password must contain at least one uppercase letter"),
+            Self::TooShort => write!(f, "Password too short, minimum length is {MIN_PASSWD_LENGTH} characters"),
+        }
+    }
 }
 
 /// Check pwd pwnage status via HIBP.
@@ -27,7 +43,9 @@ impl From<reqwest::Error> for PasswordError {
 /// 
 /// # Returns
 /// Either `Ok(())` or e.g. `Err(`[PasswordError::HIBPPwned]`)`.
+#[must_use = "Security is paramount to have..."]
 pub async fn is_passwd_pwned(plaintext_passwd: &str) -> Result<(), PasswordError> {
+    #[cfg(not(feature = "no-hibp"))]{
     // Hash the pwd:
     let mut hasher = Sha1::new();
     hasher.update(plaintext_passwd);
@@ -48,7 +66,7 @@ pub async fn is_passwd_pwned(plaintext_passwd: &str) -> Result<(), PasswordError
                 return Err(PasswordError::HIBPPwned);
             }
         }
-    }
+    }}
     Ok(())
 }
 
@@ -59,6 +77,7 @@ pub async fn is_passwd_pwned(plaintext_passwd: &str) -> Result<(), PasswordError
 /// 
 /// # Returns
 /// Either `Ok(())` or the first `Err(`[PasswordError]`)` that matches.
+#[must_use = "Security is paramount to have..."]
 pub async fn validate_passwd(plaintext_passwd: &str) -> Result<(), PasswordError>
 {
     if plaintext_passwd.len() < MIN_PASSWD_LENGTH { return Err(PasswordError::TooShort);}
