@@ -1,4 +1,6 @@
 //! A MUD project in Rust.
+//! 
+//! See README.md ...
 use std::{collections::{HashMap, HashSet}, ops::Deref, sync::Arc};
 use clap::Parser;
 use once_cell::sync::{Lazy, OnceCell};
@@ -36,9 +38,7 @@ impl Deref for ImmutablePath {
         DATA.get().expect("OOF")
     }
 }
-#[cfg(test)]
-pub(crate) static DATA: OnceCell<String> = OnceCell::new();
-#[cfg(not(test))]
+
 static DATA: OnceCell<String> = OnceCell::new();
 pub(crate) static DATA_PATH: ImmutablePath = ImmutablePath;
 pub(crate) static AUTOSAVE_QUEUE_INTERVAL: Lazy<Arc<RwLock<u64>>> = Lazy::new(|| Arc::new(RwLock::new(DEFAULT_AUTOSAVE_QUEUE_INTERVAL)));
