@@ -1,4 +1,5 @@
 use std::{sync::Arc, time::Duration};
+use futures::{stream, StreamExt};
 use tokio::{sync::RwLock, time::{self}};
 use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld};
 
@@ -7,6 +8,7 @@ const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
 const AUTOSAVE_QUEUE_INTERVAL: u64 = 30; // once per 30 sec, about.
 #[cfg(not(feature = "localtest"))]
 const AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
+pub const AUTOSAVE_ACT_COUNT_THRESHOLD: usize = 16;
 
 /// One heart of the machinery — I/O loop.
 /// 
@@ -64,24 +66,21 @@ pub async fn io_loop(
             },
 
             _ = autosave_interval.tick() => {
-                log::debug!("Auto-save cycle initiated …");
+                log::trace!("Auto-save cycle initiated …");
                 let players = world.read().await.players_by_sockaddr.clone();
-                if !players.is_empty() {
-                    log::info!("Auto-save players collected …");
-                }
-                let mut saved = false;
-                for (_, p) in players {
-                    let mut p = p.write().await;
-                    if let Err(e) = p.save().await {
-                        log::error!("Failed to save player '{}': {:?}", p.id(), e);
-                    } else {
-                        saved = true;
+                let players = stream::iter(players);
+                let players = players.filter(|(_,p)|{ let p = p.clone(); async move { p.read().await.act_count() >= AUTOSAVE_ACT_COUNT_THRESHOLD }});
+                let mut saved_any = false;
+                players.for_each(|(_,p)| { saved_any = true; async move {
+                    let mut w = p.write().await;
+                    if let Err(e) = w.save().await {
+                        log::error!("Failed to save player '{}': {:?}", w.id(), e);
                     }
-                }
-                if saved {
+                }}).await;
+                if saved_any {
                     log::info!("Auto-save cycle complete.");
                 } else {
-                    log::debug!("… but nothing to auto-save online.");
+                    log::trace!("… but nothing to do.");
                 }
             }
         }
