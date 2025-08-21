@@ -1,46 +1,71 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{item::Container, traits::{Description, Identity, Owned}};
+use crate::{item::{inventory::{Container, Storage, StorageCapacity}, weapon::Weapon}, traits::{Description, Identity, Owned}};
 
+#[derive(Debug)]
 pub enum ItemError {
-    NoItemSpace(Item),
-    NoContainerSpace(Container),
-    TooLarge(Container),
+    NotContainer(Item),
+    NoSpace(Item),
+    TooLarge(Item),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Item {
-    id: String,
-    title: String,
-    description: String,
-    owner: String,
+pub enum ItemType {
+    Container,
+    Weapon,
 }
 
-impl Identity for Item {
-    fn id<'a>(&'a self) -> &'a str { &self.id }
-}
-
-impl Description for Item {
-    fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn title<'a>(&'a self) -> &'a str { &self.title }
-}
-
-impl Owned for Item {
-    fn owner(&self) -> &str {
-        &self.owner
-    }
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub enum Item {
+    Container(Container),
+    Weapon(Weapon),
 }
 
 impl Item {
-    #[cfg(test)]
-    pub fn blank() -> Self {
-        use uuid::Uuid;
+    pub fn is_container(&self) -> bool {
+        match self {
+            Self::Container(_) => true,
+            _ => false
+        }
+    }
 
-        Self {
-            id: format!("test-item-{}", Uuid::new_v4()),
-            title: "test item".into(),
-            description: "a very testful item this is, yes".into(),
-            owner: "test".into()
+    #[must_use = "Item will be lost if not extracted from Err in case of a failure."]
+    pub fn try_insert(&mut self, item: Item) -> Result<(), ItemError> {
+        match self {
+            Self::Container(c) => c.try_insert(item),
+            _ => Err(ItemError::NotContainer(item))
+        }
+    }
+}
+
+impl StorageCapacity for Item {
+    fn capacity(&self) -> usize {
+        match self {
+            Self::Container(c) => c.capacity(),
+            _ => 0,
+        }
+    }
+
+    fn num_items(&self) -> usize {
+        match self {
+            Self::Container(c) => c.num_items(),
+            _ => 0,
+        }
+    }
+
+    fn space(&self) -> usize {
+        match self {
+            Self::Container(c) => c.space(),
+            _ => 0,
+        }
+    }
+}
+
+impl Identity for Item {
+    fn id<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Container(c) => c.id(),
+            Self::Weapon(w) => w.id(),
         }
     }
 }
