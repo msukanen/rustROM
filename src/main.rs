@@ -143,7 +143,6 @@ async fn main() {
             let mut line = String::new();
 
             // Send a welcome message to the new client.
-            let mut state = ClientState::EnteringName;
             let (greeting, login_prompt) = {
                 let w = world.read().await;
                 let g = w.greeting.clone().unwrap_or_else(|| GREETING.to_string());
@@ -151,6 +150,8 @@ async fn main() {
                 (g, p)
             };
             tell_user!(&mut writer, "{}\n\n{}", greeting, &login_prompt);
+
+            let mut state = ClientState::EnteringName;
             let mut abrupt_dc = false;
 
             // This is the main loop for the client.
@@ -169,24 +170,24 @@ async fn main() {
                     break;
                 }
 
+                // IMPORTANT: wipe the buffer before each read_line(). Instead of
+                //            clearing the buffer on its own, read_line() keeps
+                //            accumulating onto it... we'd run out of memory sooner
+                //            or later.
                 line.clear();
+
                 tokio::select! {
                     // --- First Branch: Read input from the client ---
                     result = reader.read_line(&mut line) => {
                         // An abrupt disconnect?
                         if result.unwrap_or(0) == 0 {
                             log::info!("Client {} disconnected abruptly.", addr);
-
-                            match &state {
-                                ClientState::Playing |
-                                ClientState::Editing {..}
-                                => {// Shift to logout state and re-loop…
-                                    abrupt_dc = true;
-                                    state = ClientState::Logout;
-                                    continue
-                                },
-                                _ => break// They weren't playing - nothing to save - d/c.
+                            if state.is_in_game() {
+                                abrupt_dc = true;
+                                state = ClientState::Logout;
+                                continue;
                             }
+                            break; // not in game, cut the line, wipe the floors and take a break.
                         }
 
                         let input = line.trim().sanitize();
@@ -198,12 +199,20 @@ async fn main() {
                                     state
                                 } else {
                                     log::info!("Login attempt on '{}'…", input);
-                                    if let Err(LoadError::InvalidName) = Player::load_is_possible(bad_words.clone(), &input).await {
-                                        tell_user!(&mut writer, "Name '{}' is reserved, please try another.\n\n{}", input, get_prompt!(world, PromptType::Login, PROMPT_LOGIN));
-                                        ClientState::EnteringName
+                                    let can_continue = if world.read().await.players.contains_key(&input) {
+                                        false
+                                    } else if let Err(LoadError::InvalidName) = Player::load_is_possible(bad_words.clone(), &input).await {
+                                        false
                                     } else {
+                                        true
+                                    };
+
+                                    if can_continue {
                                         tell_user!(&mut writer, get_prompt!(world, PromptType::Password1, PROMPT_PASSWD1));
                                         ClientState::EnteringPassword1 { name: input.to_string() }
+                                    } else {
+                                        tell_user!(&mut writer, "Name '{}' is reserved, please try another.\n\n{}", input, &login_prompt);
+                                        ClientState::EnteringName
                                     }
                                 }
                             },
