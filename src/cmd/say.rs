@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use async_trait::async_trait;
 use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Identity, util::Broadcast};
 
@@ -6,6 +8,16 @@ pub enum Subtype {
     Say,
     Ask,
     Exclaim,
+}
+
+impl Display for Subtype {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Self::Ask => "asks",
+            Self::Exclaim => "exclaims",
+            Self::Say => "says",
+        })
+    }
 }
 
 pub struct SayCommand;
@@ -23,12 +35,12 @@ impl Command for SayCommand {
                 let cmd = AskCommand;
                 return cmd.exec(ctx).await;
             }
-            let exlaim = ctx.args.ends_with('!');
+            let subtype = if ctx.args.ends_with('!') {Subtype::Exclaim} else {Subtype::Say};
             let p = ctx.player.read().await;
-            let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), if exlaim {"exclaims"} else {"says"}, ctx.args);
+            let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), subtype, ctx.args.trim());
             let from_player = p.id().into();
             let room_id = p.location.clone();
-            ctx.tx.send(Broadcast::Say { subtype: Some(Subtype::Say), room_id, message, from_player }).unwrap();
+            ctx.tx.send(Broadcast::Say { subtype: Some(subtype), room_id, message, from_player }).unwrap();
         }
     }
 }
