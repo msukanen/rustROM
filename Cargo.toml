@@ -1,6 +1,6 @@
 [package]
 name = "rustrom"
-version = "0.1.35"
+version = "0.1.36"
 edition = "2024"
 authors = ["Markku Sukanen <markku.sukanen@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -22,6 +22,7 @@ serde_json = "1.0.141"
 sha1 = "0.10.6"
 tokio = { version = "1.47", features = ["full"] }
 toml = "0.9.2"
+uuid = { version = "1.18.0", features = ["v4", "serde"] }
 walkdir = "2.5"
 
 [badges]
