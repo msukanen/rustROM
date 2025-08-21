@@ -32,3 +32,16 @@ impl PartialEq for ClientState {
         }
     }
 }
+
+impl ClientState {
+    pub fn is_in_game(&self) -> bool {
+        match self {
+            Self::EnteringName |
+            Self::EnteringPassword1 { .. }|
+            Self::EnteringPasswordV { .. }|
+            Self::Logout
+                => false,
+            _   => true
+        }
+    }
+}
