@@ -20,6 +20,7 @@ pub async fn io_loop(
 ) {
     let mut logout_interval = time::interval(Duration::from_secs(LOGOUT_QUEUE_INTERVAL));
     let mut autosave_interval = time::interval(Duration::from_secs(*AUTOSAVE_QUEUE_INTERVAL.read().await));
+    let mut config_change_interval = time::interval(Duration::from_millis(100));
 
     log::info!("io_loop firing up … {} second{} logout queue, {} second{} auto-save queue.",
             LOGOUT_QUEUE_INTERVAL, if LOGOUT_QUEUE_INTERVAL==1 {""} else {"s"},
@@ -35,6 +36,13 @@ pub async fn io_loop(
 
     loop {
         tokio::select! {
+            _ = config_change_interval.tick() => {
+                let new_autosave_interval = Duration::from_secs(*AUTOSAVE_QUEUE_INTERVAL.read().await);
+                if new_autosave_interval != autosave_interval.period() {
+                    autosave_interval = time::interval(new_autosave_interval);
+                }
+            },
+
             _ = logout_interval.tick() => {
                 let players_to_save = {
                     let mut w = world.write().await;
@@ -66,7 +74,7 @@ pub async fn io_loop(
             },
 
             _ = autosave_interval.tick() => {
-                log::trace!("Auto-save cycle initiated …");
+                log::trace!("Auto-save cycle initiated … @{}s intervals.", autosave_interval.period().as_secs());
                 let players = world.read().await.players_by_sockaddr.clone();
                 let players = stream::iter(players);
                 let players = players.filter(|(_,p)|{ let p = p.clone(); async move { p.read().await.act_count() >= DEFAULT_AUTOSAVE_ACT_COUNT_THRESHOLD }});

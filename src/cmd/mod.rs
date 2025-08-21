@@ -27,8 +27,7 @@ mod bc;
 mod ac;
 mod channels;
 mod inventory;
-//#[cfg(feature = "localtest")]
-mod tst;
+mod asqi;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;

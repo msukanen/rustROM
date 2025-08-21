@@ -1,10 +1,13 @@
 use async_trait::async_trait;
 use crate::{cmd::{Command, CommandCtx}, tell_user, validate_admin, AUTOSAVE_QUEUE_INTERVAL};
 
-pub struct TstCommand;
+pub struct AsqiCommand;
 
+/// The cryptic command 'asqi' ...
+/// 
+/// Real-time auto-save queue interval tuning.
 #[async_trait]
-impl Command for TstCommand {
+impl Command for AsqiCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_admin!(ctx);
         let duration = ctx.args.parse::<u64>().unwrap();
