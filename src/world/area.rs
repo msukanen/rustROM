@@ -95,6 +95,7 @@ impl Area {
         Ok(())
     }
 
+    #[cfg(feature = "localtest")]
     /// A blank slate.
     pub(crate) fn blank() -> Self { Self {
         id: "".into(),
