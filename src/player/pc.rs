@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::Access, string::{styling::dirty_mark, WordSet}, traits::{Identity, save::{DoesSave, SaveError}, Description}, util::{badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, item::{inventory::BaseContainerType, Container}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::Access, string::{styling::dirty_mark, WordSet}, traits::{save::{DoesSave, SaveError}, Description, Identity}, util::{badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -51,6 +51,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         hedit: None,
         redit: None,
         listening_to: HashSet::new(),
+        inventory: Container::from(BaseContainerType::PlayerInventory),
     }));
 
 /// Player data lives here!
@@ -69,6 +70,7 @@ pub struct Player {
     #[serde(default)] pub hedit: Option<HeditState>,
     #[serde(default)] pub redit: Option<ReditState>,
     #[serde(default)] pub listening_to: HashSet<Channel>,
+    pub inventory: Container,
 }
 
 impl Player {
@@ -90,6 +92,7 @@ impl Player {
             hedit: None,
             redit: None,
             listening_to: Channel::default_listens(),
+            inventory: Container::from(BaseContainerType::PlayerInventory),
         }
     }
 
@@ -176,6 +179,10 @@ impl Player {
         }
     }
 
+    /// Check if loading is possible.
+    /// 
+    /// # Arguments
+    /// - `badname_lock`— lock to e.g. `badnames.txt` [WordSet].
     pub async fn load_is_possible(badname_lock: Arc<RwLock<WordSet>>, name: &str) -> Result<(), LoadError> {
         let filename = format!("{}/{}.save", *SAVE_PATH, name.slugify());
         if let Ok(true) = tokio::fs::try_exists(&filename).await {
@@ -224,11 +231,12 @@ impl Player {
 
     /// Wipe out current state stack and set new root value for it.
     /// 
-    /// **NOTE:** generally used only when [Player] actually enters the game after
-    ///       password checks et al, but in an emergency, might have use elsewhere too.
-    /// 
     /// # Arguments
     /// - `state`— [ClientState] which will replace the whole stack.
+    //
+    // NOTE: generally used only when [Player] actually enters the game after
+    //       password checks et al, but in an emergency, might have use elsewhere too.
+    //
     pub fn erase_states(&mut self, state: ClientState) -> ClientState {
         self.state_stack = vec![state.clone()];
         state
