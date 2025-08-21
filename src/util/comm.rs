@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{force::ForceSource, say::Subtype}, player::{Access, Player}, traits::describe::Identity, world::{room::find_nearby_rooms, SharedWorld}};
+use crate::{cmd::{force::ForceSource, say::Subtype}, player::{Access, Player}, traits::Identity, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]

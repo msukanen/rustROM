@@ -12,10 +12,10 @@ pub(crate) mod comm;
 pub(crate) use comm::Broadcast;
 
 pub mod badname;
-pub mod github;
+mod github;
 pub(crate) use github::GithubContent;
 
-pub mod ed;
+pub(super) mod ed;
 pub(crate) use ed::Editor;
 
 #[macro_export]

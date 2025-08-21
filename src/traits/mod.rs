@@ -1,5 +1,10 @@
 pub mod tickable;
 pub mod save;
-pub mod describe;
+mod describe;
 pub(crate) use describe::Description;
-pub(crate) use describe::Identity;
+
+mod identity;
+pub(crate) use identity::Identity;
+
+mod owned;
+pub(crate) use owned::Owned;
