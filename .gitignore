@@ -18,3 +18,4 @@ target
 # data/help is rustROM-help submodule - ignore
 data/help
 data/badwords.txt
+src/cmd/tst.rs
