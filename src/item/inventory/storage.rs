@@ -1,4 +1,4 @@
-use crate::item::{item::Item, ItemError};
+use crate::item::{Item, ItemMap, ItemError};
 
 pub trait StorageCapacity {
     fn space(&self) -> usize;
@@ -9,6 +9,7 @@ pub trait StorageCapacity {
 pub trait Storage {
     fn try_insert(&mut self, item: Item) -> Result<(), ItemError>;
     fn take_out(&mut self, id: &str) -> Result<Item, ItemError>;
+    fn items(&self) -> &ItemMap;
 }
 
 pub trait Identity {

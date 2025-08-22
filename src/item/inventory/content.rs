@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{Identity, Owned, owned::UNSPECIFIED_OWNER}};
+use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError, ItemMap}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{owned::UNSPECIFIED_OWNER, Identity, Owned}, world::room::MAX_ITEMS_IN_ROOM};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
     id: String,
     owner: String,
     max_capacity: usize,
-    contents: HashMap<String, Item>,
+    contents: ItemMap,
 }
 
 impl StorageCapacity for Content {
@@ -33,12 +33,24 @@ impl From<ContainerType> for Content {
     fn from(value: ContainerType) -> Self {
         match value {
             ContainerType::PlayerInventory => Self {
-                id: format!("inventory-{}", Uuid::new_v4()),
+                id: format!("content-pc-inv-{}", Uuid::new_v4()),
                 owner: UNSPECIFIED_OWNER.into(),
                 max_capacity: MAX_ITEMS_PLAYER_INVENTORY,
                 contents: HashMap::new()
             },
-            _ => unimplemented!("more match arms needed"),
+            ContainerType::Room(id) => Self {
+                // NOTE: id "must" be set later by the [Room] itself.
+                id: format!("content-room-{}", id),
+                owner: UNSPECIFIED_OWNER.into(),
+                max_capacity: MAX_ITEMS_IN_ROOM,
+                contents: HashMap::new()
+            },
+            ContainerType::Backpack => Self {
+                id: format!("content-backpack-{}", Uuid::new_v4()),
+                owner: UNSPECIFIED_OWNER.into(),
+                max_capacity: 32,// TODO NOTE: arbitrary value.
+                contents: HashMap::new()
+            },
         }
     }
 }
@@ -75,6 +87,10 @@ impl Storage for Content {
         }
 
         Err(ItemError::NotFound)
+    }
+
+    fn items(&self) -> &ItemMap {
+        &self.contents
     }
 }
 

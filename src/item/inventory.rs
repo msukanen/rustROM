@@ -4,18 +4,20 @@ pub(crate) mod storage;
 pub(crate) use storage::{Storage, StorageCapacity};
 pub(crate) mod content;
 pub(crate) use content::Content;
-use crate::{item::{inventory::storage::Identity as StorageId, item::Item, ItemError}, traits::{Identity, Owned}};
+use crate::{item::{inventory::storage::Identity as StorageId, item::Item, ItemError}, traits::{owned::UNSPECIFIED_OWNER, Identity, Owned}};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ContainerType {
     Backpack,
     PlayerInventory,
+    Room(String),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum Container {
     Backpack(Content),
     PlayerInventory(Content),
+    Room(Content),
 }
 
 // impl Default to appease [serde(default)] tags.
@@ -26,22 +28,25 @@ impl Default for Container {
 impl StorageCapacity for Container {
     fn capacity(&self) -> usize {
         match self {
-            Self::Backpack(c) |
-            Self::PlayerInventory(c) => c.capacity(),
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c) => c.capacity(),
         }
     }
 
     fn num_items(&self) -> usize {
         match self {
             Self::Backpack(c)|
-            Self::PlayerInventory(c) => c.num_items(),
+            Self::PlayerInventory(c)|
+            Self::Room(c) => c.num_items(),
         }
     }
 
     fn space(&self) -> usize {
         match self {
             Self::Backpack(c)|
-            Self::PlayerInventory(c) => c.space(),
+            Self::PlayerInventory(c)|
+            Self::Room(c) => c.space(),
         }
     }
 }
@@ -49,15 +54,28 @@ impl StorageCapacity for Container {
 impl Storage for Container {
     fn try_insert(&mut self, item: Item) -> Result<(), ItemError> {
         match self {
-            Self::Backpack(c) |
-            Self::PlayerInventory(c) => c.try_insert(item),
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.try_insert(item),
         }
     }
 
     fn take_out(&mut self, id: &str) -> Result<Item, ItemError> {
         match self {
             Self::Backpack(c)|
-            Self::PlayerInventory(c) => c.take_out(id),
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.take_out(id),
+        }
+    }
+
+    fn items(&self) -> &super::ItemMap {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.items()
         }
     }
 }
@@ -65,16 +83,19 @@ impl Storage for Container {
 impl Identity for Container {
     fn id<'a>(&'a self) -> &'a str {
         match self {
-            Self::Backpack(c) |
-            Self::PlayerInventory(c) => c.id()
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.id()
         }
     }
 }
 
 impl From<ContainerType> for Container {
     fn from(value: ContainerType) -> Self {
-        match value {
+        match &value {
             ContainerType::PlayerInventory => Container::PlayerInventory(Content::from(ContainerType::PlayerInventory)),
+            ContainerType::Room(_) => Container::Room(Content::from(value)),
             _ => unimplemented!("more match arms needed"),
         }
     }
@@ -89,6 +110,7 @@ impl Owned for Container {
         match self {
             Self::Backpack(c)|
             Self::PlayerInventory(c) => c.owner(),
+            Self::Room(_) => UNSPECIFIED_OWNER,
         }
     }
 }

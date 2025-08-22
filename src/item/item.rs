@@ -1,8 +1,10 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{inventory::{storage::Identity as StorageId, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{Description, Identity, Owned}};
+use crate::{item::{inventory::{storage::Identity as StorageId, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{Identity, Owned}};
+
+pub(crate) type ItemMap = HashMap<String, Item>;
 
 #[derive(Debug)]
 pub enum ItemError {
@@ -110,5 +112,11 @@ impl Owned for Item {
             Self::Container(c) => c.owner(),
             Self::Weapon(w) => w.owner(),
         }
+    }
+}
+
+impl From<WeaponType> for Item {
+    fn from(value: WeaponType) -> Self {
+        Self::Weapon(Weapon::from(value))
     }
 }

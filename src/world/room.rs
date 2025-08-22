@@ -5,9 +5,11 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{player::Player, traits::{Identity, Description}, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
+use crate::{item::{inventory::{Container, ContainerType, Storage, StorageCapacity}, Item, ItemError}, player::Player, traits::{Description, Identity}, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
+/// Max number of items in a [Room], whether on ground or otherwise.
+pub(crate) static MAX_ITEMS_IN_ROOM: usize = 1_000;
 
 pub enum RoomError {
     NoRoom,
@@ -84,10 +86,9 @@ pub struct Room {
     title: String,
     pub(crate) description: String,
     pub exits: HashMap<Direction, Exit>,
-    #[serde(skip)]
-    pub parent: Weak<RwLock<Area>>,
-    #[serde(skip, default)]
-    pub players: HashMap<String, Weak<RwLock<Player>>>,
+    #[serde(skip)] pub parent: Weak<RwLock<Area>>,
+    #[serde(skip, default)] pub players: HashMap<String, Weak<RwLock<Player>>>,
+    #[serde(default)] pub contents: Container,
 }
 
 impl Room {
@@ -132,14 +133,19 @@ impl Room {
     }
 
     /// Get an entirely blank slate.
-    pub(crate) fn blank(id: Option<&str>) -> Self { Self {
-        id: (if id.is_some() { id.unwrap() } else {""}).into(),
-        title: "".into(),
-        description: "".into(),
-        exits: HashMap::new(),
-        parent: Weak::new(),
-        players: HashMap::new(),
-    }}
+    pub(crate) fn blank(id: Option<&str>) -> Self {
+        let id: String = (if id.is_some() { id.unwrap() } else {""}).into();
+
+        Self {
+            contents: Container::from(ContainerType::Room(id.clone())),
+            id,
+            title: "".into(),
+            description: "".into(),
+            exits: HashMap::new(),
+            parent: Weak::new(),
+            players: HashMap::new(),
+        }
+    }
 
     /// Add a [Player] to the [Room].
     /// 
@@ -222,5 +228,33 @@ impl Editor for Room {
     fn set_description(&mut self, desc: &str) {
         log::debug!("Setting description as: {}", desc);
         self.description = desc.into();
+    }
+}
+
+impl StorageCapacity for Room {
+    fn capacity(&self) -> usize {
+        self.contents.capacity()
+    }
+
+    fn num_items(&self) -> usize {
+        self.contents.num_items()
+    }
+
+    fn space(&self) -> usize {
+        self.contents.space()
+    }
+}
+
+impl Storage for Room {
+    fn try_insert(&mut self, item: Item) -> Result<(), ItemError> {
+        self.contents.try_insert(item)
+    }
+
+    fn take_out(&mut self, id: &str) -> Result<Item, ItemError> {
+        self.contents.take_out(id)
+    }
+    
+    fn items(&self) -> &crate::item::ItemMap {
+        self.contents.items()
     }
 }

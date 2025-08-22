@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, tell_user, traits::Description};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::inventory::Storage, tell_user, traits::Description};
 
 pub struct LookCommand;
 
@@ -20,19 +20,31 @@ pub async fn look_at_current_room(ctx: &mut CommandCtx<'_>) {
             r.description()
         );
 
-        // People in room?
-        for p in r.players.keys() {
-            desc.push_str(&format!("    <c blue>[<c cyan>{}</c>]</c>\n", p));
-        }
-        if r.players.keys().len() > 0 {
-            desc.push_str("\n");
+        /* ITEMS ON FLOOR */{
+            for (hash, _) in r.contents.items() {
+                desc.push_str(&format!("  <c red>//</c> {}\n", hash));
+            }
+            if r.contents.items().len() > 0 {
+                desc.push_str("\n");
+            }
         }
 
-        if !r.exits.is_empty() {
-            desc.push_str("<c green>Exits:</c> ");
-            let exits: Vec<String> = r.exits.keys().map(|d| format!("{:?}", d).to_lowercase()).collect();
-            desc.push_str(&exits.join(", "));
-            desc.push_str("\n\n");
+        /* PEOPLE */{
+            for p in r.players.keys() {
+                desc.push_str(&format!("    <c blue>[<c cyan>{}</c>]</c>\n", p));
+            }
+            if r.players.keys().len() > 0 {
+                desc.push_str("\n");
+            }
+        }
+
+        /* EXITS */{
+            if !r.exits.is_empty() {
+                desc.push_str("<c green>Exits:</c> ");
+                let exits: Vec<String> = r.exits.keys().map(|d| format!("{:?}", d).to_lowercase()).collect();
+                desc.push_str(&exits.join(", "));
+                desc.push_str("\n\n");
+            }
         }
         tell_user!(ctx.writer, &desc);
     } otherwise {

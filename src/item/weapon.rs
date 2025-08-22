@@ -54,3 +54,12 @@ impl Owned for Weapon {
         }
     }
 }
+
+impl From<WeaponType> for Weapon {
+    fn from(value: WeaponType) -> Self {
+        match value {
+            WeaponType::Melee => Self::Melee(MeleeInfo::default()),
+            WeaponType::Ranged => Self::Ranged(RangedInfo::default()),
+        }
+    }
+}
