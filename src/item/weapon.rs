@@ -63,3 +63,13 @@ impl From<WeaponType> for Weapon {
         }
     }
 }
+
+#[cfg(feature = "localtest")]
+impl Weapon {
+    pub(crate) fn set_id(&mut self, id: &str) {
+        match self {
+            Weapon::Melee(m) => m.set_id(id),
+            _ => unimplemented!("set_id() is defined only for Weapon::Melee.")
+        }
+    }
+}

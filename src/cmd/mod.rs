@@ -29,6 +29,7 @@ mod channels;
 mod inventory;
 mod asqi;
 mod take;
+mod put;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;

@@ -34,3 +34,10 @@ impl MeleeInfo {
 impl Owned for MeleeInfo {
     fn owner(&self) -> &str { &self.owner }
 }
+
+#[cfg(feature = "localtest")]
+impl MeleeInfo {
+    pub(crate) fn set_id(&mut self, id: &str) {
+        self.id = id.into();
+    }
+}

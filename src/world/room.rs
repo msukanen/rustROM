@@ -91,11 +91,10 @@ pub struct Room {
     pub contents: Container,
 }
 
-// We manually implement Deserialize for it
+// We manually implement Deserialize for [Room].
 impl<'de> Deserialize<'de> for Room {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
+    where D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
         struct RoomData {
@@ -105,11 +104,10 @@ impl<'de> Deserialize<'de> for Room {
             exits: HashMap<Direction, Exit>,
         }
 
-        // 2. Deserialize the data into our simple, temporary struct.
+        // Deserialize the data into temp struct.
         let data = RoomData::deserialize(deserializer)?;
 
-        // 3. Now, we have the `id`! We can use it to correctly
-        //    construct the Container.
+        // Now, we have the `id` - can use it to correctly construct the [Container].
         let contents = Container::from(ContainerType::Room(data.id.clone()));
 
         // 4. Finally, build the real Room object.
@@ -119,8 +117,8 @@ impl<'de> Deserialize<'de> for Room {
             description: data.description,
             exits: data.exits,
             contents,
-            parent: Weak::new(), // Will be linked later
-            players: HashMap::new(), // Will be populated at runtime
+            parent: Weak::new(), // Will be linked elsewhere later…
+            players: HashMap::new(), // Will be populated at runtime…
         })
     }
 }

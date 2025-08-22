@@ -117,6 +117,13 @@ impl Owned for Container {
     }
 }
 
+#[cfg(feature = "localtest")]
+impl Container {
+    pub(crate) fn set_id(&mut self, id: &str) {
+        unimplemented!("No set_id() defined.");
+    }
+}
+
 #[cfg(test)]
 mod inventory_tests {
     use crate::item::item::ItemType;

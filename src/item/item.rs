@@ -97,6 +97,16 @@ impl Identity for Item {
     }
 }
 
+#[cfg(feature = "localtest")]
+impl Item {
+    pub(crate) fn set_id(&mut self, id: &str) {
+        match self {
+            Self::Weapon(w) => w.set_id(id),
+            _ => unimplemented!("set_id() is defined only for Weapon.")
+        }
+    }
+}
+
 impl StorageId for Item {
     fn is_container(&self) -> bool {
         match self {
