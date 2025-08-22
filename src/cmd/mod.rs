@@ -5,8 +5,8 @@ use crate::{player::Player, tell_user, util::{clientstate::EditorMode, Broadcast
 
 pub mod macros;
 //--- 'mod' all the commands ---
+mod _tst;// admin-only template/testbed.
 mod quit;
-
 pub(crate) mod say;
 pub(crate) mod ask;
 mod set;
@@ -29,8 +29,6 @@ mod channels;
 mod inventory;
 mod asqi;
 mod take;
-#[cfg(feature = "localtest")]
-mod tst;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
