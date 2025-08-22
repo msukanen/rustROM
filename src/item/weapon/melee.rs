@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::traits::Identity;
+use crate::traits::{owned::UNSPECIFIED_OWNER, Identity, Owned};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MeleeInfo {
-    id: String
+    id: String,
+    owner: String,
 }
 
 impl Identity for MeleeInfo { fn id<'a>(&'a self) -> &'a str { &self.id }}
@@ -14,7 +15,22 @@ impl Identity for MeleeInfo { fn id<'a>(&'a self) -> &'a str { &self.id }}
 impl Default for MeleeInfo {
     fn default() -> Self {
         Self {
-            id: format!("weapon-melee-{}", Uuid::new_v4()),
+            id: Self::uuid(),
+            owner: UNSPECIFIED_OWNER.into(),
         }
     }
+}
+
+impl MeleeInfo {
+    #[cfg(test)]
+    pub(crate) fn re_id(&mut self) -> &mut Self {
+        self.id = Self::uuid();
+        self
+    }
+
+    fn uuid() -> String { format!("weapon-melee-{}", Uuid::new_v4())}
+}
+
+impl Owned for MeleeInfo {
+    fn owner(&self) -> &str { &self.owner }
 }

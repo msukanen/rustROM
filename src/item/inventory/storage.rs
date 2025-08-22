@@ -8,4 +8,9 @@ pub trait StorageCapacity {
 
 pub trait Storage {
     fn try_insert(&mut self, item: Item) -> Result<(), ItemError>;
+    fn take_out(&mut self, id: &str) -> Result<Item, ItemError>;
+}
+
+pub trait Identity {
+    fn is_container(&self) -> bool;
 }
