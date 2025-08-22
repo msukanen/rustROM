@@ -38,12 +38,16 @@ impl From<ContainerType> for Content {
                 max_capacity: MAX_ITEMS_PLAYER_INVENTORY,
                 contents: HashMap::new()
             },
-            ContainerType::Room(id) => Self {
-                // NOTE: id "must" be set later by the [Room] itself.
-                id: format!("content-room-{}", id),
-                owner: UNSPECIFIED_OWNER.into(),
-                max_capacity: MAX_ITEMS_IN_ROOM,
-                contents: HashMap::new()
+            ContainerType::Room(id) => {
+                log::debug!("Creating room inventory.");
+
+                Self {
+                    // NOTE: id "must" be set later by the [Room] itself.
+                    id: format!("content-room-{}", id),
+                    owner: UNSPECIFIED_OWNER.into(),
+                    max_capacity: MAX_ITEMS_IN_ROOM,
+                    contents: HashMap::new()
+                }
             },
             ContainerType::Backpack => Self {
                 id: format!("content-backpack-{}", Uuid::new_v4()),
@@ -59,9 +63,11 @@ impl Storage for Content {
     fn try_insert(&mut self, item: Item) -> Result<(), ItemError> {
         let c = item.num_items() + 1;
         if self.space() < c {
+            log::debug!("No space left in container.");
             return Err(ItemError::NoSpace(item));
         }
 
+        log::debug!("'{}' put into '{}'.", item.id(), self.id());
         self.contents.insert(item.id().into(), item);
         Ok(())
     }
@@ -69,6 +75,7 @@ impl Storage for Content {
     fn take_out(&mut self, id: &str) -> Result<Item, ItemError> {
         // Swift extract if `id` happened to be one of the keys…
         if let Some(item) = self.contents.remove(id) {
+            log::debug!("'{}' removed from container.", id);
             return Ok(item);
         }
 
@@ -83,7 +90,10 @@ impl Storage for Content {
         }
 
         if let Some(f_id) = found {
+            log::debug!("'{}' removed from container.", f_id);
             return Ok(self.contents.remove(&f_id).unwrap());
+        } else {
+            log::debug!("Nothing found ...");
         }
 
         Err(ItemError::NotFound)

@@ -95,7 +95,9 @@ impl From<ContainerType> for Container {
     fn from(value: ContainerType) -> Self {
         match &value {
             ContainerType::PlayerInventory => Container::PlayerInventory(Content::from(ContainerType::PlayerInventory)),
-            ContainerType::Room(_) => Container::Room(Content::from(value)),
+            ContainerType::Room(_) => {
+                Container::Room(Content::from(value))
+            },
             _ => unimplemented!("more match arms needed"),
         }
     }

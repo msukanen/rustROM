@@ -120,3 +120,14 @@ impl From<WeaponType> for Item {
         Self::Weapon(Weapon::from(value))
     }
 }
+
+impl From<ItemError> for Item {
+    fn from(value: ItemError) -> Self {
+        match value {
+            ItemError::NoSpace(i)|
+            ItemError::NotContainer(i)|
+            ItemError::TooLarge(i) => i,
+            ItemError::NotFound => panic!("Coder failure?")
+        }
+    }
+}

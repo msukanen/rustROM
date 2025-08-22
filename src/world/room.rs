@@ -2,7 +2,7 @@
 use std::{collections::{HashMap, HashSet, VecDeque}, sync::{Arc, Weak}};
 
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::RwLock;
 
 use crate::{item::{inventory::{Container, ContainerType, Storage, StorageCapacity}, Item, ItemError}, player::Player, traits::{Description, Identity}, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
@@ -80,7 +80,7 @@ impl Default for ExitState {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Room {
     pub(crate) id: String,
     title: String,
@@ -88,7 +88,41 @@ pub struct Room {
     pub exits: HashMap<Direction, Exit>,
     #[serde(skip)] pub parent: Weak<RwLock<Area>>,
     #[serde(skip, default)] pub players: HashMap<String, Weak<RwLock<Player>>>,
-    #[serde(default)] pub contents: Container,
+    pub contents: Container,
+}
+
+// We manually implement Deserialize for it
+impl<'de> Deserialize<'de> for Room {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct RoomData {
+            id: String,
+            title: String,
+            description: String,
+            exits: HashMap<Direction, Exit>,
+        }
+
+        // 2. Deserialize the data into our simple, temporary struct.
+        let data = RoomData::deserialize(deserializer)?;
+
+        // 3. Now, we have the `id`! We can use it to correctly
+        //    construct the Container.
+        let contents = Container::from(ContainerType::Room(data.id.clone()));
+
+        // 4. Finally, build the real Room object.
+        Ok(Room {
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            exits: data.exits,
+            contents,
+            parent: Weak::new(), // Will be linked later
+            players: HashMap::new(), // Will be populated at runtime
+        })
+    }
 }
 
 impl Room {
