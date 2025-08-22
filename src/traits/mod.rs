@@ -6,5 +6,5 @@ pub(crate) use describe::Description;
 mod identity;
 pub(crate) use identity::Identity;
 
-mod owned;
+pub(crate) mod owned;
 pub(crate) use owned::Owned;
