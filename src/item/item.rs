@@ -6,7 +6,7 @@ use crate::{item::{inventory::{storage::Identity as StorageId, Container, Storag
 
 pub(crate) type ItemMap = HashMap<String, Item>;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize, Serialize)]
 pub enum ItemError {
     NotContainer(Item),
     NoSpace(Item),
@@ -23,6 +23,18 @@ impl Display for ItemError {
             Self::NotContainer(_) => write!(f, "Cannot insert; recipient is not a container"),
             Self::TooLarge(i) => write!(f, "'{}' is too large to fit", i.id()),
             Self::NotFound => write!(f, "No such item found."),
+        }
+    }
+}
+
+impl Identity for ItemError {
+    fn id<'a>(&'a self) -> &'a str {
+        match self {
+            Self::NoSpace(i)|
+            Self::NotContainer(i)|
+            Self::TooLarge(i)
+                => i.id(),
+            _ => unimplemented!("Attempt to retrieve ID of an unfound item…")
         }
     }
 }
@@ -140,4 +152,11 @@ impl From<ItemError> for Item {
             ItemError::NotFound => panic!("Coder failure?")
         }
     }
+}
+
+#[macro_export]
+macro_rules! force_item_to_player {
+    ($ctx:ident, $item:ident) => {{
+        let _ = $ctx.player.write().await.inventory.try_insert($item);
+    }};
 }

@@ -75,7 +75,7 @@ impl Storage for Content {
     fn take_out(&mut self, id: &str) -> Result<Item, ItemError> {
         // Swift extract if `id` happened to be one of the keys…
         if let Some(item) = self.contents.remove(id) {
-            log::debug!("'{}' removed from container.", id);
+            log::debug!("'{id}' removed from '{}'.", self.id());
             return Ok(item);
         }
 
@@ -90,10 +90,10 @@ impl Storage for Content {
         }
 
         if let Some(f_id) = found {
-            log::debug!("'{}' removed from container.", f_id);
+            log::debug!("'{f_id}' removed from '{}'.", self.id());
             return Ok(self.contents.remove(&f_id).unwrap());
         } else {
-            log::debug!("Nothing found ...");
+            log::debug!("Nothing resembling '{id}' found in '{}'…", self.id());
         }
 
         Err(ItemError::NotFound)
@@ -101,6 +101,23 @@ impl Storage for Content {
 
     fn items(&self) -> &ItemMap {
         &self.contents
+    }
+
+    fn items_mut(&mut self) -> &mut ItemMap {
+        &mut self.contents
+    }
+
+    fn contains(&self, id: &str) -> bool {
+        self.contents.contains_key(id)
+    }
+
+    fn contains_r(&self, id: &str) -> Result<String, String> {
+        for k in self.contents.keys() {
+            if k.contains(id) {
+                return Ok(k.clone());
+            }
+        }
+        Err(format!("No key matching with '{id}' found."))
     }
 }
 

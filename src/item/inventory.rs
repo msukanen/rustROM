@@ -78,6 +78,33 @@ impl Storage for Container {
                 => c.items()
         }
     }
+
+    fn items_mut(&mut self) -> &mut super::ItemMap {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.items_mut()
+        }
+    }
+
+    fn contains(&self, id: &str) -> bool {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.contains(id)
+        }
+    }
+
+    fn contains_r(&self, id: &str) -> Result<String, String> {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.contains_r(id)
+        }
+    }
 }
 
 impl Identity for Container {
