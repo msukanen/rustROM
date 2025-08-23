@@ -1,11 +1,15 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use futures::{stream, StreamExt};
 use tokio::{sync::RwLock, time::{self}};
-use crate::{player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld, AUTOSAVE_QUEUE_INTERVAL};
+use crate::{item::ItemError, player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld, AUTOSAVE_QUEUE_INTERVAL};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
 pub(crate) const DEFAULT_AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.
 pub(crate) const DEFAULT_AUTOSAVE_ACT_COUNT_THRESHOLD: usize = 16;
+#[cfg(not(feature = "localtest"))]
+const LOST_AND_FOUND_QUEUE_INTERVAL: u64 = 900; // once per 15 minutes, about.
+#[cfg(feature = "localtest")]
+const LOST_AND_FOUND_QUEUE_INTERVAL: u64 = 5; // once per 5 sec, about.
 
 /// One heart of the machinery — I/O loop.
 /// 
@@ -18,6 +22,8 @@ pub async fn io_loop(
     let mut logout_interval = time::interval(Duration::from_secs(LOGOUT_QUEUE_INTERVAL));
     let mut autosave_interval = time::interval(Duration::from_secs(*AUTOSAVE_QUEUE_INTERVAL.read().await));
     let mut config_change_interval = time::interval(Duration::from_millis(100));
+    let mut lost_and_found_interval = time::interval(Duration::from_secs(LOST_AND_FOUND_QUEUE_INTERVAL));
+    let mut lost_and_found: HashMap<String, ItemError> = HashMap::new();
 
     log::info!("io_loop firing up … {} second{} logout queue, {} second{} auto-save queue.",
             LOGOUT_QUEUE_INTERVAL, if LOGOUT_QUEUE_INTERVAL==1 {""} else {"s"},
@@ -87,7 +93,22 @@ pub async fn io_loop(
                 } else {
                     log::trace!("… but nothing to do.");
                 }
-            }
+            },
+
+            _ = lost_and_found_interval.tick() => {
+                let new_losts = {
+                    let mut w = world.write().await;
+                    w.lost_and_found.drain().collect::<Vec<(String, ItemError)>>()
+                };
+                let num = new_losts.len();
+                for (id, err) in new_losts {
+                    lost_and_found.insert(id, err);
+                }
+                if num > 0 {
+                    log::info!("Collected {} item{} into safety from The Void.", num, if num != 1 {"s"} else {""});
+                    log::info!("Currently holding onto {} item{} in total.", lost_and_found.len(), if lost_and_found.len() != 1 {"s"} else {""});
+                }
+            },
         }
     }
 }

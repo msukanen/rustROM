@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{player::Player, string::prompt::PromptType , traits::tickable::Tickable, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
+use crate::{item::ItemError, player::Player, string::prompt::PromptType, traits::tickable::Tickable, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MotD {
@@ -62,6 +62,7 @@ pub struct World {
     #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
     #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
     #[serde(skip, default)] pub help_aliased: HashMap<String, String>,
+    #[serde(default)] pub lost_and_found: HashMap<String, ItemError>,
 }
 
 /// Thread-shared world type.
@@ -131,6 +132,7 @@ impl World {
         rooms: HashMap::new(),
         help: HashMap::new(),
         help_aliased: HashMap::new(),
+        lost_and_found: HashMap::new(),
     }}
 
     /// Bootstrap MUD from grounds up.
