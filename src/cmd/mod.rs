@@ -30,6 +30,8 @@ mod inventory;
 mod asqi;
 mod take;
 mod put;
+mod drop;
+mod create;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
