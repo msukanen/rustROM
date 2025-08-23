@@ -2,7 +2,7 @@ use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::{save::DoesSave, Identity}, validate_admin, world::SharedWorld};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::{save::DoesSave, Identity}, validate_admin, world::{room::Room, SharedWorld}};
 
 pub struct TranslocateCommand;
 
@@ -109,6 +109,10 @@ pub(crate) async fn translocate(
             if r.write().await.add_player(&player).await {
                 let r_id = r.read().await.id().to_string();
                 let mut p = player.write().await;
+                // Force set player's Weak lock onto the room, no matter if it's set yet or not.
+                // Player loading doesn't have knowledge about the world itself, so lock delivery
+                // has to be done here.
+                p.room = Arc::<RwLock<Room>>::downgrade(&r);
                 if !is_same && p.location != r_id {
                     p.location = r_id.clone();
                     p.inc_act_count();

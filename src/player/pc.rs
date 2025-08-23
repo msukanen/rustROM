@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::Arc};
+use std::{collections::HashSet, fmt::Display, net::SocketAddr, path::PathBuf, str::FromStr, sync::{Arc, Weak}};
 
 use argon2::{password_hash::{rand_core::OsRng, PasswordHasher, SaltString}, Argon2, PasswordHash, PasswordVerifier};
 use async_trait::async_trait;
@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, item::inventory::{Container, ContainerType}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::Access, string::{styling::dirty_mark, WordSet}, traits::{save::{DoesSave, SaveError}, Description, Identity}, util::{badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{validate_passwd, PasswordError}, ClientState}, DATA_PATH};
+use crate::{cmd::{hedit::HeditState, redit::ReditState}, item::inventory::{Container, ContainerType}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::Access, string::{styling::dirty_mark, WordSet}, traits::{save::{DoesSave, SaveError}, Description, Identity}, util::{badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{validate_passwd, PasswordError}, ClientState}, world::room::Room, DATA_PATH};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -54,6 +54,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         listening_to: HashSet::new(),
         inventory: Container::from(ContainerType::PlayerInventory),
         act_count: 0,
+        room: Weak::new(),
     }));
 
 /// Player data lives here!
@@ -66,6 +67,7 @@ pub struct Player {
     gender: Gender,
     pub access: Access,
     pub location: String,
+    #[serde(skip, default)] pub room: Weak<RwLock<Room>>,
     hp: CombatStat,
     mp: CombatStat,
     #[serde(skip, default)] in_combat: bool,
@@ -97,6 +99,7 @@ impl Player {
             listening_to: Channel::default_listens(),
             inventory: Container::from(ContainerType::PlayerInventory),
             act_count: 0,
+            room: Weak::new(),
         }
     }
 
