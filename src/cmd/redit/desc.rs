@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
+use crate::{access_ed_entry, cmd::{Command, CommandCtx}, show_help, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
 
 pub struct DescCommand;
 
@@ -8,9 +8,7 @@ impl Command for DescCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
 
-        let res = edit_text(ctx.writer, ctx.args,
-            &ctx.player.read().await.redit.as_ref().unwrap().entry.description
-            ).await;
+        let res = edit_text(ctx.writer, ctx.args, &access_ed_entry!(ctx, redit).description).await;
         let verbose = match res {
             Ok(EdResult::ContentReady { text, verbose, .. }) => {
                 ctx.player.write().await.redit.set_description(&text);

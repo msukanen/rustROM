@@ -200,6 +200,14 @@ fn insert_nth_line(text: &str, line_num: usize, text_to_insert: &str) -> String 
     format!("{}\n", lines.join("\n"))
 }
 
+/// Access `$ed` (hedit, redit, etc.) of the given `$ctx`.
+#[macro_export]
+macro_rules! access_ed_entry {
+    ($ctx:ident, $ed:ident) => {
+        $ctx.player.read().await.$ed.as_ref().unwrap().entry
+    };
+}
+
 #[cfg(test)]
 mod desc_tests {
     #[test]
