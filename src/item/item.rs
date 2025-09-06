@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{inventory::{storage::Identity as StorageId, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{Identity, Owned}};
+use crate::{item::{inventory::{storage::Identity as StorageId, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{owned::OwnerError, Identity, Owned}};
 
 pub(crate) type ItemMap = HashMap<String, Item>;
 
@@ -133,6 +133,44 @@ impl Owned for Item {
         match self {
             Self::Container(c) => c.owner(),
             Self::Weapon(w) => w.owner(),
+        }
+    }
+
+    fn original_owner(&self) -> &str {
+        match self {
+            Self::Container(c) => c.original_owner(),
+            Self::Weapon(w) => w.original_owner(),
+        }
+    }
+
+    fn set_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> {
+        let owned = self.is_owned();
+        match self {
+            Self::Container(c) => {
+                match c {
+                    Container::Backpack(c) => c.set_owner(owner_id),
+                    Container::PlayerInventory(c) => {
+                        if owned {
+                            log::warn!("Skipping attempt to change ownership of owned PlayerInventory.");
+                            Err(OwnerError::ImmutableOwnership)
+                        } else {
+                            c.set_owner(owner_id)
+                        }
+                    },
+                    Container::Room(_) => {
+                        log::warn!("Cannot set owner for a Room. Immutable, unsettable.");
+                        Err(OwnerError::ImmutableOwnership)
+                    }
+                }
+            },
+            Self::Weapon(w) => w.set_owner(owner_id),
+        }
+    }
+
+    fn set_original_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> {
+        match self {
+            Self::Container(c) => c.set_original_owner(owner_id),
+            Self::Weapon(w) => w.set_original_owner(owner_id),
         }
     }
 }

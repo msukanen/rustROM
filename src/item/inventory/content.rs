@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError, ItemMap}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{owned::UNSPECIFIED_OWNER, Identity, Owned}, world::room::MAX_ITEMS_IN_ROOM};
+use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError, ItemMap}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{owned::{Owner, OwnerError, UNSPECIFIED_OWNER}, Identity, Owned}, world::room::MAX_ITEMS_IN_ROOM};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
     id: String,
-    owner: String,
+    #[serde(default)]
+    owner: Owner,
     max_capacity: usize,
     contents: ItemMap,
 }
@@ -34,7 +35,7 @@ impl From<ContainerType> for Content {
         match value {
             ContainerType::PlayerInventory => Self {
                 id: format!("content-pc-inv-{}", Uuid::new_v4()),
-                owner: UNSPECIFIED_OWNER.into(),
+                owner: Owner::default(),
                 max_capacity: MAX_ITEMS_PLAYER_INVENTORY,
                 contents: HashMap::new()
             },
@@ -44,14 +45,14 @@ impl From<ContainerType> for Content {
                 Self {
                     // NOTE: id "must" be set later by the [Room] itself.
                     id: format!("content-room-{}", id),
-                    owner: UNSPECIFIED_OWNER.into(),
+                    owner: Owner::default(),
                     max_capacity: MAX_ITEMS_IN_ROOM,
                     contents: HashMap::new()
                 }
             },
             ContainerType::Backpack => Self {
                 id: format!("content-backpack-{}", Uuid::new_v4()),
-                owner: UNSPECIFIED_OWNER.into(),
+                owner: Owner::default(),
                 max_capacity: 32,// TODO NOTE: arbitrary value.
                 contents: HashMap::new()
             },
@@ -122,7 +123,8 @@ impl Storage for Content {
 }
 
 impl Owned for Content {
-    fn owner(&self) -> &str {
-        &self.owner
-    }
+    fn owner(&self) -> &str { self.owner.owner() }
+    fn original_owner(&self) -> &str { self.owner.original_owner() }
+    fn set_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_owner(owner_id) }
+    fn set_original_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_original_owner(owner_id) }
 }

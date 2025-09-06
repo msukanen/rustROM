@@ -18,11 +18,12 @@ pub struct Player {
 
 ## Hot-reload
 
-Breakdown of the wizardry it would require:
+Breakdown of what it'd require:
 
-### 1\. Listening for the Signal
+### 1\. The Monkeys Are Listening…
 
-First, listen for the `SIGUSR1` signal without blocking the server. The `tokio::signal` module is designed for exactly this. In `main()` function, spawn a separate task whose only job is to wait for the signal.
+Listen for e.g. `SIGUSR1` signal without blocking the server. `tokio::signal` module is designed for this.
+Spawn a separate task whose only job is to wait for the signal.
 
 ```rust
 // In main() function
@@ -30,44 +31,17 @@ tokio::spawn(async move {
     let mut stream = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::user_defined1()).unwrap();
     loop {
         stream.recv().await;
-        log::info!("SIGUSR1 received! Triggering hot-reload...");
-        // When the signal is received, trigger the reload logic.
-        // This could be done by sending a message over another channel.
+        // do stuff
     }
 });
 ```
 
-### 2\. Storing File Hashes
+### 2\. The Hot-Reload Logic
 
-To know what's changed, store the state of the files from the last load. The perfect place for this is inside `World` struct. Add a new field:
+When `SIGUSR1` signal is received, trigger "hot-reload" function.
 
-```rust
-// In your World struct
-#[derive(Debug)]
-pub struct World {
-    // ... other fields ...
-    #[serde(skip)] // This is runtime state, not saved
-    file_hashes: HashMap<String, u64>,
-}
-```
-
-When loading the world, hash each file and populate this map.
-
-### 3\. The Hot-Reload Logic
-
-When `SIGUSR1` signal is received, trigger "hot-reload" function. This function would:
-
-1. Get an exclusive `write` lock on the `World`.
-2. Walk through the `data/areas/` and `data/rooms/` directories.
-3. For each file, calculate its current hash.
-4. Compare the new hash to the one stored in `world.file_hashes`.
-5. **If the hash is different:**
-      * Call the appropriate `Area::load(...)` or `Room::load(...)` function to load the new version into a temporary variable.
+1. `write` lock the `World`.
+2. Walk through world, areas, rooms, help files, etc.
+3. calculate their hashes, and if the hash is different than ye olde:
       * Handle player relocation, when/if need (check if anyone's location is now invalid and moving them to a safe spot).
-      * Replace the old `Arc<RwLock<...>>` in the `World`'s `HashMap` with the new one.
       * Update the `world.file_hashes` map with the new hash.
-6. Release the `write` lock.
-
-## GIT
-
-Implement some means to pull/push areas and such from/to GitHub.

@@ -289,4 +289,16 @@ impl Storage for Room {
     fn items(&self) -> &crate::item::ItemMap {
         self.contents.items()
     }
+
+    fn contains(&self, id: &str) -> bool {
+        self.contents.contains(id)
+    }
+
+    fn contains_r(&self, id: &str) -> Result<String, String> {
+        self.contents.contains_r(id)
+    }
+
+    fn items_mut(&mut self) -> &mut crate::item::ItemMap {
+        self.contents.items_mut()
+    }
 }

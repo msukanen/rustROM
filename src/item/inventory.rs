@@ -4,7 +4,7 @@ pub(crate) mod storage;
 pub(crate) use storage::{Storage, StorageCapacity};
 pub(crate) mod content;
 pub(crate) use content::Content;
-use crate::{item::{inventory::storage::Identity as StorageId, item::Item, ItemError}, traits::{owned::UNSPECIFIED_OWNER, Identity, Owned}};
+use crate::{item::{inventory::storage::Identity as StorageId, item::Item, ItemError}, traits::{owned::{OwnerError, UNSPECIFIED_OWNER}, Identity, Owned}};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ContainerType {
@@ -140,6 +140,40 @@ impl Owned for Container {
             Self::Backpack(c)|
             Self::PlayerInventory(c) => c.owner(),
             Self::Room(_) => UNSPECIFIED_OWNER,
+        }
+    }
+
+    fn set_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> {
+        match self {
+            Self::Backpack(c) => c.set_owner(owner_id),
+            Self::PlayerInventory(c) => {
+                // setting ownership of PlayerInventory is a one-time process - generally happening during load/new of Player.
+                if !c.is_owned() {
+                    c.set_owner(owner_id);
+                    c.set_original_owner(owner_id);
+                    Ok(())
+                } else {
+                    log::error!("A logic error somewhere - an attempt to change ownership of PlayerInventory… Which is naturally rejected.");
+                    Err(OwnerError::ImmutableOwnership)
+                }
+            },
+            Self::Room(_) => Err(OwnerError::NotOwnable),
+        }
+    }
+
+    fn original_owner(&self) -> &str {
+        match self {
+            Self::Backpack(c) => c.original_owner(),
+            Self::PlayerInventory(c) => c.owner(),
+            Self::Room(_) => UNSPECIFIED_OWNER,
+        }
+    }
+
+    fn set_original_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c) => c.set_original_owner(owner_id),
+            Self::Room(_) => Err(OwnerError::ImmutableOwnership),
         }
     }
 }

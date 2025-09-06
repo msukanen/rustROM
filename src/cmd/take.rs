@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::{inventory::Storage, Item, ItemError}, show_help_if_needed, tell_user, traits::Identity};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::{inventory::Storage, Item, ItemError}, show_help_if_needed, tell_user, traits::{owned::OwnerError, Identity, Owned}};
 #[cfg(feature = "localtest")]
 use crate::item::{weapon::WeaponType, Item};
 
@@ -12,8 +12,17 @@ impl Command for TakeCommand {
         do_in_current_room!(ctx,|room| {
             let item = room.write().await.take_out(ctx.args);
             match item {
-                Ok(item) => {
+                Ok(mut item) => {
                     let id = item.id().to_string();
+
+                    if !item.is_owned() {
+                        let p = ctx.player.read().await;
+                        let p_id = p.id();
+                        let err_o = item.set_owner(p_id);
+                        let err_oo = item.set_original_owner(p_id);
+                        log::debug!("Item '{}' is now owned by '{}': EO {err_o:?} / EOO {err_oo:?}", id, p_id);
+                    }
+
                     if let Err(item) = ctx.player.write().await.inventory.try_insert(item) {
                         // tell the user why exactly taking the item didn't work...
                         match &item {
