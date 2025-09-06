@@ -9,7 +9,7 @@ pub struct TakeCommand;
 impl Command for TakeCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         show_help_if_needed!(ctx, "take");
-        do_in_current_room!(ctx,|room| {
+        do_in_current_room!(ctx, |room| {
             let item = room.write().await.take_out(ctx.args);
             match item {
                 Ok(mut item) => {
@@ -41,7 +41,7 @@ impl Command for TakeCommand {
                     }
                 },
                 _=> {
-                    log::debug!("No such thing as 'weapon' present...?");
+                    log::trace!("No such thing as '{}' present at '{}'…", ctx.args, room.read().await.id());
                     tell_user!(ctx.writer, "Nothing taken ...\n");
                 }
             }
