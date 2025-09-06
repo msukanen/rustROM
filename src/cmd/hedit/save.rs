@@ -31,7 +31,7 @@ impl Command for SaveCommand {
                 tell_user!(ctx.writer, "Edits saved.\n");
             }
         } else {
-            tell_user!(ctx.writer, "Nothing to save here...\n");
+            tell_user!(ctx.writer, "Nothing to save here…\n");
         }
     }
 }

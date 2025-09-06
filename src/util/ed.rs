@@ -4,9 +4,20 @@ use tokio::net::tcp::OwnedWriteHalf;
 
 use crate::{string::{styling::{MAX_DESCRIPTION_LINES, RULER_LINE}, LineEndingExt}, tell_user};
 
+#[derive(Debug)]
 pub enum EditorError {
     MaxLineCount,
     ParseIntError(ParseIntError),
+}
+
+impl std::error::Error for EditorError {}
+impl std::fmt::Display for EditorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MaxLineCount => write!(f, "Max line count of {MAX_DESCRIPTION_LINES} exceeded."),
+            Self::ParseIntError(e) => write!(f, "Numeric error {}", e),
+        }
+    }
 }
 
 pub enum EdResult {
@@ -27,7 +38,7 @@ pub(crate) trait Editor {
 /// 
 /// - `+` — insert line.
 /// - `-` — remove line.
-/// - `=` — ignore source, use replacement.
+/// - `=` — ignore `source`, use `args` as full replacement.
 pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) -> Result<EdResult, EditorError> {
     if args.is_empty() {
         return {
@@ -59,7 +70,7 @@ pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) ->
                     return {
                         tell_user!(writer,
                             "<c red>Warning!</c> Maximum help entry description length is limited to {} lines.\n\
-                            Command cancelled - no changes made.\n",
+                            Command cancelled — no changes made.\n",
                             MAX_DESCRIPTION_LINES);
                         Err(EditorError::MaxLineCount)
                     };
@@ -74,9 +85,8 @@ pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) ->
             }
         };
 
-        let dirty = true;
         let text = insert_nth_line(&source, lno, if args.len() < 2 {""} else {args[1]});
-        return Ok(EdResult::ContentReady { text, dirty, verbose });
+        return Ok(EdResult::ContentReady { text, dirty: true, verbose });
     }
 
     //
@@ -95,7 +105,7 @@ pub async fn edit_text(writer: &mut OwnedWriteHalf, args: &str, source: &str) ->
                         text.push_str("\n");
                     } else {
                         return {
-                            tell_user!(writer, "Nothing to change - not that many lines to begin with.\n");
+                            tell_user!(writer, "Nothing to change — not that many lines to begin with.\n");
                             Ok(EdResult::NoChanges(verbose))
                         };
                     }

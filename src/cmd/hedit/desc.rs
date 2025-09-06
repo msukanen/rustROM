@@ -10,7 +10,8 @@ impl Command for DescCommand {
 
         let res = edit_text(ctx.writer, ctx.args, &ctx.player.read().await.hedit.as_ref().unwrap().entry.description).await;
         let verbose = match res {
-            Ok(EdResult::ContentReady { text, verbose, .. }) => {
+            // Description needs (re)setting only if 'dirty' flag is `true`.
+            Ok(EdResult::ContentReady { text, verbose, dirty: true }) => {
                 let mut g = ctx.player.write().await;
                 g.hedit.set_description(&text);
                 verbose
