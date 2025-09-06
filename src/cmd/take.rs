@@ -1,7 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::{inventory::Storage, Item, ItemError}, show_help_if_needed, tell_user, traits::{owned::OwnerError, Identity, Owned}};
-#[cfg(feature = "localtest")]
-use crate::item::{weapon::WeaponType, Item};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::{inventory::Storage, ItemError}, show_help_if_needed, tell_user, traits::{Identity, Owned}};
 
 pub struct TakeCommand;
 
