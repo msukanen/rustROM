@@ -31,4 +31,5 @@ Takes care of some async I/O ...
 * saves (and purges) disconnected players.
 * bootstraps "bad names" word list from github, if/when needed.
 * auto-saves online players.
+* runtime lost-and-found items collecting.
 * ... other things to come.
