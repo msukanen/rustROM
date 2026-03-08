@@ -63,17 +63,17 @@ impl CombatStat {
         }
     }
 
-    pub fn is_dead(&self) -> bool {
-        match self {
-            Self::HP { current, .. } => *current < -10.0,
-            _ => false
-        }
-    }
-
     pub fn is_unconscious(&self) -> bool {
         match self {
             Self::HP { current, .. } |
             Self::MP { current, .. } => *current <= 0.0001,
+        }
+    }
+
+    pub fn is_dead(&self, is_mob: bool) -> bool {
+        match self {
+            Self::HP { current, .. } => *current < if is_mob {0.0} else {-10.0},
+            _ => false
         }
     }
 }
