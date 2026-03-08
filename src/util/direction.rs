@@ -43,20 +43,23 @@ impl TryFrom<&str> for Direction {
     type Error = &'static str;
 
     /// Try convert the given `value` into a suitable [Direction] enum.
+    /// 
+    /// Note: we accommodate for a few very common typos (and some abbreviations).
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         if value.is_empty() { return Err("Direction cannot be empty.");}
-        match value.to_lowercase().as_str() {
-            "north"|"n"=> Ok(Self::North),
-            "south"|"s"=> Ok(Self::South),
-            "east"|"e" => Ok(Self::East),
-            "west"|"w" => Ok(Self::West),
+        let lc = value.to_lowercase();
+        match lc.as_str() {
+            "north"|"n"|"nor"|"norht"|"nort" => Ok(Self::North),
+            "south"|"s"|"sou"|"souht"|"sout" => Ok(Self::South),
+            "east"|"e"|"est"|"eas" => Ok(Self::East),
+            "west"|"w"|"wes" => Ok(Self::West),
             "up"  |"u" => Ok(Self::Up),
-            "down"|"d" => Ok(Self::Down),
+            "down"|"d"|"donw" => Ok(Self::Down),
             "northeast"|"ne" => Ok(Self::NorthEast),
             "northwest"|"nw" => Ok(Self::NorthWest),
             "southeast"|"se" => Ok(Self::SouthEast),
             "southwest"|"sw" => Ok(Self::SouthWest),
-            _ => Ok(Self::Custom(value.into()))
+            _ => Ok(Self::Custom(lc))
         }
     }
 }
