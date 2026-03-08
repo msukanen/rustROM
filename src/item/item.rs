@@ -192,9 +192,13 @@ impl From<ItemError> for Item {
     }
 }
 
+/// Force item to player, if possible...
 #[macro_export]
 macro_rules! force_item_to_player {
     ($ctx:ident, $item:ident) => {{
-        let _ = $ctx.player.write().await.inventory.try_insert($item);
+        let e = $ctx.player.write().await.inventory.try_insert($item);
+        if let Err(e) = e {
+            log::error!("Could NOT force item to player '{}': {e}", $ctx.player.read().await.id());
+        }
     }};
 }

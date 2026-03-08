@@ -120,6 +120,10 @@ impl Storage for Content {
         }
         Err(format!("No key matching with '{id}' found."))
     }
+
+    fn is_empty(&self) -> bool {
+        self.contents.is_empty()
+    }
 }
 
 impl Owned for Content {

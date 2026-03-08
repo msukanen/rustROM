@@ -22,6 +22,7 @@ pub trait Storage {
     fn items(&self) -> &ItemMap;
     /// Get mut reference to the whole [ItemMap] within.
     fn items_mut(&mut self) -> &mut ItemMap;
+    fn is_empty(&self) -> bool;
 }
 
 pub trait Identity {

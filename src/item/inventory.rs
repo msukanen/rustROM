@@ -105,6 +105,14 @@ impl Storage for Container {
                 => c.contains_r(id)
         }
     }
+
+    fn is_empty(&self) -> bool {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c) => c.is_empty()
+        }
+    }
 }
 
 impl Identity for Container {
@@ -149,8 +157,9 @@ impl Owned for Container {
             Self::PlayerInventory(c) => {
                 // setting ownership of PlayerInventory is a one-time process - generally happening during load/new of Player.
                 if !c.is_owned() {
-                    c.set_owner(owner_id);
-                    c.set_original_owner(owner_id);
+                    // We ignore the set_#_owner results, at this point in time they oughta™ succeed...
+                    let _ = c.set_owner(owner_id);
+                    let _ = c.set_original_owner(owner_id);
                     Ok(())
                 } else {
                     log::error!("A logic error somewhere - an attempt to change ownership of PlayerInventory… Which is naturally rejected.");
