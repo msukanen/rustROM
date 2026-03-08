@@ -21,19 +21,19 @@ pub async fn look_at_current_room(ctx: &mut CommandCtx<'_>) {
         );
 
         /* ITEMS ON FLOOR */{
-            for (hash, _) in r.contents.items() {
-                desc.push_str(&format!("  <c red>//</c> {}\n", hash));
-            }
-            if r.contents.items().len() > 0 {
+            if !r.is_empty() {
+                for (hash, _) in r.contents.items() {
+                    desc.push_str(&format!("  <c red>//</c> {}\n", hash));
+                }
                 desc.push_str("\n");
             }
         }
 
         /* PEOPLE */{
-            for p in r.players.keys() {
-                desc.push_str(&format!("    <c blue>[<c cyan>{}</c>]</c>\n", p));
-            }
-            if r.players.keys().len() > 0 {
+            if !r.players.is_empty() {
+                for p in r.players.keys() {
+                    desc.push_str(&format!("    <c blue>[<c cyan>{}</c>]</c>\n", p));
+                }
                 desc.push_str("\n");
             }
         }
