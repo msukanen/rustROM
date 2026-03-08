@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError, ItemMap}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{owned::{Owner, OwnerError, UNSPECIFIED_OWNER}, Identity, Owned}, world::room::MAX_ITEMS_IN_ROOM};
+use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError, ItemMap}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{owned::{Owner, OwnerError}, Identity, Owned}, world::room::MAX_ITEMS_IN_ROOM};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {

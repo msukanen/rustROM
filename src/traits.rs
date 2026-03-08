@@ -8,3 +8,5 @@ pub(crate) use identity::Identity;
 
 pub(crate) mod owned;
 pub(crate) use owned::Owned;
+
+pub mod mob;

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::traits::{owned::{Owner, OwnerError, UNSPECIFIED_OWNER}, Identity, Owned};
+use crate::traits::{owned::{Owner, OwnerError}, Identity, Owned};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MeleeInfo {
