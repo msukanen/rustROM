@@ -21,7 +21,7 @@ pub mod util;
 mod cmd;
 mod item;
 
-use crate::{cmd::{translocate::translocate, CommandCtx}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{comm::{IsRecipient, MessagePayload}, help::Help, Broadcast, ClientState}};
+use crate::{cmd::{CommandCtx, force::ForceSource, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload}, help::Help}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -289,9 +289,10 @@ async fn main() {
                                             let (p_id, prompt, state) = {
                                                 let mut pl = p.write().await;
                                                 let p_id = pl.id().to_string();
+                                                let state = pl.erase_states(ClientState::Playing);
                                                 let prompt = pl.prompt().await;
                                                 log::info!("New player '{}' instantiated and translocated to '{}'.", p_id, &pl.location);
-                                                (p_id, prompt, pl.erase_states(ClientState::Playing))
+                                                (p_id, prompt, state)
                                             };
                                             {
                                                 let mut w = world.write().await;
@@ -358,15 +359,19 @@ async fn main() {
                         if let ClientState::Playing = &state {
                             if let Ok(msg) = result {
                                 if let Some(p) = world.read().await
-                                        .players_by_sockaddr.get(&addr)
-                                        .cloned()
+                                    .players_by_sockaddr.get(&addr)
+                                    .cloned()
                                 {
                                     if msg.is_recipient(&p, &world).await {
                                         let prompt = p.read().await.prompt().await;
 
                                         // Handle 'force' as a special case.
-                                        if let Broadcast::Force { message, .. } = &msg {
-                                            tell_user!(&mut writer, "\n");
+                                        if let Broadcast::Force { message, from_player, .. } = &msg {
+                                            match from_player {
+                                                ForceSource::System => tell_user!(&mut writer, "\nUnexpectedly you feel an urge to do something…"),
+                                                ForceSource::Admin { anonymous: false, .. } => tell_user!(&mut writer, "\nAn admin has issued a command you feel compelled to comply with…"),
+                                                _ => tell_user!(&mut writer, "\n"),
+                                            };
                                             let ctx = CommandCtx {
                                                 player: p.clone(),
                                                 state: p.read().await.state(),
