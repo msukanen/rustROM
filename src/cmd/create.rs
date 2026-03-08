@@ -9,19 +9,24 @@ pub struct CreateCommand;
 impl Command for CreateCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         show_help_if_needed!(ctx, "create");
+        
+        // Local test for 'test-item'...
         #[cfg(feature = "localtest")] {
             if ctx.args == "test-item" {
             do_in_current_room!(ctx, |room| {
                 let mut item = Item::from(WeaponType::Melee);
                 item.set_id("test-item");
-                let id = item.id().to_string();
-                let res = room.write().await.try_insert(item);
-                match res {
-                    Ok(()) => {
-                        log::debug!("Item '{}' inserted to room '{}'::'{}'", id, room.read().await.id(), room.read().await.contents.id());
-                    },
-                    Err(e) => {
-                        log::debug!("Error: {:?}", e);
+                let id = item.id();
+                {
+                    let r = room.write().await;
+                    let res = r.try_insert(item);
+                    match res {
+                        Ok(()) => {
+                            log::debug!("Item '{}' inserted to room '{}'::'{}'", id, r.id(), r.contents.id());
+                        },
+                        Err(e) => {
+                            log::debug!("Error: {:?}", e);
+                        }
                     }
                 }
             });}
