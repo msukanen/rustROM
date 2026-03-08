@@ -12,7 +12,8 @@ impl Command for ScryCommand {
         let other = ctx.world.read().await.find_player(who);
         if let Some(found) = other {
             let you = ctx.player.clone();
-                ctx.player = found.clone();
+            // loan the eyes of the found player…
+            ctx.player = found.clone();
             let look = LookCommand;
             look.exec({ctx.args = ""; ctx}).await;
             ctx.player = you;
