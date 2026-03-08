@@ -1,8 +1,9 @@
+//! Translocation, teleportation, moving-without-moving…
 use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::{save::DoesSave, Identity}, validate_admin, world::{room::Room, SharedWorld}};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::Identity, validate_admin, world::{room::Room, SharedWorld}};
 
 pub struct TranslocateCommand;
 
@@ -10,19 +11,18 @@ pub struct TranslocateCommand;
 pub enum TranslocationError {
     SourceNotFound,
     TargetNotFound,
-    PlayerNotFound,
+//    PlayerNotFound,
     NoMoveRequired,
 }
 
 impl std::error::Error for TranslocationError {}
 impl Display for TranslocationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // TODO: refine
         match self {
-            Self::PlayerNotFound => write!(f, "Cannot translocate a non-existing entity"),
+//            Self::PlayerNotFound => write!(f, "Cannot translocate a non-existing entity"),
             Self::SourceNotFound => write!(f, "Not fatal, but notable. Source room not found"),
             Self::TargetNotFound => write!(f, "Target room does not exist?"),
-            Self::NoMoveRequired => write!(f, "Source == Target. No move required."),
+            Self::NoMoveRequired => write!(f, "Source ≡ Target. No move required."),
         }
     }
 }
@@ -66,7 +66,7 @@ impl Command for TranslocateCommand {
                         let look = LookCommand;
                         look.exec({ctx.args = ""; ctx}).await;
                         ctx.player = you;
- */                } else {
+*/              } else {
                     tell_user!(ctx.writer, "Could not locate '{}'", who);
                 }
             }
@@ -74,21 +74,23 @@ impl Command for TranslocateCommand {
     }
 }
 
-/// Translocate given player to another place in another time... or so.
+/// Translocate given player to another place in another time… or so.
 /// 
 /// If [Player] already *is* at the target and/or target is the same as source,
 /// nothing will be done, of course.
 /// 
+/// `source` room is *semi-optional*; [Player] does **not** have to have an origin.
+/// 
 /// # Arguments
-/// - `world`— the [SharedWorld] itself.
-/// - `source`— source room name, optional (to a degree).
-/// - `target`— target room name - mandatory, naturally.
-/// - `player`— the [Player] to be hauled over.
+/// - `world` is the [SharedWorld] itself.
+/// - `source` represents a *semi-optional* source room name.
+/// - `target` stands for a **mandatory** target room name.
+/// - `player` tells which [Player] to haul around.
 /// 
 /// # Returns
 /// - `Ok(None)` if everything went smooth.
 /// - `Ok(SourceNotFound)` if source room was not found, but translocation itself still succeeded.
-/// - `Ok(NoMoveRequired)` if `source==target`.
+/// - `Ok(NoMoveRequired)` if `source≡target`.
 /// - `Err(TranslocationError)` if something went truly awry.
 #[must_use = "Result must be used to ensure data/world integrity."]
 pub(crate) async fn translocate(
@@ -104,7 +106,7 @@ pub(crate) async fn translocate(
 
     // Handle TARGET first...
     {
-        let w = world.write().await;
+        let w = world.read().await;
         if let Some(r) = w.rooms.get(&target) {
             if r.write().await.add_player(&player).await {
                 let r_id = r.read().await.id().to_string();
@@ -115,10 +117,11 @@ pub(crate) async fn translocate(
                 p.room = Arc::<RwLock<Room>>::downgrade(&r);
                 if !is_same && p.location != r_id {
                     p.location = r_id.clone();
-                    p.inc_act_count();
+                    p.inc_act_count();// treat as 'activity' for auto-saving purposes.
                 }
             }
         } else {
+            // TODO: add fuzzy search logic!
             log::error!("Target room '{}' not found!", target);
             return Err(TranslocationError::TargetNotFound);
         }
@@ -128,7 +131,7 @@ pub(crate) async fn translocate(
     let mut ok_err = None;
     if let Some(source) = source {
         if is_same {
-            log::trace!("Skipping source extraction - target == source");
+            log::trace!("Skipping source extraction - target ≡ source");
             return Ok(Some(TranslocationError::NoMoveRequired));
         }
         
