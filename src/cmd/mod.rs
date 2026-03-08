@@ -32,6 +32,7 @@ mod take;
 mod put;
 mod drop;
 mod create;
+mod scry;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
