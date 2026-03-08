@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, cmd_exec, do_in_current_room, force_item_to_player, item::{inventory::Storage, Item, ItemError}, show_help, tell_user, traits::Identity};
+use crate::{cmd::{Command, CommandCtx}, force_item_to_player, item::{inventory::Storage, Item, ItemError}, show_help, tell_user, traits::Identity};
 
 pub struct PutCommand;
 
@@ -46,7 +46,7 @@ impl Command for PutCommand {
                             force_item_to_player!(ctx, item);
                         }
                     } else {
-                        tell_user!(ctx.writer, "No matter how hard to look, you don't find anything '{}' related around…", where_to);
+                        tell_user!(ctx.writer, "No matter how hard you look, you don't find anything '{}' related around…", where_to);
                     }
                 }
             };
