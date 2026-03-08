@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{hedit::HeditState, redit::ReditState}, item::inventory::{Container, ContainerType}, mob::{core::IsMob, gender::Gender, stat::{StatType, StatValue}, CombatStat}, player::Access, string::{styling::dirty_mark, WordSet}, traits::{save::{DoesSave, SaveError}, Description, Identity}, util::{badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{validate_passwd, PasswordError}, ClientState}, world::room::Room, DATA_PATH};
+use crate::{DATA_PATH, cmd::{hedit::HeditState, redit::ReditState}, item::inventory::{Container, ContainerType}, mob::{CombatStat, gender::Gender, stat::{StatType, StatValue}}, player::Access, string::{WordSet, styling::dirty_mark}, traits::{Description, Identity, mob::IsMob, save::{DoesSave, SaveError}}, util::{ClientState, badname::filter_bad_name, clientstate::EditorMode, comm::Channel, password::{PasswordError, validate_passwd}}, world::room::Room};
 use crate::string::Sluggable;
 
 static SAVE_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/save", *DATA_PATH)));
@@ -328,9 +328,9 @@ impl IsMob for Player {
     }
     fn hp<'a>(&'a self) -> &'a CombatStat { &self.hp }
     fn mp<'a>(&'a self) -> &'a CombatStat { &self.mp }
-    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {// TODO: return alive/dead/etc.
+    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {
         self.hp -= percentage;
-        return false;
+        self.hp.is_dead(false)
     }
 }
 
