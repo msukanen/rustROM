@@ -195,7 +195,7 @@ impl Room {
         // FYI: it's irrelevant if something was replaced or not and thus we ignore .insert() result.
         self.players.insert(id.clone(), Arc::downgrade(&player));
         log::debug!("Player '{}' added to room '{}'", id, self.id());
-        return true;
+        true
     }
 
     /// Remove [Player] from the [Room].
@@ -206,8 +206,9 @@ impl Room {
     /// # Arguments
     /// - `player`— Some [Player].
     pub async fn remove_player(&mut self, player: &Arc<RwLock<Player>>) {
-        let id = player.read().await.id().to_string();
-        if let Some(_) = self.players.remove(&id) {
+        let lock = player.read().await;
+        let id = lock.id();
+        if let Some(_) = self.players.remove(id) {
             log::debug!("Player '{}' removed from room '{}'", id, self.id());
         }
     }
@@ -300,5 +301,9 @@ impl Storage for Room {
 
     fn items_mut(&mut self) -> &mut crate::item::ItemMap {
         self.contents.items_mut()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.contents.is_empty()
     }
 }
