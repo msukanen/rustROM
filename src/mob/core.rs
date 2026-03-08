@@ -1,12 +1,4 @@
-use crate::{mob::{stat::StatValue, CombatStat}, traits::{Description, Identity}};
-
-pub trait IsMob {
-    /// Name of a mob.
-    async fn prompt<'a>(&'a self) -> String;
-    fn hp<'a>(&'a self) -> &'a CombatStat;
-    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool;
-    fn mp<'a>(&'a self) -> &'a CombatStat;
-}
+use crate::{mob::{CombatStat, stat::StatValue}, traits::{Description, Identity, mob::IsMob}};
 
 /// Core struct for mobs of all sorts.
 pub struct MobCore {
@@ -24,4 +16,23 @@ impl Description for MobCore {
 
 impl Identity for MobCore {
     fn id<'a>(&'a self) -> &'a str { &self.name }
+}
+
+impl IsMob for MobCore {
+    fn hp<'a>(&'a self) -> &'a CombatStat {
+        &self.hp
+    }
+
+    fn mp<'a>(&'a self) -> &'a CombatStat {
+        &self.mp
+    }
+
+    async fn prompt<'a>(&'a self) -> String {
+        format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current())
+    }
+
+    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {
+        self.hp -= percentage;
+        self.hp.is_dead(true)
+    }
 }
