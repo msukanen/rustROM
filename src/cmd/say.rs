@@ -3,6 +3,7 @@ use std::fmt::Display;
 use async_trait::async_trait;
 use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Identity, util::Broadcast};
 
+/// Say, Exclaim, Ask, etc. subtypes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Subtype {
     Say,
@@ -40,6 +41,6 @@ impl Command for SayCommand {
         let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), subtype, ctx.args.trim());
         let from_player = p.id().into();
         let room_id = p.location.clone();
-        ctx.tx.send(Broadcast::Say { subtype: Some(subtype), room_id, message, from_player }).unwrap();
+        let _ = ctx.tx.send(Broadcast::Say { subtype: Some(subtype), room_id, message, from_player });
     }
 }
