@@ -21,7 +21,7 @@ pub mod util;
 mod cmd;
 mod item;
 
-use crate::{cmd::{CommandCtx, force::ForceSource, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, mob::core::IsMob, string::WordSet, traits::{Description, Identity}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload}, help::Help}};
+use crate::{cmd::{CommandCtx, force::ForceSource, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload}, help::Help}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -138,7 +138,7 @@ async fn main() {
         let bad_words = bad_words.clone();
 
         // Spawn a new task to handle this client's connection.
-        // This allows the server to handle multiple clients concurrently.
+        // This lets us to handle multiple clients concurrently.
         tokio::spawn(async move {
             // Split the socket into a reader and a writer.
             let (reader, mut writer) = socket.into_split();
@@ -159,7 +159,10 @@ async fn main() {
             let mut state = ClientState::EnteringName;
             let mut abrupt_dc = false;
 
-            // This is the main loop for the client.
+            //=======================================
+            //
+            // This is the main-loop for the client.
+            //
             loop {
                 // Check if player is logging out...
                 if let ClientState::Logout = &state {
@@ -177,7 +180,7 @@ async fn main() {
 
                 // IMPORTANT: wipe the buffer before each read_line(). Instead of
                 //            clearing the buffer on its own, read_line() keeps
-                //            accumulating onto it... we'd run out of memory sooner
+                //            accumulating onto it… we'd run out of memory sooner
                 //            or later.
                 line.clear();
 
@@ -197,6 +200,7 @@ async fn main() {
 
                         let input = line.trim().sanitize();
 
+                        // Handle player input based on their current [ClientState].
                         state = match state {
                             ClientState::EnteringName => {
                                 if input.is_empty() {
@@ -221,6 +225,7 @@ async fn main() {
                                     }
                                 }
                             },
+
                             ClientState::EnteringPassword1{ name } => {
                                 match Player::load(&name, &input, &addr).await {
                                     Ok(mut save) => {
@@ -273,6 +278,7 @@ async fn main() {
                                     }
                                 }
                             },
+
                             ClientState::EnteringPasswordV{ name, pw1 } => {
                                 if input == pw1 {
                                     let mut player = Player::new(&name);
@@ -324,6 +330,8 @@ async fn main() {
                                     ClientState::EnteringPassword1 { name }
                                 }
                             },
+
+                            // all the remaining [ClientState] (except Logout) pipe through CommandCtx:
                             _ => {
                                 let prompt: String;
                                 let p = world.read().await.players_by_sockaddr.get(&addr).cloned();
@@ -352,12 +360,10 @@ async fn main() {
 
                     // --- Second Branch: Receive broadcast messages from other clients ---
                     result = rx.recv() => {
-                        /*
-                        We handle *majority* of broadcast messages in Playing state only, which avoids
-                        e.g. editor modes from being disturbed.
-                        */
-                        if let ClientState::Playing = &state {
-                            if let Ok(msg) = result {
+                        // We handle *majority* of broadcast messages in Playing state only,
+                        // which avoids e.g. the editor modes from being disturbed.
+                        match (&state, result) {
+                            (ClientState::Playing, Ok(msg)) => {
                                 if let Some(p) = world.read().await
                                     .players_by_sockaddr.get(&addr)
                                     .cloned()
@@ -392,6 +398,9 @@ async fn main() {
                                     }
                                 }
                             }
+                            
+                            // we'll ignore all other states and/or 'failed' rx.recv()
+                            _ => ()
                         }
                     }
                 }

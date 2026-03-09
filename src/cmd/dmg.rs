@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, cmd_exec, mob::{core::IsMob, stat::StatValue}, tell_user, tell_user_unk};
+use crate::{cmd::{Command, CommandCtx}, cmd_exec, mob::stat::StatValue, tell_user, tell_user_unk, traits::mob::IsMob};
 
 pub struct DmgCommand;
 
