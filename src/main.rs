@@ -374,9 +374,8 @@ async fn main() {
                                         // Handle 'force' as a special case.
                                         if let Broadcast::Force { message, from_player, .. } = &msg {
                                             match from_player {
-                                                ForceSource::System => tell_user!(&mut writer, "\nUnexpectedly you feel an urge to do something…"),
                                                 ForceSource::Admin { anonymous: false, .. } => tell_user!(&mut writer, "\nAn admin has issued a command you feel compelled to comply with…"),
-                                                _ => tell_user!(&mut writer, "\n"),
+                                                _ => tell_user!(&mut writer, "\nUnexpectedly you feel an urge to do something…"),
                                             };
                                             let ctx = CommandCtx {
                                                 player: p.clone(),
