@@ -30,17 +30,16 @@ impl Command for SayCommand {
         }
         show_help_if_needed!(ctx, "say");
 
-        if !ctx.args.is_empty() {
-            if ctx.args.ends_with('?') {
-                let cmd = AskCommand;
-                return cmd.exec(ctx).await;
-            }
-            let subtype = if ctx.args.ends_with('!') {Subtype::Exclaim} else {Subtype::Say};
-            let p = ctx.player.read().await;
-            let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), subtype, ctx.args.trim());
-            let from_player = p.id().into();
-            let room_id = p.location.clone();
-            ctx.tx.send(Broadcast::Say { subtype: Some(subtype), room_id, message, from_player }).unwrap();
+        // relay questions to Ask…
+        if ctx.args.trim().ends_with('?') {
+            return AskCommand.exec(ctx).await;
         }
+
+        let subtype = if ctx.args.ends_with('!') {Subtype::Exclaim} else {Subtype::Say};
+        let p = ctx.player.read().await;
+        let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), subtype, ctx.args.trim());
+        let from_player = p.id().into();
+        let room_id = p.location.clone();
+        ctx.tx.send(Broadcast::Say { subtype: Some(subtype), room_id, message, from_player }).unwrap();
     }
 }
