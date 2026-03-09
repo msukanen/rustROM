@@ -33,6 +33,7 @@ mod put;
 mod drop;
 mod create;
 mod scry;
+mod emote;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
