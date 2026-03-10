@@ -15,6 +15,7 @@ impl Command for EmoteCommand {
         let p_id = p.id();
         let room_id = p.location.clone();
         let message = format!("\n<c cyan>{p_id}</c> {}\n", ctx.args.trim());
+        tell_user!(ctx.writer, &message);
         let _ = ctx.tx.send(Broadcast::Say {
             subtype: None,
             room_id, message,
