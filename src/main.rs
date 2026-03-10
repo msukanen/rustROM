@@ -389,7 +389,7 @@ async fn main() {
                                             tell_user!(&mut writer, "{}", prompt);
                                         } else {
                                             // everything else but 'force' goes through Broadcast's message().
-                                            tell_user!(&mut writer, "{}{}", msg.message(), prompt);
+                                            tell_user!(&mut writer, "\n{}\n{}", msg.message(), prompt);
                                         }
                                     }
                                     #[cfg(feature = "localtest")] {

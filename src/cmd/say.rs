@@ -38,9 +38,11 @@ impl Command for SayCommand {
 
         let subtype = if ctx.args.ends_with('!') {Subtype::Exclaim} else {Subtype::Say};
         let p = ctx.player.read().await;
-        let message = format!("\n<c blue>[<c cyan>{}</c>]</c> {}: {}\n", p.id(), subtype, ctx.args.trim());
-        let from_player = p.id().into();
-        let room_id = p.location.clone();
-        let _ = ctx.tx.send(Broadcast::Say { subtype: Some(subtype), room_id, message, from_player });
+        let _ = ctx.tx.send(Broadcast::Say {
+            room_id: p.location.clone(),
+            message: format!("<c blue>[<c cyan>{}</c>]</c> {}: {}", p.id(), subtype, ctx.args.trim()),
+            subtype: Some(subtype),
+            from_player: p.id().into(),
+        });
     }
 }
