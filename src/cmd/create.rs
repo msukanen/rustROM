@@ -16,9 +16,9 @@ impl Command for CreateCommand {
             do_in_current_room!(ctx, |room| {
                 let mut item = Item::from(WeaponType::Melee);
                 item.set_id("test-item");
-                let id = item.id();
+                let id = item.id().to_string();
                 {
-                    let r = room.write().await;
+                    let mut r = room.write().await;
                     let res = r.try_insert(item);
                     match res {
                         Ok(()) => {
