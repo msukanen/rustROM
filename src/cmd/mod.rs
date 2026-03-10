@@ -72,7 +72,14 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
         return state;
     }
 
-    let (command, args) = ctx.args.split_once(' ').unwrap_or((ctx.args, ""));
+    let (command, args) = {
+        if ctx.args.starts_with('*') && ctx.args.ends_with('*') {
+            // Btw, let's start/end trim the *'d text:
+            ("emote", ctx.args[1..ctx.args.len()-1].trim())
+        } else {
+            ctx.args.split_once(' ').unwrap_or((ctx.args, ""))
+        }
+    };
     ctx.args = args;
     
     let table = match state {
