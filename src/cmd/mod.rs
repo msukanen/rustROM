@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}};
-use crate::{player::Player, tell_user, util::{clientstate::EditorMode, Broadcast}, world::SharedWorld, ClientState};
+use crate::{ClientState, player::Player, tell_user_unk, util::{Broadcast, clientstate::EditorMode}, world::SharedWorld};
 
 pub mod macros;
 //--- 'mod' all the commands ---
@@ -34,6 +34,7 @@ mod drop;
 mod create;
 mod scry;
 mod emote;
+mod give;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
@@ -88,8 +89,8 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
             EditorMode::Room { .. } => &REDIT_COMMANDS,
             EditorMode::Help { .. } => &HEDIT_COMMANDS,
         },
-        _ => {// Should not happen, but ...
-            log::error!("Player state '{:?}' invalid?", state);
+        _ => {// Should not happen, but …
+            log::error!("Player state '{:?}' invalid for commands processing!?", state);
             return state;
         }
     };
@@ -99,7 +100,8 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
     } else if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {
         cmd.exec(&mut ctx).await;
     } else {
-        tell_user!(ctx.writer, "Huh?\n");
+        tell_user_unk!(ctx.writer);
     }
+
     ctx.player.read().await.state()
 }
