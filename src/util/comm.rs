@@ -196,11 +196,13 @@ impl IsRecipient for Broadcast {
                 nearby.contains(&p.location)
             },
             Self::Tell { to_player, .. } => p.id() == *to_player,
-            Self::Force { to_player, from_player, .. } => {
-                if let Some(to) = to_player { *to == p.id() } else {
-                    // prevent force from affecting self.
-                    from_player.id() != p.id()
-                }
+            Self::Force { to_player, from_player, message } => {
+                // 1.) AoE with None as to_player, otherwise targeted.
+                // 2.) no (potentially recursive!) self-forcing and
+                // 3.) no (the worst case) re-'force' in general…
+                to_player.as_ref().map_or(true, |to| *to == p.id())
+                && from_player.id() != p.id()
+                && !message.trim().to_lowercase().starts_with("force")
             },
             Self::Channel { channel, .. } => channel.can_listen(&player).await && (p.listening_to(channel) || channel.is_always_on()),
         }
