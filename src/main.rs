@@ -14,10 +14,10 @@ mod player;
 mod mob;
 mod game_loop;  use game_loop::game_loop;
 mod io;         use io::io_loop;
-pub(crate) mod world;
-pub mod traits;
-pub mod string;
-pub mod util;
+mod world;
+mod traits;
+mod string;
+mod util;
 mod cmd;
 mod item;
 
