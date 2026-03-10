@@ -55,6 +55,7 @@ static DUMMY_SAVE: Lazy<Arc<Player>> = Lazy::new(|| Arc::new(Player {
         inventory: Container::from(ContainerType::PlayerInventory),
         act_count: 0,
         room: Weak::new(),
+        invis: false,
     }));
 
 /// Player data lives here!
@@ -76,6 +77,7 @@ pub struct Player {
     #[serde(default)] pub redit: Option<ReditState>,
     #[serde(default)] pub listening_to: HashSet<Channel>,
     #[serde(default)] pub inventory: Container,
+    #[serde(default)] pub invis: bool,
 }
 
 impl Player {
@@ -100,6 +102,7 @@ impl Player {
             inventory: Container::from(ContainerType::PlayerInventory),
             act_count: 0,
             room: Weak::new(),
+            invis: false,
         }
     }
 
@@ -331,6 +334,9 @@ impl IsMob for Player {
     fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {
         self.hp -= percentage;
         self.hp.is_dead(false)
+    }
+    fn invis(&self) -> bool {
+        self.invis
     }
 }
 

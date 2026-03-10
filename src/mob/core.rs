@@ -1,12 +1,16 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{mob::{CombatStat, stat::StatValue}, traits::{Description, Identity, mob::IsMob}};
 
 /// Core struct for mobs of all sorts.
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MobCore {
     name: String,
     title: String,
     description: String,
     hp: CombatStat,
     mp: CombatStat,
+    invis: bool,
 }
 
 impl Description for MobCore {
@@ -34,5 +38,9 @@ impl IsMob for MobCore {
     fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {
         self.hp -= percentage;
         self.hp.is_dead(true)
+    }
+
+    fn invis(&self) -> bool {
+        self.invis
     }
 }

@@ -14,4 +14,7 @@ pub trait IsMob {
     
     /// Mob's magic points/potential (mp).
     fn mp<'a>(&'a self) -> &'a CombatStat;
+
+    /// Check if mob is currently invisible.
+    fn invis(&self) -> bool;
 }
