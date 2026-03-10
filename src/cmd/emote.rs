@@ -1,3 +1,4 @@
+//! Emote something.
 use async_trait::async_trait;
 use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, traits::Identity, util::Broadcast};
 
@@ -13,12 +14,12 @@ impl Command for EmoteCommand {
 
         let p = ctx.player.read().await;
         let p_id = p.id();
-        let room_id = p.location.clone();
         let message = format!("\n<c cyan>{p_id}</c> {}\n", ctx.args.trim());
-        tell_user!(ctx.writer, &message);
+        tell_user!(ctx.writer, message.strip_prefix('\n').unwrap_or(&message));
         let _ = ctx.tx.send(Broadcast::Say {
             subtype: None,
-            room_id, message,
+            room_id: p.location.clone(),
+            message,
             from_player: p_id.into()
         });
     }
