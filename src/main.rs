@@ -39,7 +39,7 @@ impl Deref for ImmutablePath {
     }
 }
 
-static DATA: OnceCell<String> = OnceCell::new();
+pub(crate) static DATA: OnceCell<String> = OnceCell::new();
 pub(crate) static DATA_PATH: ImmutablePath = ImmutablePath;
 pub(crate) static AUTOSAVE_QUEUE_INTERVAL: Lazy<Arc<RwLock<u64>>> = Lazy::new(|| Arc::new(RwLock::new(DEFAULT_AUTOSAVE_QUEUE_INTERVAL)));
 
@@ -53,7 +53,7 @@ Note:   The data path can also be set using the RUSTROM_DATA environment\n\
 Usage:  RUSTROM_DATA=/path/to/data rustrom [OPTIONS]
         "
 )]
-struct CmdLineArgs {
+pub(crate) struct CmdLineArgs {
     #[arg(short, long, default_value = "8080")]                 port: u32,
     #[arg(long, default_value = "0.0.0.0")]                     host_listen_addr: String,
     #[arg(long, default_value = "rustrom")]                     world: String,

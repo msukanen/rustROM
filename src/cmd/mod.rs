@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}};
-use crate::{ClientState, player::Player, tell_user_unk, util::{Broadcast, clientstate::EditorMode}, world::SharedWorld};
+use crate::{ClientState, cmd::cmd_alias::CMD_ALIASES, player::Player, tell_user_unk, util::{Broadcast, clientstate::EditorMode}, world::SharedWorld};
 
 pub mod macros;
 //--- 'mod' all the commands ---
@@ -36,6 +36,7 @@ mod scry;
 mod emote;
 mod give;
 mod who;
+mod cmd_alias;// special case of specialness…
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
@@ -96,10 +97,21 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
         }
     };
 
-    if let Some(cmd) = table.get(command.to_lowercase().as_str()) {
+    let command = command.to_lowercase();
+    if let Some(cmd) = table.get(&command) {
         cmd.exec(&mut ctx).await;
-    } else if let Some(cmd) = COMMANDS.get(command.to_lowercase().as_str()) {
+    } else if let Some(cmd) = COMMANDS.get(&command) {
         cmd.exec(&mut ctx).await;
+    } else if let Some(cmd_alias) = CMD_ALIASES.get(&command) {
+        // command alias was found, now to get actual command...
+        if let Some(cmd) = table.get(cmd_alias) {
+            cmd.exec(&mut ctx).await;
+        } else if let Some(cmd) = COMMANDS.get(cmd_alias) {
+            cmd.exec(&mut ctx).await;
+        } else {
+            log::error!("Command alias '{command}' was mapped for '{cmd_alias}', but '{cmd_alias}' was NOT found?!");
+            tell_user_unk!(ctx.writer);
+        }
     } else {
         tell_user_unk!(ctx.writer);
     }

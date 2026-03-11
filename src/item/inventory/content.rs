@@ -74,8 +74,10 @@ impl Storage for Content {
     }
 
     fn take_out(&mut self, id: &str) -> Result<Item, ItemError> {
+        let id = id.trim().to_lowercase();
+        
         // Swift extract if `id` happened to be one of the keys…
-        if let Some(item) = self.contents.remove(id) {
+        if let Some(item) = self.contents.remove(&id) {
             log::debug!("'{id}' removed from '{}'.", self.id());
             return Ok(item);
         }
@@ -83,7 +85,7 @@ impl Storage for Content {
         // Search by e.g. title… slooowly…
         let mut found = None;
         for (c_id, item) in &mut self.contents {
-            if c_id.contains(&id) 
+            if c_id.contains(&id)
             || item.owner().contains(&id) {
                 found = Some(item.id().to_string());
                 break;
@@ -109,12 +111,16 @@ impl Storage for Content {
     }
 
     fn contains(&self, id: &str) -> bool {
-        self.contents.contains_key(id)
+        // 'id' may or may not be preprocessed, so…
+        self.contents.contains_key(id.trim().to_lowercase().as_str())
     }
 
     fn contains_r(&self, id: &str) -> Result<String, String> {
+        // 'id' should be clean trimmed by callsite, but we can't quite trust that…
+        let id = id.trim().to_lowercase();
+        let trim_id = id.as_str();
         for k in self.contents.keys() {
-            if k.contains(id) {
+            if k.contains(trim_id) {
                 return Ok(k.clone());
             }
         }

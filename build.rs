@@ -28,7 +28,12 @@ fn generate_cmd_table(file: &mut BufWriter<File>, path_str: &str, table_name: &s
         let path = entry.path();
         if !filter(path) { continue; }
         if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-            if stem != "mod" && stem != "macros" && stem != "utils" {
+            // Skip common non-command files:
+            if stem != "mod"
+            && stem != "macros"
+            && stem != "utils"
+            && stem != "cmd_alias"
+            {
                 commands.push(stem.to_string());
             }
         }
