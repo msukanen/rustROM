@@ -1,3 +1,4 @@
+//! Looking around, looking at, looking into…
 use async_trait::async_trait;
 use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::inventory::Storage, tell_user, traits::Description};
 
@@ -6,7 +7,13 @@ pub struct LookCommand;
 #[async_trait]
 impl Command for LookCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
-        look_at_current_room(ctx).await;
+        // Look without args will look around the room…
+        if ctx.args.is_empty() {
+            look_at_current_room(ctx).await;
+            return;
+        }
+
+        
     }
 }
 
