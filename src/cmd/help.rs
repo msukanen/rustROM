@@ -1,3 +1,4 @@
+//! 'help' command.
 use std::{collections::HashMap, sync::{Arc, OnceLock}};
 
 use async_trait::async_trait;
