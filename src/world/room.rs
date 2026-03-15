@@ -1,11 +1,12 @@
 //! "Make room!" - the [Room] live here.
-use std::{collections::{HashMap, HashSet, VecDeque}, sync::{Arc, Weak}};
+use std::{collections::{HashMap, HashSet, VecDeque}, fmt::Display, fs, path::PathBuf, sync::{Arc, Weak}};
 
+use async_trait::async_trait;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{item::{inventory::{Container, ContainerType, Storage, StorageCapacity}, Item, ItemError}, player::Player, traits::{Description, Identity}, util::{direction::Direction, Editor}, world::{area::Area, SharedWorld}, DATA_PATH};
+use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area}};
 
 static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 /// Max number of items in a [Room], whether on ground or otherwise.
@@ -74,6 +75,34 @@ pub struct Exit {
     pub state: ExitState,
 }
 
+impl PartialEq for Exit {
+    fn eq(&self, other: &Self) -> bool {
+        self.destination == other.destination
+    }
+}
+
+impl Display for Exit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.destination)
+    }
+}
+
+impl From<&str> for Exit {
+    fn from(destination: &str) -> Self {
+        Self {
+            destination: destination.into(),
+            state: ExitState::default(),
+        }
+    }
+}
+
+// Just a "lazy convenience" From<>…
+impl From<&&str> for Exit {
+    fn from(value: &&str) -> Self {
+        (*value).into()
+    }
+}
+
 impl Default for ExitState {
     fn default() -> Self {
         ExitState::Open
@@ -81,10 +110,10 @@ impl Default for ExitState {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct Room {
-    pub(crate) id: String,
-    title: String,
-    pub(crate) description: String,
+pub(crate) struct Room {
+    pub id: String,
+    pub title: String,
+    pub description: String,
     pub exits: HashMap<Direction, Exit>,
     #[serde(skip)] pub parent: Weak<RwLock<Area>>,
     #[serde(skip, default)] pub players: HashMap<String, Weak<RwLock<Player>>>,
@@ -305,5 +334,23 @@ impl Storage for Room {
 
     fn is_empty(&self) -> bool {
         self.contents.is_empty()
+    }
+}
+
+#[async_trait]
+impl DoesSave for Room {
+    async fn save(&mut self) -> Result<(), SaveError> {
+        let path = PathBuf::from(&format!("{}/{}.room", *ROOM_PATH, self.id()));
+        fs::write(path, serde_json::to_string_pretty(self)?)?;
+        Ok(())
+    }
+}
+
+impl Room {
+    pub(crate) fn shallow_copy(&mut self, other: &Self) {
+        self.id = other.id.clone();
+        self.description = other.description.clone();
+        self.title = other.title.clone();
+        self.exits = other.exits.clone();
     }
 }
