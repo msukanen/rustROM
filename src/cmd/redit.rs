@@ -1,8 +1,12 @@
+//! Room Editor - REdit.
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use crate::{cmd::{Command, CommandCtx}, tell_user, traits::Identity, util::{clientstate::EditorMode, Editor}, validate_builder, world::room::Room, ClientState};
 
 pub mod desc;
+pub mod exit;
+pub mod save;
+pub mod title;
 
 pub struct ReditCommand;
 
@@ -37,10 +41,9 @@ impl Command for ReditCommand {
             }
         }
 
-        let id = if ctx.args == "this" {
-            g.location.clone()
-        } else {
-            ctx.args.to_string()
+        let id = match ctx.args {
+            "this"|"here" => g.location.clone(),
+            other => other.to_string()
         };
 
         if let Some(existing_entry) = ctx.world.read().await.rooms.get(&id) {

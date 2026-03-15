@@ -1,6 +1,8 @@
 //! A MUD project in Rust.
 //! 
 //! See README.md ...
+//! 
+//! The `main()` is a monster, but it's a friendly monster ;-)
 use std::{collections::{HashMap, HashSet}, ops::Deref, sync::Arc};
 use clap::Parser;
 use once_cell::sync::{Lazy, OnceCell};
@@ -21,21 +23,27 @@ mod util;
 mod cmd;
 mod item;
 
-use crate::{cmd::{CommandCtx, force::ForceSource, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload}, help::Help}};
+use crate::{cmd::{CommandCtx, force::ForceSource, translocate::translocate, help::HELP_REGISTRY}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload}, help::Help}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
 use crate::world::World;
 
+/// To appease (lazy-init) file system access...
 pub struct ImmutablePath; impl ImmutablePath {
     pub fn set(path: impl Into<String>) {
-        DATA.set(path.into()).expect("FFS!");
+        let path: String = path.into();// note: .set() takes ownership of its args…
+        DATA.set(path.clone()).expect(&format!("Cannot set DATA to '{}'!", path));
     }
 }
+
+/// DeRef to appease (lazy-init) file system access...
 impl Deref for ImmutablePath {
     type Target = String;
     fn deref(&self) -> &Self::Target {
-        DATA.get().expect("OOF")
+        DATA.get().unwrap_or_else(||{
+            panic!("DATA.get() fail. DATA_PATH var not set yet? Dev, go find out why not…");
+        })
     }
 }
 
@@ -109,8 +117,9 @@ async fn main() {
     Help::bootstrap(args.bootstrap_url).await.expect("Bootstrapping failed?!");
     // Load help files ...
     let (help_core, help_aliases) = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
-    world.write().await.help = help_core;
-    world.write().await.help_aliased = help_aliases;
+    HELP_REGISTRY.get_or_init(|| {
+        RwLock::new((help_core, help_aliases))
+    });
 
     tokio::spawn(game_loop(world.clone()));
     tokio::spawn(io_loop(world.clone(), bad_words.clone()));

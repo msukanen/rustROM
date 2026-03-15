@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, util::{clientstate::EditorMode, Editor, Help}, validate_builder, ClientState};
+use crate::{ClientState, help_reg_lock, cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, util::{Editor, Help, clientstate::EditorMode}, validate_builder};
 
 pub(crate) mod desc;
 pub(crate) mod data;
@@ -46,7 +46,7 @@ impl Command for HeditCommand {
             }
         }
 
-        if let Some(existing_entry) = ctx.world.read().await.help.get(ctx.args) {
+        if let Some(existing_entry) = help_reg_lock!(read).0.get(ctx.args) {
             // Make a working copy of an existing entry.
             pg.hedit = Some(HeditState {
                 entry: existing_entry.read().await.clone(),

@@ -72,13 +72,14 @@ impl Help {
 
                 if let Ok(help) = toml::from_str::<Help>(&content) {
                     let help = Arc::new(RwLock::new(help));
-                    let primary_id = help.read().await.id.clone();
-                    let x = helps.insert(primary_id.clone(), help.clone());
+                    let help_lock = help.read().await;
+                    let primary_id = help_lock.id();
+                    let x = helps.insert(primary_id.into(), help.clone());
                     if x.is_some() {
-                        log::warn!("Overlapping - '{}' and '{}'", x.unwrap().read().await.id(), help.read().await.id());
+                        log::warn!("Overlapping - '{}' and '{}'", x.unwrap().read().await.id(), help_lock.id());
                     }
                     for alias in &help.read().await.aliases {
-                        aliases.insert(alias.clone(), primary_id.clone());
+                        aliases.insert(alias.clone(), primary_id.into());
                     }
                 } else {
                     log::warn!("Help file '{}' malformed …", path.display());

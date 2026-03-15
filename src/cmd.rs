@@ -15,7 +15,7 @@ mod dig;
 mod dmg;
 pub(crate) mod translocate;
 mod goto;
-mod help;
+pub(crate) mod help;
 mod r#return;
 pub(crate) mod hedit;
 pub(crate) mod redit;
@@ -80,7 +80,7 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
             // Btw, let's start/end trim the *'d text:
             ("emote", ctx.args[1..ctx.args.len()-1].trim())
         } else {
-            ctx.args.split_once(' ').unwrap_or((ctx.args, ""))
+            ctx.args.split_once(' ').unwrap_or((ctx.args.trim(), ""))
         }
     };
     ctx.args = args;

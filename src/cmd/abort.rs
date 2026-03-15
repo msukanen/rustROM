@@ -6,8 +6,8 @@ pub struct AbortCommand;
 #[async_trait]
 impl Command for AbortCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
-        let old_state = ctx.player.read().await.state();
-        match old_state {
+        let mut p = ctx.player.write().await;
+        match p.state() {
             ClientState::Playing => {
                 // NOTE: 'abort' is a no-op when user is not within some editor context.
                 return tell_user_unk!(ctx.writer);
@@ -15,12 +15,13 @@ impl Command for AbortCommand {
             ClientState::Editing { ref mode } => {
                 tell_user!(ctx.writer, "Discarding edits …\n");
                 match mode {
-                    EditorMode::Help => { ctx.player.write().await.hedit = None; },
-                    EditorMode::Room => { ctx.player.write().await.redit = None; },
+                    EditorMode::Help => { p.hedit = None; },
+                    EditorMode::Room => { p.redit = None; },
                 }
             }
-            _ => {}
+            _ => ()
         }
-        ctx.player.write().await.pop_state();
+
+        p.pop_state();
     }
 }

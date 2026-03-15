@@ -1,3 +1,4 @@
+//! Modify [Help] entry title.
 use async_trait::async_trait;
 use crate::{cmd::{Command, CommandCtx}, tell_user, validate_builder};
 
@@ -5,6 +6,7 @@ pub struct TitleCommand;
 
 #[async_trait]
 impl Command for TitleCommand {
+    /// HEdit 'title'.
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         validate_builder!(ctx);
         
@@ -19,7 +21,6 @@ impl Command for TitleCommand {
             let ed = g.hedit.as_mut().unwrap();
             ed.dirty = true;
             ed.entry.title = ctx.args.to_string();
-            drop(g);
         }
 
         let cmd = TitleCommand;

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use serde::{Deserialize, Serialize};
 
 /// Various directions, obviously.
@@ -7,6 +9,24 @@ pub enum Direction {
     NorthEast, NorthWest, SouthEast, SouthWest,
     Up, Down,
     Custom(String)
+}
+
+impl Display for Direction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Self::Custom(c) => c,
+            Self::Down => "down",
+            Self::East => "east",
+            Self::North => "north",
+            Self::NorthEast => "northeast",
+            Self::NorthWest => "northwest",
+            Self::South => "south",
+            Self::SouthEast => "southeast",
+            Self::SouthWest => "southwest",
+            Self::Up => "up",
+            Self::West => "west",
+        })
+    }
 }
 
 impl Direction {
@@ -46,20 +66,40 @@ impl TryFrom<&str> for Direction {
     /// 
     /// Note: we accommodate for a few very common typos (and some abbreviations).
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        if value.is_empty() { return Err("Direction cannot be empty.");}
-        let lc = value.to_lowercase();
+        if value.is_empty() {
+            return Err("Direction cannot be empty.");
+        }
+        Ok(Self::from(value))
+    }
+}
+
+impl Direction {
+    /// `From<&str>`-like `from()` impl.
+    /// 
+    /// # Notes
+    /// Unlike [Direction::try_from], this impl does not validate empty `value`
+    /// and treats it as [Direction::Custom] instead…
+    //
+    // Due impl conflict with actual `From<&str>` and `TryFrom<&str>`, we have
+    // this `From<&str>`-like impl, which *should* see use rather rarely but
+    // acts as a shortcut when `value` has already been validated by some other
+    // means (e.g. [show_help_if_needed!][`crate::show_help_if_needed!`])
+    // has been called before [Direction::from]).
+    //
+    pub(crate) fn from(value: &str) -> Self {
+        let lc = value.trim().to_lowercase();
         match lc.as_str() {
-            "north"|"n"|"nor"|"norht"|"nort" => Ok(Self::North),
-            "south"|"s"|"sou"|"souht"|"sout" => Ok(Self::South),
-            "east"|"e"|"est"|"eas" => Ok(Self::East),
-            "west"|"w"|"wes" => Ok(Self::West),
-            "up"  |"u" => Ok(Self::Up),
-            "down"|"d"|"donw" => Ok(Self::Down),
-            "northeast"|"ne" => Ok(Self::NorthEast),
-            "northwest"|"nw" => Ok(Self::NorthWest),
-            "southeast"|"se" => Ok(Self::SouthEast),
-            "southwest"|"sw" => Ok(Self::SouthWest),
-            _ => Ok(Self::Custom(lc))
+            "north"|"n"|"nor"|"norht"|"nort" => Self::North,
+            "south"|"s"|"sou"|"souht"|"sout" => Self::South,
+            "east"|"e"|"est"|"eas" => Self::East,
+            "west"|"w"|"wes" => Self::West,
+            "up"  |"u" => Self::Up,
+            "down"|"d"|"donw" => Self::Down,
+            "northeast"|"ne" => Self::NorthEast,
+            "northwest"|"nw" => Self::NorthWest,
+            "southeast"|"se" => Self::SouthEast,
+            "southwest"|"sw" => Self::SouthWest,
+            _ => Self::Custom(lc)
         }
     }
 }

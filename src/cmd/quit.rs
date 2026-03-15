@@ -1,3 +1,4 @@
+//! Quit the game.
 use async_trait::async_trait;
 use crate::{cmd::{Command, CommandCtx}, ClientState};
 

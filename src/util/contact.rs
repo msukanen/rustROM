@@ -1,3 +1,4 @@
+//! Contact info structuring.
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
