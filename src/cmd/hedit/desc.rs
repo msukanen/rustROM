@@ -1,3 +1,4 @@
+//! HEdit/'desc' command.
 use async_trait::async_trait;
 use crate::{access_ed_entry, cmd::{Command, CommandCtx}, show_help, util::{ed::{edit_text, EdResult}, Editor}, validate_builder};
 
