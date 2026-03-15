@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{item::ItemError, player::Player, string::prompt::PromptType, traits::tickable::Tickable, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{world_area_serialization, Area}, room::Room}, DATA_PATH};
+use crate::{DATA_PATH, item::ItemError, player::Player, string::prompt::PromptType, traits::{save::{DoesSave, SaveError}, tickable::Tickable}, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{Area, world_area_serialization}, room::Room}};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MotD {
@@ -60,8 +60,6 @@ pub struct World {
     #[serde(skip, default)] pub players: HashMap<String, Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub players_to_logout: Vec<Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
-    #[serde(skip, default)] pub help: HashMap<String, Arc<RwLock<Help>>>,
-    #[serde(skip, default)] pub help_aliased: HashMap<String, String>,
     #[serde(default)] pub lost_and_found: HashMap<String, ItemError>,
 }
 
@@ -130,8 +128,6 @@ impl World {
         players: HashMap::new(),
         players_to_logout: vec![],
         rooms: HashMap::new(),
-        help: HashMap::new(),
-        help_aliased: HashMap::new(),
         lost_and_found: HashMap::new(),
     }}
 
@@ -211,6 +207,18 @@ impl Tickable for World {
             area.write().await
                 .tick(self.uptime).await;
         }
+    }
+}
+
+#[async_trait]
+impl DoesSave for World {
+    /// Save the [World]!
+    async fn save(&mut self) -> Result<(), SaveError> {
+        for area in self.areas.values() {
+            let mut g = area.write().await;
+            g.save().await?;
+        }
+        Ok(())
     }
 }
 
