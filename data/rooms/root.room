@@ -1,9 +1,26 @@
 {
-    "id": "root",
-    "title": "RustROM RootRoom of Rootness",
-    "description": "Very rooty room of rooty rootness…",
-    "exits": {
-        "East": { "destination": "not-so-root", "state": "Open" },
-        "North": { "destination": "does-not-exist", "state": "Open" }
+  "id": "root",
+  "title": "RustROM RootRoom of Rootness",
+  "description": "Very rooty room of rooty rootness…",
+  "exits": {
+    "North": {
+      "destination": "does-not-exist",
+      "state": "Open"
+    },
+    "East": {
+      "destination": "not-so-root",
+      "state": "Open"
     }
+  },
+  "contents": {
+    "Room": {
+      "id": "content-room-root",
+      "owner": {
+        "curr_id": "",
+        "orig_id": ""
+      },
+      "max_capacity": 1000,
+      "contents": {}
+    }
+  }
 }
