@@ -1,5 +1,4 @@
 //! Room exit control.
-
 use async_trait::async_trait;
 
 use crate::{access_ed_entry, cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, util::direction::Direction, validate_builder};
