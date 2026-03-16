@@ -37,6 +37,7 @@ mod emote;
 mod give;
 mod who;
 mod cmd_alias;// special case of specialness…
+mod sync;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
