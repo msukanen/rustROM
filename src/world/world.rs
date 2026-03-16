@@ -214,10 +214,22 @@ impl Tickable for World {
 impl DoesSave for World {
     /// Save the [World]!
     async fn save(&mut self) -> Result<(), SaveError> {
+        // base #.world file:
+        let file = std::fs::File::create(&self.filename)?;
+        serde_json::to_writer_pretty(file, &self)?;
+
+        // areas/#.area files:
         for area in self.areas.values() {
             let mut g = area.write().await;
             g.save().await?;
         }
+
+        // player save/#.save files:
+        for player in self.players.values() {
+            let mut g = player.write().await;
+            g.save().await?;
+        }
+
         Ok(())
     }
 }
