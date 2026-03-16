@@ -292,6 +292,20 @@ impl Player {
     pub fn inc_act_count(&mut self) {
         self.add_act_count(1);
     }
+
+    /// Blocking save of [Player].
+    fn save_blocking(&mut self) -> Result<(), SaveError> {
+        let filename = format!("{}/{}.save", *SAVE_PATH, self.name.slugify());
+        let path = PathBuf::from_str(&filename).unwrap();
+        let file = std::fs::File::create(path)?;
+        let _ = serde_json::to_writer_pretty(file, &self)?;
+        log::info!("Saved '{}'.", filename);
+        
+        // Reset act count.
+        self.act_count = 0;
+        
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -301,14 +315,7 @@ impl DoesSave for Player {
     /// # Returns
     /// Success?
     async fn save(&mut self) -> Result<(), SaveError> {
-        let filename = format!("{}/{}.save", *SAVE_PATH, self.name.slugify());
-        let path = PathBuf::from_str(&filename).unwrap();
-        let file = std::fs::File::create(path)?;
-        let _ = serde_json::to_writer(file, &self)?;
-        log::info!("Saved '{}'.", filename);
-        // Reset act count.
-        self.act_count = 0;
-        Ok(())
+        self.save_blocking()
     }
 }
 
