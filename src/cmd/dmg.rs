@@ -18,7 +18,7 @@ impl Command for DmgCommand {
             match args[0] {
                 "self" => {
                     if let Ok(n) = args[1].parse::<i32>() {
-                        ctx.player.write().await.take_dmg(n as StatValue);
+                        ctx.player.write().await.take_dmg(n as StatValue, false);
                     }
                 },
                 "fix" => {

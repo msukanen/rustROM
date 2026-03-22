@@ -127,7 +127,7 @@ pub enum Broadcast {
         subtype: Option<Subtype>,
         message: String,
         to_player: String,
-        from_player: String,
+        from_player: TellFrom,
     },
     /// Special system/admin broadcast.
     Force {
@@ -139,6 +139,51 @@ pub enum Broadcast {
         channel: Channel,
         message: String,
         from_player: String,
+    },
+    /// System-only variants:
+    System(SystemBroadcastType),
+}
+
+#[derive(Debug, Clone)]
+pub enum SystemBroadcastType {
+    Shutdown { message: String, seconds: u64 },
+}
+
+impl SystemBroadcastType {
+    pub(crate) fn message(&self) -> String {
+        match self {
+            Self::Shutdown { message, .. } => message.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum TellFrom {
+    Player(String),
+    System,
+}
+
+impl From<&TellFrom> for String {
+    fn from(value: &TellFrom) -> Self {
+        match value {
+            TellFrom::System => "system".into(),
+            TellFrom::Player(id) => id.clone()
+        }
+    }
+}
+
+impl From<&str> for TellFrom {
+    fn from(value: &str) -> Self {
+        match value {
+            "system" => Self::System,
+            other => Self::Player(other.into()),
+        }
+    }
+}
+
+impl From<String> for TellFrom {
+    fn from(value: String) -> Self {
+        TellFrom::from(value.as_str())
     }
 }
 
@@ -151,10 +196,11 @@ impl MessagePayload for Broadcast {
     fn from_player(&self) -> String {
         match self {
             Self::Channel { from_player, .. }|
-            Self::Shout { from_player , ..}|
-            Self::Say { from_player, .. }|
-            Self::Tell { from_player , ..} => from_player.clone(),
+            Self::Shout { from_player , ..}  |
+            Self::Say { from_player, .. }    => from_player.clone(),
+            Self::Tell { from_player, ..} => from_player.into(),
             Self::Force { from_player, .. } => from_player.id().to_string(),
+            Self::System(_) => "system".into(),
         }
     }
 
@@ -171,9 +217,10 @@ impl MessagePayload for Broadcast {
                 }
             }
             Self::Force { message, .. }|
-            Self::Say { message, .. }|
+            Self::Say { message, .. }  |
             Self::Shout { message, .. }|
-            Self::Tell { message, .. } => message.clone()
+            Self::Tell { message, .. } => message.clone(),
+            Self::System(sbt) => sbt.message(),
         }
     }
 }
@@ -195,7 +242,7 @@ impl IsRecipient for Broadcast {
                 let nearby = find_nearby_rooms(world, &room_id, 2).await;
                 nearby.contains(&p.location)
             },
-            Self::Tell { to_player, .. } => p.id() == *to_player,
+            Self::Tell { to_player, .. } => p.id() == *to_player || *to_player == "all",
             Self::Force { to_player, from_player, message } => {
                 // 1.) AoE with None as to_player, otherwise targeted.
                 // 2.) no (potentially recursive!) self-forcing and
@@ -205,6 +252,7 @@ impl IsRecipient for Broadcast {
                 && !message.trim().to_lowercase().starts_with("force")
             },
             Self::Channel { channel, .. } => channel.can_listen(&player).await && (p.listening_to(channel) || channel.is_always_on()),
+            Self::System { .. } => true,
         }
     }
 }

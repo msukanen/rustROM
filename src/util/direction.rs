@@ -16,6 +16,14 @@ impl Display for Direction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
             Self::Custom(c) => c,
+            _ => self.as_str()
+        })
+    }
+}
+
+impl Direction {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
             Self::Down => "down",
             Self::East => "east",
             Self::North => "north",
@@ -26,11 +34,10 @@ impl Display for Direction {
             Self::SouthWest => "southwest",
             Self::Up => "up",
             Self::West => "west",
-        })
+            _ => unimplemented!("Direction::Custom cannot be &'static str, sorreh!")
+        }
     }
-}
 
-impl Direction {
     pub fn opposite(&self) -> Self {
         match self {
             Self::Down => Self::Up,
@@ -101,6 +108,13 @@ impl Direction {
             "southeast"|"se" => Self::SouthEast,
             "southwest"|"sw" => Self::SouthWest,
             _ => Self::Custom(lc)
+        }
+    }
+
+    pub(crate) fn as_cardinal(value: &str) -> Option<Self> {
+        match Direction::from(value) {
+            Self::Custom(_) => None,
+            other => Some(other)
         }
     }
 }

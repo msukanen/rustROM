@@ -1,5 +1,5 @@
 //! Mob stats.
-use std::ops::{AddAssign, SubAssign};
+use std::{cmp::Ordering, ops::{AddAssign, SubAssign}};
 
 use async_trait::async_trait;
 //
@@ -46,6 +46,13 @@ impl CombatStat {
         match self {
             Self::HP { current, .. } |
             Self::MP { current, .. } => *current,
+        }
+    }
+
+    pub fn set_current(&mut self, new: StatValue) {
+        match self {
+            Self::HP { current, .. } |
+            Self::MP { current, .. } => *current = new,
         }
     }
 
@@ -103,5 +110,22 @@ impl SubAssign<StatValue> for CombatStat {
             Self::HP { current, .. } |
             Self::MP { current, .. } => *current -= rhs,
         }
+    }
+}
+
+impl PartialEq<StatValue> for CombatStat {
+    fn eq(&self, other: &StatValue) -> bool {
+        (self.current() - other).abs() < 0.001
+    }
+}
+
+impl PartialOrd<StatValue> for CombatStat {
+    fn partial_cmp(&self, other: &StatValue) -> Option<Ordering> {
+        Some(if self == other {
+            Ordering::Equal
+        } else {
+            self.current().partial_cmp(other)
+                .expect("No nuns allowed. Just monks. Someone NaN'd a float. Go punish.")
+        })
     }
 }

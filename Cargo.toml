@@ -1,6 +1,6 @@
 [package]
 name = "rustrom"
-version = "0.1.50"
+version = "0.1.51"
 edition = "2024"
 authors = ["Markku Sukanen <markku.sukanen@gmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -26,6 +26,7 @@ serde_json = "1.0.149"
 sha1 = "0.10.6"
 tokio = { version = "1.50", features = ["full"] }
 toml = "1"
+unicode-normalization = "0.1.25"
 uuid = { version = "1.21.0", features = ["v4", "serde"] }
 walkdir = "2.5"
 

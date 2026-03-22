@@ -8,9 +8,12 @@ pub trait IsMob {
     fn hp<'a>(&'a self) -> &'a CombatStat;
     /// "Take this!"…
     /// 
+    /// # Args
+    /// - `percentage` amount of dmg delivery.
+    /// - `subdue` only, if possible…
     /// # Returns
     /// `true` if still kicking.
-    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool;
+    fn take_dmg<'a>(&'a mut self, percentage: StatValue, subdue: bool) -> bool;
     
     /// Mob's magic points/potential (mp).
     fn mp<'a>(&'a self) -> &'a CombatStat;

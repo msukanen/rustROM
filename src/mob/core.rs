@@ -35,8 +35,11 @@ impl IsMob for MobCore {
         format!("[hp ({}|{})]#> ", self.hp().current(), self.mp().current())
     }
 
-    fn take_dmg<'a>(&'a mut self, percentage: StatValue) -> bool {
+    fn take_dmg<'a>(&'a mut self, percentage: StatValue, subdue: bool) -> bool {
         self.hp -= percentage;
+        if subdue && self.hp < 0.01 {
+            self.hp.set_current(0.01);
+        }
         self.hp.is_dead(true)
     }
 

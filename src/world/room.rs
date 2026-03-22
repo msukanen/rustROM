@@ -3,62 +3,17 @@ use std::{collections::{HashMap, HashSet, VecDeque}, fmt::Display, fs, path::Pat
 
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use tokio::sync::RwLock;
 
 use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area}};
 
-static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
+pub(crate) static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 /// Max number of items in a [Room], whether on ground or otherwise.
 pub(crate) static MAX_ITEMS_IN_ROOM: usize = 1_000;
 
 pub enum RoomError {
     NoRoom,
-}
-
-/// Room serializer for [Area]-level hashmap.
-pub mod area_room_serialization {
-    use std::{collections::HashMap, fs, sync::Arc};
-
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use tokio::sync::RwLock;
-
-    use super::{Room, ROOM_PATH};
-
-    pub fn serialize<S: Serializer>(rooms: &HashMap<String, Arc<RwLock<Room>>>, serializer: S) -> Result<S::Ok, S::Error>
-    where S: Serializer,
-    {
-        let runtime = tokio::runtime::Runtime::new().unwrap();
-        for (stem, room) in rooms {
-            let path = format!("{}/{}.room", *ROOM_PATH, stem);
-            let contents = runtime.block_on(async {
-                let g = room.read().await;
-                serde_json::to_string_pretty(&*g).unwrap()
-            });
-            fs::write(path, contents).unwrap();
-        }
-
-        rooms.keys()
-            .collect::<Vec<&String>>()
-            .serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Arc<RwLock<Room>>>, D::Error>
-    where D: Deserializer<'de>,
-    {
-        let room_stems = Vec::<String>::deserialize(deserializer)?;
-        let mut loaded_rooms = HashMap::new();
-
-        for stem in room_stems {
-            let path = format!("{}/{}.room", *ROOM_PATH, stem);
-            log::info!("… processing '{}'", path);
-            let contents = fs::read_to_string(path).map_err(serde::de::Error::custom)?;
-            let room: Room = serde_json::from_str(&contents).map_err(serde::de::Error::custom)?;
-            loaded_rooms.insert(stem.to_string(), Arc::new(RwLock::new(room)));
-        }
-
-        Ok(loaded_rooms)
-    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -109,45 +64,57 @@ impl Default for ExitState {
     }
 }
 
+#[inline]
+fn room_parent_id_default() -> String {"root".into()}
+
+// NOTE: keep this and deserializer's RoomFile struct in sync!
 #[derive(Debug, Clone, Serialize)]
 pub(crate) struct Room {
     pub id: String,
     pub title: String,
     pub description: String,
     pub exits: HashMap<Direction, Exit>,
-    #[serde(skip)] pub parent: Weak<RwLock<Area>>,
-    #[serde(skip, default)] pub players: HashMap<String, Weak<RwLock<Player>>>,
+    
+    /// Parent [Area] ID.
+    #[serde(default = "room_parent_id_default")]
+    pub parent_id: String,
+    
+    /// Weak lock to parent [Area]; set elsewhere.
+    #[serde(skip)]
+    pub parent: Weak<RwLock<Area>>,
+    
+    /// Weak lock to [Player] entities currently present in the [Room].
+    #[serde(skip, default)]
+    pub players: HashMap<String, Weak<RwLock<Player>>>,
+    
+    /// [Room] [contents][Container]… a.k.a. whatever lies around.
     pub contents: Container,
 }
 
-// We manually implement Deserialize for [Room].
-impl<'de> Deserialize<'de> for Room {
+impl <'de> Deserialize<'de> for Room {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where D: Deserializer<'de>,
-    {
+    where D: Deserializer<'de> {
         #[derive(Deserialize)]
-        struct RoomData {
+        struct RoomFile {
             id: String,
             title: String,
             description: String,
             exits: HashMap<Direction, Exit>,
+            #[serde(default = "room_parent_id_default")]
+            parent_id: String,
+            contents: Option<Container>,
         }
 
-        // Deserialize the data into temp struct.
-        let data = RoomData::deserialize(deserializer)?;
-
-        // Now, we have the `id` - can use it to correctly construct the [Container].
-        let contents = Container::from(ContainerType::Room(data.id.clone()));
-
-        // 4. Finally, build the real Room object.
-        Ok(Room {
-            id: data.id,
-            title: data.title,
-            description: data.description,
-            exits: data.exits,
-            contents,
-            parent: Weak::new(), // Will be linked elsewhere later…
-            players: HashMap::new(), // Will be populated at runtime…
+        let rf: RoomFile = Deserialize::deserialize(deserializer)?;
+        Ok(Self {
+            title: rf.title,
+            description: rf.description,
+            exits: rf.exits,
+            parent_id: rf.parent_id,
+            parent: Weak::new(),
+            contents: rf.contents.unwrap_or_else(|| Room::default_container(&rf.id)),
+            players: HashMap::new(),
+            id: rf.id,
         })
     }
 }
@@ -198,13 +165,14 @@ impl Room {
         let id: String = (if id.is_some() { id.unwrap() } else {""}).into();
 
         Self {
-            contents: Container::from(ContainerType::Room(id.clone())),
-            id,
             title: "".into(),
             description: "".into(),
             exits: HashMap::new(),
+            parent_id: "root".into(),
             parent: Weak::new(),
             players: HashMap::new(),
+            contents: Room::default_container(&id),
+            id,
         }
     }
 
@@ -240,6 +208,11 @@ impl Room {
         if let Some(_) = self.players.remove(id) {
             log::debug!("Player '{}' removed from room '{}'", id, self.id());
         }
+    }
+
+    /// Generate a Room-[Container] for `id`.
+    fn default_container(id: &str) -> Container {
+        Container::from(ContainerType::Room(id.into()))
     }
 }
 
@@ -353,4 +326,24 @@ impl Room {
         self.title = other.title.clone();
         self.exits = other.exits.clone();
     }
+}
+
+#[cfg(test)]
+mod room_tests {
+    use crate::world::room::Room;
+
+    /// See that [Room] and [RoomFile] stay in sync…
+    #[test]
+    fn test_room_serialization_sync() {
+        let room_json = r#"{
+            "id": "nexus",
+            "title": "The Nexus",
+            "description": "Center of the world.",
+            "exits": {},
+            "parent_id": "root"
+        }"#;
+        
+        let room: Room = serde_json::from_str(room_json).unwrap();
+        assert_eq!(room.id, "nexus");
+    }    
 }

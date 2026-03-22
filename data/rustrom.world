@@ -26,5 +26,6 @@
         "area": "root",
         "room": "root"
     },
+    "rooms": ["root", "not-so-root"],
     "prompts": {}
 }

@@ -3,7 +3,7 @@
 //! See README.md ...
 //! 
 //! The `main()` is a monster, but it's a friendly monster ;-)
-use std::{collections::{HashMap, HashSet}, ops::Deref, sync::Arc};
+use std::{collections::{HashMap, HashSet}, ops::Deref, process::exit, sync::Arc};
 use clap::Parser;
 use once_cell::sync::{Lazy, OnceCell};
 use tokio::{
@@ -23,7 +23,7 @@ mod util;
 mod cmd;
 mod item;
 
-use crate::{cmd::{CommandCtx, force::ForceSource, translocate::translocate, help::HELP_REGISTRY}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload}, help::Help}};
+use crate::{cmd::{CommandCtx, force::ForceSource, help::HELP_REGISTRY, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload, SystemBroadcastType}, help::Help}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;
@@ -83,6 +83,7 @@ async fn main() {
     if let Some(duration) = args.autosave_queue_interval {
         *AUTOSAVE_QUEUE_INTERVAL.write().await = duration;
     }
+    // Note that DATA has to be set *before* any I/O is initiated.
     let _ = DATA.set(args.data_path);
 
     // Initialize the logger
@@ -91,26 +92,27 @@ async fn main() {
     let bad_words: Arc<RwLock<WordSet>> = Arc::new(RwLock::new(HashSet::new()));
 
     // Load the world ...
-    let world = Arc::new(RwLock::new({
-        let w = World::new(&args.world).await.expect("ERROR: world dead or in fire?!");
-        w.validate().await.expect(&format!("Error validating {}", "rustrom.world"))
-    }));{
+    let world = Arc::new(RwLock::new(
+        World::load_or_bootstrap(&args.world).await.expect("ERROR: world dead or in fire?!")
+    ));{
         log::info!("Connecting dots …");
-        let mut w = world.write().await;
-        let mut collected_rooms_to_add = HashMap::new();
-        for area_arc in w.areas.values_mut() {
-            let mut a = area_arc.write().await;
-            log::info!("… processing area '{}'", a.id);
-            a.parent = Arc::downgrade(&world);
-
-            for (room_stem, room_arc) in &a.rooms {
-                let mut r = room_arc.write().await;
-                log::info!("… making ↑ connect for room '{}' (a.k.a. '{}')", r.id(), r.title());
-                r.parent = Arc::downgrade(area_arc);
-                collected_rooms_to_add.insert(room_stem.clone(), room_arc.clone());
+        let w = world.read().await;
+        for room in w.rooms.values() {
+            let mut room_lock = room.write().await;
+            if let Some(area) = w.areas.get(&room_lock.parent_id) {
+                log::trace!("… making ↑ connect for room '{} / {}' to area '{}'…",
+                    room_lock.id(),
+                    room_lock.title(),
+                    room_lock.parent_id
+                );
+                let mut area_lock = area.write().await;
+                area_lock.rooms.insert(room_lock.id().into(), Arc::downgrade(room));
+                room_lock.parent = Arc::downgrade(area);
+                log::trace!("… connection success.");
+            } else {
+                log::warn!("… connection FAILED: area '{}' does not exist?!", room_lock.parent_id);
             }
         }
-        w.rooms = collected_rooms_to_add;
     }
 
     // Bootstrap helps, if needed ...
@@ -367,7 +369,7 @@ async fn main() {
                         };
                     },
 
-                    // --- Second Branch: Receive broadcast messages from other clients ---
+                    // --- Second Branch: Receive broadcast messages from other clients/system itself ---
                     result = rx.recv() => {
                         // We handle *majority* of broadcast messages in Playing state only,
                         // which avoids e.g. the editor modes from being disturbed.
@@ -403,6 +405,12 @@ async fn main() {
                                     }
                                     #[cfg(feature = "localtest")] {
                                         log::debug!("Broadcast '{}' dispatched.", msg.message());
+                                    }
+
+                                    // Did we get told to shut down?
+                                    if let Broadcast::System(SystemBroadcastType::Shutdown{..}) = &msg {
+                                        tell_user!(&mut writer, "\n<c yellow>Server is shutting down. Logging you safely off…\n");
+                                        state = ClientState::Logout;
                                     }
                                 }
                             }

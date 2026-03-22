@@ -11,7 +11,7 @@ const LOST_AND_FOUND_QUEUE_INTERVAL: u64 = 900; // once per 15 minutes, about.
 #[cfg(feature = "localtest")]
 const LOST_AND_FOUND_QUEUE_INTERVAL: u64 = 5; // once per 5 sec, about.
 
-/// One heart of the machinery — I/O loop.
+/// One heart of the machinery — disk I/O loop.
 /// 
 /// # Arguments
 /// - `world`— shared world, shared pain ;-)

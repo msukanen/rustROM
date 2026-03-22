@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{DATA_PATH, item::ItemError, player::Player, string::prompt::PromptType, traits::{save::{DoesSave, SaveError}, tickable::Tickable}, util::{contact::{AdminInfo, Contact}, help::Help}, world::{area::{Area, world_area_serialization}, room::Room}};
+use crate::{DATA_PATH, item::ItemError, player::Player, string::{Sluggable, prompt::PromptType}, traits::{save::{DoesSave, SaveError}, tickable::Tickable}, util::contact::{AdminInfo, Contact}, world::{area::Area, room::Room}};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MotD {
@@ -39,6 +39,103 @@ impl WorldEntrance {
     }
 }
 
+mod area_serialization {
+    //! Serializer for [World] level [Area] listing.
+    use std::{collections::HashMap, fs, sync::Arc};
+
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use tokio::sync::RwLock;
+
+    use crate::{traits::{Identity, save::DoesSave}, world::area::AREA_PATH};
+
+    use super::Area;
+
+    pub fn serialize<S: Serializer>(areas: &HashMap<String, Arc<RwLock<Area>>>, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+    {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        for (_, area) in areas {
+            runtime.block_on(async {
+                // TODO: _ …
+                let _ = area.write().await.save().await;
+            });
+        }
+        
+        areas.keys()
+            .collect::<Vec<&String>>()
+            .serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Arc<RwLock<Area>>>, D::Error>
+    where D: Deserializer<'de>,
+    {
+        let stems = Vec::<String>::deserialize(deserializer)?;
+        let mut loaded = HashMap::new();
+
+        for stem in stems {
+            let path = format!("{}/{}.area", *AREA_PATH, stem);
+            log::info!("… processing '{}'", path);
+            let area: Area = serde_json::from_str(
+                    &fs::read_to_string(path)
+                        .map_err(serde::de::Error::custom)?
+                )
+                .map_err(serde::de::Error::custom)?;
+            loaded.insert(stem, Arc::new(RwLock::new(area)));
+        }
+
+        Ok(loaded)
+    }
+}
+
+/// Room serializer for [Area]-level hashmap.
+mod room_serialization {
+    use std::{collections::HashMap, fs, sync::Arc};
+
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+    use tokio::sync::RwLock;
+
+    use crate::{traits::save::DoesSave, world::room::ROOM_PATH};
+
+    use super::Room;
+
+    pub fn serialize<S: Serializer>(rooms: &HashMap<String, Arc<RwLock<Room>>>, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer,
+    {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        for (_, room) in rooms {
+            runtime.block_on(async {
+                // TODO: _ …
+                let _ = room.write().await.save().await;
+            });
+        }
+
+        rooms.keys()
+            .collect::<Vec<&String>>()
+            .serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<String, Arc<RwLock<Room>>>, D::Error>
+    where D: Deserializer<'de>,
+    {
+        let room_stems = Vec::<String>::deserialize(deserializer)?;
+        let mut loaded_rooms = HashMap::new();
+
+        for stem in room_stems {
+            let path = format!("{}/{}.room", *ROOM_PATH, stem);
+            log::info!("… processing '{}'", path);
+            let room: Room = serde_json::from_str(
+                    &fs::read_to_string(path).map_err(serde::de::Error::custom)?
+                ).map_err(serde::de::Error::custom)?;
+            loaded_rooms.insert(
+                stem.to_string(),
+                Arc::new(RwLock::new(room))
+            );
+        }
+
+        Ok(loaded_rooms)
+    }
+}
+
 /// The World itself…
 #[derive(Debug, Deserialize, Serialize)]
 pub struct World {
@@ -48,18 +145,21 @@ pub struct World {
     description: String,
     owner: Contact,
     admins: Option<Vec<AdminInfo>>,
+    
     pub motd: Option<Vec<MotD>>,
     pub greeting: Option<String>,
     pub welcome_back: Option<String>,
     pub welcome_new: Option<String>,
-    #[serde(with = "world_area_serialization")]
-    pub areas: HashMap<String, Arc<RwLock<Area>>>,
-    pub root: WorldEntrance,
     pub prompts: HashMap<PromptType, String>,
+
     #[serde(skip, default)] pub players_by_sockaddr: HashMap<SocketAddr, Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub players: HashMap<String, Arc<RwLock<Player>>>,
     #[serde(skip, default)] pub players_to_logout: Vec<Arc<RwLock<Player>>>,
-    #[serde(skip, default)] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
+
+    #[serde(with = "area_serialization")] pub areas: HashMap<String, Arc<RwLock<Area>>>,
+    #[serde(with = "room_serialization")] pub rooms: HashMap<String, Arc<RwLock<Room>>>,
+    pub root: WorldEntrance,
+
     #[serde(default)] pub lost_and_found: HashMap<String, ItemError>,
 }
 
@@ -86,11 +186,13 @@ impl Display for WorldError {
 }
 
 impl World {
-    /// A brand new world (loaded from a file, of course).
+    /// Load or bootstrap a world.
+    /// 
+    /// If `name` doesn't yet exist as a stored [World], we bootstrap a brand new one.
     /// 
     /// # Arguments
-    /// - `name`— stem-name of the world. Designates the storage medium (without filename extension, etc.).
-    pub async fn new(name: &str) -> Result<Self, WorldError> {
+    /// - stem-`name` of the world.
+    pub async fn load_or_bootstrap(name: &str) -> Result<Self, WorldError> {
         let filename = format!("{}/{}.world", *DATA_PATH, name);
         log::info!("Loading '{}'", filename);
         let path = PathBuf::from_str(filename.as_str()).unwrap();
@@ -132,13 +234,24 @@ impl World {
     }}
 
     /// Bootstrap MUD from grounds up.
-    pub async fn bootstrap(name: &str) -> Result<String, std::io::Error> {
+    /// 
+    /// # Args
+    /// - `name` of the world (file). Preferably a single word…
+    //
+    // This is generally called only via [`load_or_bootstrap()`].
+    //
+    async fn bootstrap(name: &str) -> Result<String, std::io::Error> {
         log::warn!("Bootstrapping - no previous world setup detected …");
+        
         tokio::fs::create_dir_all((*DATA_PATH).as_str()).await?;
+        
         // Bootstrap the "subsystems"…
         Player::bootstrap().await?;
         Room::bootstrap().await?;
         Area::bootstrap().await?;
+        
+        let Ok(name) = name.as_id() else { panic!("World name '{name}' undecipherable! Fix!") };
+        
         log::warn!("Bootstrap - generating world skeleton '{}/{}.world'", *DATA_PATH, name);
         let world = serde_json::json!({
             "title": "RustROM World",
@@ -224,11 +337,11 @@ impl DoesSave for World {
             g.save().await?;
         }
 
-        // player save/#.save files:
-        for player in self.players.values() {
-            let mut g = player.write().await;
-            g.save().await?;
-        }
+        // // player save/#.save files - commented out but left here as a reminder of sorts.
+        // for player in self.players.values() {
+        //     let mut g = player.write().await;
+        //     g.save().await?;
+        // }
 
         Ok(())
     }

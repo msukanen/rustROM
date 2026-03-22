@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, force_item_to_player, item::{Item, inventory::Storage}, show_help, show_help_if_needed, tell_user, traits::{Identity, Owned}, util::Broadcast};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, force_item_to_player, item::{Item, inventory::Storage}, show_help, show_help_if_needed, tell_user, traits::{Identity, Owned}, util::{Broadcast, comm::TellFrom}};
 
 pub struct GiveCommand;
 
@@ -68,7 +68,7 @@ impl Command for GiveCommand {
                                 subtype: None,
                                 to_player: recv.id().into(),
                                 message: format!("<c cyan>{}</c> gives you '{}'", giver, item_name),
-                                from_player: giver,
+                                from_player: giver.into(),
                             });
                         }
                     } else {
