@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{item::{inventory::{ContainerType, Storage, StorageCapacity}, Item, ItemError, ItemMap}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{owned::{Owner, OwnerError}, Identity, Owned}, world::room::MAX_ITEMS_IN_ROOM};
+use crate::{item::{Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
@@ -62,6 +62,11 @@ impl From<ContainerType> for Content {
 
 impl Storage for Content {
     fn try_insert(&mut self, item: Item) -> Result<(), ItemError> {
+        if !self.is_container() {
+            log::trace!("Amusing attempt, but '{}' is not a container and thus cannot hold '{}'", self.id(), item.id());
+            return Err(ItemError::NotContainer(item));
+        }
+
         let c = item.num_items() + 1;
         if self.space() < c {
             log::debug!("No space left in container.");
@@ -82,7 +87,7 @@ impl Storage for Content {
             return Ok(item);
         }
 
-        // Search by e.g. title… slooowly…
+        // Search by e.g. title… slowly and unsurely ;-)
         let mut found = None;
         for (c_id, item) in &mut self.contents {
             if c_id.contains(&id)
@@ -96,7 +101,7 @@ impl Storage for Content {
             log::debug!("'{f_id}' removed from '{}'.", self.id());
             return Ok(self.contents.remove(&f_id).unwrap());
         } else {
-            log::debug!("Nothing resembling '{id}' found in '{}'…", self.id());
+            log::trace!("Nothing resembling '{id}' found in '{}'…", self.id());
         }
 
         Err(ItemError::NotFound)
@@ -137,4 +142,11 @@ impl Owned for Content {
     fn original_owner(&self) -> &str { self.owner.original_owner() }
     fn set_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_owner(owner_id) }
     fn set_original_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_original_owner(owner_id) }
+}
+
+impl StorageIdentity for Content {
+    fn is_container(&self) -> bool {
+        // Obviously, things with zero `max_capacity` are not considered containers at all.
+        self.max_capacity > 0
+    }
 }
