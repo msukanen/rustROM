@@ -1,12 +1,12 @@
 //! "Make room!" - the [Room] live here.
-use std::{collections::{HashMap, HashSet, VecDeque}, fmt::Display, fs, path::PathBuf, sync::{Arc, Weak}};
+use std::{collections::{HashMap, HashSet, VecDeque}, fs, path::PathBuf, sync::{Arc, Weak}};
 
 use async_trait::async_trait;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area}};
+use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area, exit::{Exit, ExitState}}};
 
 pub(crate) static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 /// Max number of items in a [Room], whether on ground or otherwise.
@@ -14,54 +14,6 @@ pub(crate) static MAX_ITEMS_IN_ROOM: usize = 1_000;
 
 pub enum RoomError {
     NoRoom,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum ExitState {
-    Open,
-    Closed,
-    Locked { key_id: String }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Exit {
-    pub destination: String,
-    #[serde(default)]
-    pub state: ExitState,
-}
-
-impl PartialEq for Exit {
-    fn eq(&self, other: &Self) -> bool {
-        self.destination == other.destination
-    }
-}
-
-impl Display for Exit {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.destination)
-    }
-}
-
-impl From<&str> for Exit {
-    fn from(destination: &str) -> Self {
-        Self {
-            destination: destination.into(),
-            state: ExitState::default(),
-        }
-    }
-}
-
-// Just a "lazy convenience" From<>…
-impl From<&&str> for Exit {
-    fn from(value: &&str) -> Self {
-        (*value).into()
-    }
-}
-
-impl Default for ExitState {
-    fn default() -> Self {
-        ExitState::Open
-    }
 }
 
 #[inline]
@@ -214,6 +166,15 @@ impl Room {
     fn default_container(id: &str) -> Container {
         Container::from(ContainerType::Room(id.into()))
     }
+
+    /// Change state of one of the [Room] [Exit].
+    pub fn set_exit_state(&mut self, exit: Direction, state: ExitState) {
+        if let Some(exit) = self.exits.get_mut(&exit) {
+            exit.state = state
+        } else {
+            log::debug!("Room '{}' does not have exit '{exit:?}'", self.id());
+        }
+    }
 }
 
 impl Description for Room {
@@ -321,7 +282,7 @@ impl DoesSave for Room {
 
 impl Room {
     pub(crate) fn shallow_copy(&mut self, other: &Self) {
-        self.id = other.id.clone();
+        //self.id = other.id.clone();
         self.description = other.description.clone();
         self.title = other.title.clone();
         self.exits = other.exits.clone();
@@ -335,15 +296,13 @@ mod room_tests {
     /// See that [Room] and [RoomFile] stay in sync…
     #[test]
     fn test_room_serialization_sync() {
-        let room_json = r#"{
+        let room: Room = serde_json::from_str(r#"{
             "id": "nexus",
             "title": "The Nexus",
             "description": "Center of the world.",
             "exits": {},
             "parent_id": "root"
-        }"#;
-        
-        let room: Room = serde_json::from_str(room_json).unwrap();
+        }"#).unwrap();
         assert_eq!(room.id, "nexus");
     }    
 }
