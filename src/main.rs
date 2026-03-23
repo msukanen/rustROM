@@ -70,8 +70,13 @@ pub(crate) struct CmdLineArgs {
     #[arg(long)]                                                autosave_queue_interval: Option<u64>,
 }
 
+/// Main entrance.
+//
+// Main is a bit monstrous place, but bear with it.
+//
 #[tokio::main]
 async fn main() {
+    // some constants to deal with [World]-specific choices that aren't present for a reason or other…
     const GREETING: &str = "Welcome to RustROM!";
     const PROMPT_LOGIN: &str = "What do we call you?: ";
     const PROMPT_PASSWD1: &str = "Password: ";
@@ -97,20 +102,22 @@ async fn main() {
     ));{
         log::info!("Connecting dots …");
         let w = world.read().await;
+        // interconnect [Room] instances with their designated [Area]s…
         for room in w.rooms.values() {
             let mut room_lock = room.write().await;
             if let Some(area) = w.areas.get(&room_lock.parent_id) {
-                log::trace!("… making ↑ connect for room '{} / {}' to area '{}'…",
+                let mut area_lock = area.write().await;
+                area_lock.rooms.insert(room_lock.id().into(), Arc::downgrade(room));
+                room_lock.parent = Arc::downgrade(area);
+                log::trace!("… made ↑ connect for room '{} / {}' to area '{}'…",
                     room_lock.id(),
                     room_lock.title(),
                     room_lock.parent_id
                 );
-                let mut area_lock = area.write().await;
-                area_lock.rooms.insert(room_lock.id().into(), Arc::downgrade(room));
-                room_lock.parent = Arc::downgrade(area);
-                log::trace!("… connection success.");
             } else {
-                log::warn!("… connection FAILED: area '{}' does not exist?!", room_lock.parent_id);
+                // NOTE: lack of parent [Area] is occasionally intentional but usually not.
+                //       We'll issue a warning in both cases.
+                log::warn!("… connecting room '{}' FAILED: area '{}' does not exist?!", room_lock.id(), room_lock.parent_id);
             }
         }
 
@@ -119,15 +126,14 @@ async fn main() {
             (None, None) => panic!("Neither 'root' area nor 'root' room exist!?"),
             (None, _) => panic!("'root' area does no exist!?"),
             (_, None) => panic!("'root' room is a miss!?"),
-            _ => ()
+            _ => ()// yay!
         }
     }
 
-    // Bootstrap helps, if needed ...
+    // Bootstrap and load [Help] entries …
     Help::bootstrap(args.bootstrap_url).await.expect("Bootstrapping failed?!");
-    // Load help files ...
     let (help_core, help_aliases) = Help::load_all().await.expect("Oopsie - we're helpless - no help available?!");
-    HELP_REGISTRY.get_or_init(|| {
+    HELP_REGISTRY.get_or_init(move || {
         RwLock::new((help_core, help_aliases))
     });
 
@@ -156,8 +162,8 @@ async fn main() {
         let world = world.clone();
         let bad_words = bad_words.clone();
 
-        // Spawn a new task to handle this client's connection.
-        // This lets us to handle multiple clients concurrently.
+        // Spawn a new task to handle this client's connection,
+        // which lets us to handle multiple clients concurrently.
         tokio::spawn(async move {
             // Split the socket into a reader and a writer.
             let (reader, mut writer) = socket.into_split();
@@ -183,25 +189,27 @@ async fn main() {
             // This is the main-loop for the client.
             //
             loop {
-                // Check if player is logging out...
+                // Check if [Player] is logging out (due disconnect or otherwise)…
                 if let ClientState::Logout = &state {
                     let mut w = world.write().await;
                     if let Some(p) = w.players_by_sockaddr.remove(&addr) {
                         // drop the named mapping here as it's not needed for logout.
-                        w.players.remove(p.read().await.id());
-                        w.players_to_logout.push(p);
+                        let lock = p.read().await;
+                        w.players.remove(lock.id());
                         if !abrupt_dc {
-                            tell_user!(&mut writer, "<c cyan>Goodbye! See you soon again!</c>\n");
+                            tell_user!(&mut writer, "\n<c cyan>Goodbye {}! See you soon again!</c>\n", lock.id());
                         }
+                        drop(lock);
+                        w.players_to_logout.push(p);
                     }
                     break;
                 }
 
-                // IMPORTANT: wipe the buffer before each read_line(). Instead of
+                // IMPORTANT: wipe the buffer before each read_line() as instead of
                 //            clearing the buffer on its own, read_line() keeps
                 //            accumulating onto it… we'd run out of memory sooner
                 //            or later.
-                line.clear();
+                line.clear();// ← !!!
 
                 tokio::select! {
                     // --- First Branch: Read input from the client ---
@@ -379,8 +387,8 @@ async fn main() {
 
                     // --- Second Branch: Receive broadcast messages from other clients/system itself ---
                     result = rx.recv() => {
-                        // We handle *majority* of broadcast messages in Playing state only,
-                        // which avoids e.g. the editor modes from being disturbed.
+                        // Majority of broadcast messages are treated as "Playing state only",
+                        // which avoids e.g. the editor modes from being disturbed (too much).
                         match (&state, result) {
                             (ClientState::Playing, Ok(msg)) => {
                                 if let Some(p) = world.read().await
