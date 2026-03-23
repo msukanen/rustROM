@@ -50,8 +50,8 @@ impl Area {
         Ok(())
     }
 
-    #[cfg(test)]
     /// A blank slate.
+    #[cfg(test)]
     pub(crate) fn blank() -> Self { Self {
         id: "".into(),
         title: "".into(),
@@ -83,20 +83,26 @@ impl DoesSave for Area {
 
 #[cfg(test)]
 mod area_tests {
-    use std::path::PathBuf;
+    use std::{env, fs, path::PathBuf};
 
-    use log::debug;
+    use crate::DATA;
 
     use super::*;
 
+    /// Test area loading.
+    /// 
+    /// Bear in mind that this test requires `data/areas/root.area` to be
+    /// in out-of-the-box original shape and that `RUSTROM_DATA` env var
+    /// is properly set to point to `data` directory…
+    /// 
+    /// `RUSTROM_DATA` is generally set either in shell or in `.cargo/config.toml`.
     #[test]
     fn load_area() {
         let _ = env_logger::try_init();
-        let contents = std::fs::read_to_string(PathBuf::from(format!("{}/root.area", *AREA_PATH))).expect("Cannot find?!");
-        debug!("Con10z:\n{}", contents);
-        let area: Area = serde_json::from_str(&contents).unwrap();
-        debug!("Area name: \"{}\"", area.id);
-        debug!("     desc: \"{}\"", area.description);
-        
+        DATA.get_or_init(|| env::var("RUSTROM_DATA").unwrap());
+        let area: Area = serde_json::from_str(&fs::read_to_string(PathBuf::from(format!("{}/root.area", *AREA_PATH))).expect("Cannot find?!")).unwrap();
+        assert_eq!("root", area.id);
+        assert_eq!("RustROM Root", area.title);
+        assert_eq!("The very basic base of baseness…", area.description);
     }
 }
