@@ -42,118 +42,31 @@ impl Command for GotoCommand {
 
 #[cfg(test)]
 mod goto_tests {
+
     use std::sync::Arc;
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{player::Player, util::{Broadcast, ClientState}, world::{area::Area, room::{Exit, ExitState, Room}, World}};
+    use crate::{world_for_tests, async_client_for_tests, async_server_for_tests, player::Player, util::{Broadcast, ClientState}, world::{area::Area, room::{Exit, ExitState, Room}, World}};
 
     use super::*;
 
     #[tokio::test]
     async fn go_a_to_b() {
         let _ = env_logger::try_init();
+
         log::info!("Preparing the stage …");
-        let w = Arc::new(RwLock::new(World::blank()));
-        let a = Arc::new(RwLock::new({
-            let mut area = Area::blank();
-            area.id = "area".into();
-            area
-        }));
+
         // stage the World…
-        {
-            let mut world_lock = w.write().await;
-            
-            // room #1
-            let r = Arc::new(RwLock::new(Room::blank(Some("void"))));{
-                let mut room_lock = r.write().await;
-                room_lock.description = "Alpha".into();
-                room_lock.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: ExitState::Open });
-                room_lock.parent_id = "area".into();
-                room_lock.parent = Arc::downgrade(&a);
-            }
-            world_lock.rooms.insert("void".into(), r);
-            
-            // room #2
-            let r = Arc::new(RwLock::new(Room::blank(Some("clearing"))));{
-                let mut room_lock = r.write().await;
-                room_lock.description = "Omega".to_string();
-                room_lock.exits.insert(Direction::West, Exit { destination: "void".into(), state: ExitState::Open });
-                room_lock.parent_id = "area".into();
-                room_lock.parent = Arc::downgrade(&a);
-            }
-            world_lock.rooms.insert("clearing".into(), r);
-
-            // put the area into play
-            world_lock.areas.insert("root".to_string(), a);
-            drop(world_lock);
-        }
-        log::info!("World staged.");
-
+        let w = world_for_tests!();
         let p = Arc::new(RwLock::new(Player::new("ani")));
         p.write().await.location = "void".into();
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let (tx, _) = broadcast::channel::<Broadcast>(1);
-
-        let client_task = tokio::spawn(async move {
-            let (reader, mut writer) = TcpStream::connect(addr).await.unwrap().into_split();
-            log::debug!("client_task: connected.");
-            let mut reader = BufReader::new(reader);
-            let mut buffer = String::new();
-
-            // Send the "look" command
-            writer.write_all(b"look\n").await.unwrap();
-            // Send the "goto" command
-            writer.write_all(b"goto east\n").await.unwrap();
-
-            // Now, read all the output until the server closes the connection.
-            reader.read_to_string(&mut buffer).await.unwrap();
-            log::debug!("client_tast: server response|→{}←|", buffer);
-            buffer
-        });
-        log::info!("Client task prepped…");
-
-        // 4. Server-side logic now simulates the main loop for two commands.
-        let server_task = tokio::spawn(async move {
-            let (server_socket, client_addr) = listener.accept().await.unwrap();
-            log::debug!("server_task: connection from {addr:?}");
-            w.write().await.players_by_sockaddr.insert(client_addr, p);
-            let (server_reader, mut server_writer) = server_socket.into_split();
-            let mut server_reader = BufReader::new(server_reader);
-            let mut line = String::new();
-            log::debug!("server_task: player_arc?");
-            let player_arc = w.read().await.players_by_sockaddr.get(&client_addr).unwrap().clone();
-            log::debug!("server_task: player_arc ok");
-            player_arc.write().await.push_state(ClientState::Playing);
-
-            // Handle "look" command
-            server_reader.read_line(&mut line).await.unwrap();
-            log::info!("server_task: client cmd#1 \"{}\"", line.trim());
-            let ctx = CommandCtx {
-                player: player_arc.clone(),
-                state: player_arc.read().await.state(),
-                world: &w,
-                tx: &tx,
-                args: &line.trim(),
-                writer: &mut server_writer };
-            crate::cmd::parse_and_execute(ctx).await;
-            
-            // Handle "goto east" command
-            line.clear();
-            server_reader.read_line(&mut line).await.unwrap();
-            log::info!("server_task: client cmd#2 \"{}\"", line.trim());
-            let ctx = CommandCtx {
-                player: player_arc.clone(),
-                state: player_arc.read().await.state(),
-                world: &w,
-                tx: &tx,
-                args: &line.trim(),
-                writer: &mut server_writer };
-            crate::cmd::parse_and_execute(ctx).await;
-        }); // `server_socket` is dropped here, closing the connection.
-        log::info!("Server task prepped…");
+        let client_task = async_client_for_tests!(addr, "look", "goto east");
+        let server_task = async_server_for_tests!(w, listener, tx, addr, p, 2);
 
         // wait for the client task to finish and get the output…
         let (_, client_out) = tokio::join!(server_task, client_task);

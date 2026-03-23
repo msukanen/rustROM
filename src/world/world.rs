@@ -347,6 +347,43 @@ impl DoesSave for World {
     }
 }
 
+#[macro_export]
+macro_rules! world_for_tests {
+    () => {{
+        let w = Arc::new(RwLock::new(World::blank()));
+        let a = Arc::new(RwLock::new({
+            let mut area = Area::blank();
+            area.id = "area".into();
+            area
+        }));
+        {
+            let mut world_lock = w.write().await;
+            // room #1
+            let r = Arc::new(RwLock::new(Room::blank(Some("void"))));{
+                let mut room_lock = r.write().await;
+                room_lock.description = "Alpha".into();
+                room_lock.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: ExitState::Open });
+                room_lock.parent_id = "area".into();
+                room_lock.parent = Arc::downgrade(&a);
+            }
+            world_lock.rooms.insert("void".into(), r);
+        
+            // room #2
+            let r = Arc::new(RwLock::new(Room::blank(Some("clearing"))));{
+                let mut room_lock = r.write().await;
+                room_lock.description = "Omega".to_string();
+                room_lock.exits.insert(Direction::West, Exit { destination: "void".into(), state: ExitState::Open });
+                room_lock.parent_id = "area".into();
+                room_lock.parent = Arc::downgrade(&a);
+            }
+            world_lock.rooms.insert("clearing".into(), r);
+            // put the area into play
+            world_lock.areas.insert("root".to_string(), a);
+        }
+        w
+    }}
+}
+
 #[cfg(test)]
 mod world_tests {
     /// Let's see how the threads react to the core world being super busy with global locks.
