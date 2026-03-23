@@ -186,12 +186,12 @@ fn insert_nth_line(text: &str, line_num: usize, text_to_insert: &str) -> String 
     }
 
     let mut lines: Vec<&str> = text.lines().collect();
-    let index = line_num - 1;
+    let index = (line_num - 1).min(lines.len() + 10);
 
     if index >= lines.len() {
-        // If index is out of bounds, just append
-        // TODO: append X empty lines if inserted text would be "far" beyond bounds.
-        // TODO: see that X isn't stupidly large number though...
+        while lines.len() < index {
+            lines.push("");
+        }
         lines.push(text_to_insert);
     } else {
         lines.insert(index, text_to_insert);
