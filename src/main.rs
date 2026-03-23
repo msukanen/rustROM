@@ -113,6 +113,14 @@ async fn main() {
                 log::warn!("… connection FAILED: area '{}' does not exist?!", room_lock.parent_id);
             }
         }
+
+        // final coherency check…
+        match (w.areas.get("root"), w.rooms.get("root")) {
+            (None, None) => panic!("Neither 'root' area nor 'root' room exist!?"),
+            (None, _) => panic!("'root' area does no exist!?"),
+            (_, None) => panic!("'root' room is a miss!?"),
+            _ => ()
+        }
     }
 
     // Bootstrap helps, if needed ...
