@@ -21,7 +21,9 @@ impl Command for GotoCommand {
         let mut do_translocate_to = None;
         do_in_current_room!(ctx, |room|{
             if let Some(exit) = room.read().await.exits.get(&exit).cloned() {
-                if ctx.world.read().await.rooms.get(&exit.destination).is_some() {
+                if exit.is_closed() {
+                    tell_user!(ctx.writer, "Well… the way to {} is closed. Try open it, maybe?\n", exit.destination);
+                } else if ctx.world.read().await.rooms.get(&exit.destination).is_some() {
                     // translocate afterwards so that all currently held locks are released first.
                     do_translocate_to = Some((room.read().await.id().to_string(), exit.destination.clone()));
                 } else {
@@ -47,7 +49,7 @@ mod goto_tests {
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
-    use crate::{world_for_tests, async_client_for_tests, async_server_for_tests, player::Player, util::{Broadcast, ClientState}, world::{area::Area, room::{Exit, ExitState, Room}, World}};
+    use crate::{async_client_for_tests, async_server_for_tests, player::Player, util::{Broadcast, ClientState}, world::{World, area::Area, exit::*, room::Room}, world_for_tests};
 
     use super::*;
 
@@ -80,5 +82,42 @@ mod goto_tests {
         assert!(output_string.contains("Alpha"));
         assert!(output_string.contains("Omega"));
         assert!(output_string.contains("[ani]"));
+    }
+
+    #[tokio::test]
+    async fn try_go_a_to_b_via_closed_exit() {
+        let _ = env_logger::try_init();
+
+        log::info!("Preparing the stage …");
+
+        // stage the World…
+        let w = world_for_tests!();
+        // close void's east exit…
+        {
+            let mut lock = w.write().await;
+            if let Some(room) = lock.rooms.get_mut("void") {
+                room.write().await.set_exit_state(Direction::East, ExitState::Closed);
+            }
+        }
+        let p = Arc::new(RwLock::new(Player::new("ani")));
+        p.write().await.location = "void".into();
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (tx, _) = broadcast::channel::<Broadcast>(1);
+        let client_task = async_client_for_tests!(addr, "look", "goto east");
+        let server_task = async_server_for_tests!(w, listener, tx, addr, p, 2);
+
+        // wait for the client task to finish and get the output…
+        let (_, client_out) = tokio::join!(server_task, client_task);
+        let output_string = client_out.unwrap();
+
+        // de-grit output_string... (strip ANSI)
+        let re = regex::Regex::new(r"\x1b\[[0-9;]*m").unwrap();
+        let output_string = re.replace_all(&output_string, "");
+
+        // assert that the output contains the description of BOTH rooms.
+        assert!(output_string.contains("Alpha"));
+        assert!(output_string.contains("the way to clearing is closed"));
     }
 }
