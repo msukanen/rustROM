@@ -60,6 +60,10 @@ impl Item {
         }
     }
 
+    /// Craft some new item…
+    /// 
+    /// # Args
+    /// - `item_type` of the new item.
     pub fn new(item_type: ItemType) -> Self {
         match item_type {
             ItemType::Weapon => Self::Weapon(Weapon::new(WeaponType::Melee)),
