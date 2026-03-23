@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{inventory::{storage::Identity as StorageId, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{owned::OwnerError, Identity, Owned}};
+use crate::{item::{inventory::{storage::StorageIdentity, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{owned::OwnerError, Identity, Owned}};
 
 pub(crate) type ItemMap = HashMap<String, Item>;
 
@@ -119,7 +119,7 @@ impl Item {
     }
 }
 
-impl StorageId for Item {
+impl StorageIdentity for Item {
     fn is_container(&self) -> bool {
         match self {
             Self::Container(_) => true,

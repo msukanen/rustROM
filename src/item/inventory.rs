@@ -4,7 +4,7 @@ pub(crate) mod storage;
 pub(crate) use storage::{Storage, StorageCapacity};
 pub(crate) mod content;
 pub(crate) use content::Content;
-use crate::{item::{inventory::storage::Identity as StorageId, item::Item, ItemError}, traits::{owned::{OwnerError, UNSPECIFIED_OWNER}, Identity, Owned}};
+use crate::{item::{inventory::storage::StorageIdentity, item::Item, ItemError}, traits::{owned::{OwnerError, UNSPECIFIED_OWNER}, Identity, Owned}};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ContainerType {
@@ -138,7 +138,7 @@ impl From<ContainerType> for Container {
     }
 }
 
-impl StorageId for Container {
+impl StorageIdentity for Container {
     fn is_container(&self) -> bool { true }
 }
 

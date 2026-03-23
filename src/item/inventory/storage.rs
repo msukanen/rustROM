@@ -25,6 +25,8 @@ pub trait Storage {
     fn is_empty(&self) -> bool;
 }
 
-pub trait Identity {
+/// Introducing identity crisis for all sorts of storage.
+pub trait StorageIdentity {
+    /// Check if this thing actually is a container at all…
     fn is_container(&self) -> bool;
 }
