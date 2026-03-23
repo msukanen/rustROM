@@ -42,7 +42,7 @@ impl Command for GotoCommand {
 
 #[cfg(test)]
 mod goto_tests {
-    use std::{net::SocketAddr, str::FromStr, sync::Arc};
+    use std::sync::Arc;
 
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
 
