@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{redit::ReditCommand, translocate::translocate, Command, CommandCtx}, show_help, tell_user, traits::Identity, util::direction::Direction, validate_builder, world::room::{Exit, ExitState, Room}};
+use crate::{cmd::{Command, CommandCtx, redit::ReditCommand, translocate::translocate}, show_help, tell_user, traits::Identity, util::direction::Direction, validate_builder, world::{exit::{Exit, ExitState}, room::Room}};
 
 pub struct DigCommand;
 
@@ -66,6 +66,12 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
     Some((dir, new_room_id))
 }
 
+/// Create a new [Room] at `dir`, making a bi-directional way there from current [Room].
+/// 
+/// # Args
+/// - `ctx`…
+/// - `dir` which way to make the new [Room].
+/// - `id` for the new [Room].
 async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str) -> bool {
     let curr_id = {
         let p = ctx.player.read().await;
@@ -73,19 +79,23 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
     };
     let mut room = Room::blank(Some(id));
     room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open });
-    let lock = Arc::new(RwLock::new(room));
-    
     let mut w = ctx.world.write().await;
-    w.rooms.insert(id.into(), lock.clone());
-    log::debug!("Room inserted.");
+    let lock;
 
     if let Some(curr_arc) = w.rooms.get(&curr_id) {
         let mut r = curr_arc.write().await;
+        room.parent_id = r.parent_id.clone();
+        room.parent = r.parent.clone();
+        lock = Arc::new(RwLock::new(room));
         r.exits.insert(dir, Exit { destination: id.into(), state: ExitState::Open });
+        // we'll insert the room into World a bit later below…
     } else {
         log::error!("Player '{}' was in a non-existent room '{}'", ctx.player.read().await.id(), curr_id);
         return false;
     }
+    // …pesky borrows made me put this line here instead of the if-block above…
+    w.rooms.insert(id.into(), lock.clone());
+    log::debug!("Room inserted.");
 
     tell_user!(ctx.writer, format!("Blank room '<c cyan>{}</c>' created.\n", id));
     true
