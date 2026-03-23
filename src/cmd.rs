@@ -39,6 +39,7 @@ mod who;
 mod cmd_alias;// special case of specialness…
 mod sync;
 mod shutdown;
+mod open;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
