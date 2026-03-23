@@ -15,7 +15,6 @@ impl Command for DropCommand {
             writer: ctx.writer,
             args: &format!("{} ground", ctx.args)
         };
-        let cmd = PutCommand;
-        cmd.exec(&mut ctx).await
+        PutCommand.exec(&mut ctx).await
     }
 }

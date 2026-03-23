@@ -244,7 +244,7 @@ impl IsRecipient for Broadcast {
             },
             Self::Tell { to_player, .. } => p.id() == *to_player || *to_player == "all",
             Self::Force { to_player, from_player, message } => {
-                // 1.) AoE with None as to_player, otherwise targeted.
+                // 1.) do AoE with None as to_player, otherwise targeted.
                 // 2.) no (potentially recursive!) self-forcing and
                 // 3.) no (the worst case) re-'force' in general…
                 to_player.as_ref().map_or(true, |to| *to == p.id())
