@@ -1,8 +1,8 @@
 //! Looking around, looking at, looking into…
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::inventory::Storage, tell_user, traits::{Description, Identity}};
+use crate::{cmd::{Command, CommandCtx, hedit::title}, do_in_current_room, item::inventory::Storage, tell_user, traits::{Description, Identity}};
 
 pub struct LookCommand;
 
@@ -95,6 +95,13 @@ async fn look_at_or_into(ctx: &mut CommandCtx<'_>, spec: LookSpecifier, target: 
                     tell_user!(ctx.writer, "You see… '{}', clearly.\n", i.id());
                 }
             }
+            // [Player]'s own stuff…
+            let lock = ctx.player.read().await;
+            for i in lock.inventory.items().values() {
+                if i.id().contains(&target_lc) {
+                    tell_user!(ctx.writer, "In your inventory you notice… '{}', apparently.\n", i.id());
+                }
+            }
         }),
         _ => ()
     }
@@ -112,8 +119,18 @@ pub(crate) async fn look_at_current_room(ctx: &mut CommandCtx<'_>) {
 
         /* ITEMS ON FLOOR */{
             if !r.is_empty() {
-                for (hash, _) in r.contents.items() {
-                    desc.push_str(&format!("  <c red>//</c> {}\n", hash));
+                let mut counts = HashMap::new();
+                // let's try avoid scroll of doom a bit…
+                for item in r.contents.items().values() {
+                    *counts.entry(item.title()).or_insert(0) += 1;
+                }
+
+                for (title, count) in counts {
+                    if count > 1 {
+                        desc.push_str(&format!("  <c red>//</c> {title} ({count})\n"));
+                    } else {
+                        desc.push_str(&format!("  <c red>//</c> {title}\n"));
+                    }
                 }
                 desc.push_str("\n");
             }

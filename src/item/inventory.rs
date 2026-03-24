@@ -4,7 +4,7 @@ pub(crate) mod storage;
 pub(crate) use storage::{Storage, StorageCapacity};
 pub(crate) mod content;
 pub(crate) use content::Content;
-use crate::{item::{inventory::storage::StorageIdentity, item::Item, ItemError}, traits::{owned::{OwnerError, UNSPECIFIED_OWNER}, Identity, Owned}};
+use crate::{item::{BlueprintID, ItemError, inventory::storage::StorageIdentity, item::Item}, traits::{Identity, Owned, owned::{OwnerError, UNSPECIFIED_OWNER}}};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ContainerType {
@@ -210,6 +210,17 @@ impl Owned for Container {
 impl Container {
     pub(crate) fn set_id(&mut self, id: &str) {
         unimplemented!("No set_id() defined.");
+    }
+}
+
+impl BlueprintID for Container {
+    fn bp_id<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Backpack(c) |
+            Self::PlayerInventory(c) |
+            Self::Room(c)
+                => c.bp_id()
+        }
     }
 }
 

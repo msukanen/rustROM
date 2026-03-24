@@ -2,13 +2,16 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, string::uuid_id::AsUuidId, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
+use crate::{item::{BlueprintID, Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, string::uuid_id::AsUuidId, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
 
 fn title_default() -> String { "container".into() }
+
+const BACKPACK_BP_ID: &'static str = "backpack";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
     id: String,
+    bp_id: String,
     #[serde(default = "title_default")] title: String,
     #[serde(default)] owner: Owner,
     max_capacity: usize,
@@ -41,6 +44,7 @@ impl From<ContainerType> for Content {
                 let title = "content-pc-inv".uuided();
                 Self {
                     id: title.clone(),
+                    bp_id: title.clone(),
                     title,
                     owner: Owner::default(),
                     max_capacity: MAX_ITEMS_PLAYER_INVENTORY,
@@ -54,6 +58,7 @@ impl From<ContainerType> for Content {
                 Self {
                     // NOTE: id "must" be set later by the [Room] itself.
                     id: title.clone(),
+                    bp_id: title.clone(),
                     title,
                     owner: Owner::default(),
                     max_capacity: MAX_ITEMS_IN_ROOM,
@@ -62,6 +67,7 @@ impl From<ContainerType> for Content {
             },
             ContainerType::Backpack => Self {
                 id: "content-backpack".uuided(),
+                bp_id: BACKPACK_BP_ID.into(),
                 // TODO: a bit more creativity for name/title…
                 title: "backpack".into(),
                 owner: Owner::default(),
@@ -188,4 +194,8 @@ impl StorageIdentity for Content {
         // Obviously, things with zero `max_capacity` are not considered containers at all.
         self.max_capacity > 0
     }
+}
+
+impl BlueprintID for Content {
+    fn bp_id<'a>(&'a self) -> &'a str { &self.bp_id }
 }

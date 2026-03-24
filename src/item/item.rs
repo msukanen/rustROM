@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{inventory::{Container, Storage, StorageCapacity, storage::StorageIdentity}, key::Key, weapon::{Weapon, WeaponType}}, traits::{Identity, Owned, owned::OwnerError}};
+use crate::{item::{BlueprintID, inventory::{Container, Storage, StorageCapacity, storage::StorageIdentity}, key::Key, weapon::{Weapon, WeaponType}}, traits::{Identity, Owned, owned::OwnerError}};
 
 pub type ItemMap = HashMap<String, Item>;
 
@@ -227,5 +227,15 @@ macro_rules! force_item_to_player {
 impl StorageIdentity for Item {
     fn is_container(&self) -> bool {
         matches!(self, Self::Container(_))
+    }
+}
+
+impl BlueprintID for Item {
+    fn bp_id<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Container(c) => c.bp_id(),
+            Self::Key(k) => k.bp_id(),
+            Self::Weapon(w) => w.bp_id(),
+        }
     }
 }

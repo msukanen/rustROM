@@ -1,15 +1,18 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{string::uuid_id::AsUuidId, traits::{Description, Identity, Owned, owned::{Owner, OwnerError}}};
+use crate::{item::BlueprintID, string::uuid_id::AsUuidId, traits::{Description, Identity, Owned, owned::{Owner, OwnerError}}};
 
 // TODO: naming creativity!
 fn title_default() -> String { "melee weapon".into() }
 // TODO: description creativity!
 fn desc_default() -> String { "a melee weapon of some sort".into() }
 
+const MELEE_BP_ID: &'static str = "weapon-melee";
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MeleeInfo {
     id: String,
+    bp_id: String,
     #[serde(default)] owner: Owner,
     #[serde(default = "title_default")] title: String,
     #[serde(default = "desc_default")] description: String,
@@ -24,7 +27,8 @@ impl Identity for MeleeInfo {
 impl Default for MeleeInfo {
     fn default() -> Self {
         Self {
-            id: Self::uuid(),
+            id: MELEE_BP_ID.uuided(),
+            bp_id: MELEE_BP_ID.into(),
             owner: Owner::default(),
             title: title_default(),
             description: desc_default(),
@@ -35,11 +39,9 @@ impl Default for MeleeInfo {
 impl MeleeInfo {
     #[cfg(test)]
     pub(crate) fn re_id(&mut self) -> &mut Self {
-        self.id = Self::uuid();
+        self.id = MELEE_BP_ID.uuided();
         self
     }
-
-    fn uuid() -> String { "weapon-melee".uuided() }
 }
 
 impl Owned for MeleeInfo {
@@ -58,4 +60,8 @@ impl MeleeInfo {
 
 impl Description for MeleeInfo {
     fn description<'a>(&'a self) -> &'a str { &self.description }
+}
+
+impl BlueprintID for MeleeInfo {
+    fn bp_id(&self) -> &str { &self.bp_id }
 }
