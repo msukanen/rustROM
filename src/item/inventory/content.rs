@@ -8,6 +8,7 @@ use crate::{item::{Item, ItemError, ItemMap, inventory::{ContainerType, Storage,
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
     id: String,
+    title: String,
     #[serde(default)]
     owner: Owner,
     max_capacity: usize,
@@ -28,23 +29,32 @@ impl StorageCapacity for Content {
     }
 }
 
-impl Identity for Content { fn id<'a>(&'a self) -> &'a str { &self.id }}
+impl Identity for Content {
+    fn id<'a>(&'a self) -> &'a str { &self.id }
+    fn title<'a>(&'a self) -> &'a str { &self.title }
+}
 
 impl From<ContainerType> for Content {
     fn from(value: ContainerType) -> Self {
         match value {
-            ContainerType::PlayerInventory => Self {
-                id: format!("content-pc-inv-{}", Uuid::new_v4()),
-                owner: Owner::default(),
-                max_capacity: MAX_ITEMS_PLAYER_INVENTORY,
-                contents: HashMap::new()
+            ContainerType::PlayerInventory => {
+                let title = format!("content-pc-inv-{}", Uuid::new_v4());
+                Self {
+                    id: title.clone(),
+                    title,
+                    owner: Owner::default(),
+                    max_capacity: MAX_ITEMS_PLAYER_INVENTORY,
+                    contents: HashMap::new()
+                }
             },
             ContainerType::Room(id) => {
                 log::debug!("Creating room inventory.");
+                let title = format!("content-room-{}", id);
 
                 Self {
                     // NOTE: id "must" be set later by the [Room] itself.
-                    id: format!("content-room-{}", id),
+                    id: title.clone(),
+                    title,
                     owner: Owner::default(),
                     max_capacity: MAX_ITEMS_IN_ROOM,
                     contents: HashMap::new()
@@ -52,6 +62,8 @@ impl From<ContainerType> for Content {
             },
             ContainerType::Backpack => Self {
                 id: format!("content-backpack-{}", Uuid::new_v4()),
+                // TODO: a bit more creativity for name/title…
+                title: "backpack".into(),
                 owner: Owner::default(),
                 max_capacity: 32,// TODO NOTE: arbitrary value.
                 contents: HashMap::new()
@@ -117,7 +129,16 @@ impl Storage for Content {
 
     fn contains(&self, id: &str) -> bool {
         // 'id' may or may not be preprocessed, so…
-        self.contents.contains_key(id.trim().to_lowercase().as_str())
+        let id = id.trim().to_lowercase();
+
+        self.contents.contains_key(&id) ||
+        self.contents.values().any(|item| {
+            if let Item::Container(c) = item {
+                c.contains(&id)
+            } else {
+                false
+            }
+        })
     }
 
     fn contains_r(&self, id: &str) -> Result<String, String> {
@@ -134,6 +155,24 @@ impl Storage for Content {
 
     fn is_empty(&self) -> bool {
         self.contents.is_empty()
+    }
+
+    fn get(&self, id: &str) -> Option<&Item> {
+        log::debug!("Attempting to get('{id}') from '{}'", self.id());
+
+        if let Some(exact) = self.contents.get(id) {
+            return Some(exact);
+        }
+
+        for item in self.contents.values() {
+            if let Item::Container(c) = item {
+                if let Some(exact) = c.get(id) {
+                    return Some(exact);
+                }
+            }
+        }
+
+        None
     }
 }
 

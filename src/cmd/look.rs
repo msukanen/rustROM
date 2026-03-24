@@ -78,10 +78,26 @@ async fn look_at_or_into(ctx: &mut CommandCtx<'_>, spec: LookSpecifier, target: 
     match target_lc.as_str() {
         "me"|"self"|"myself" => admire_self!(ctx),
         _ if target_lc == ctx.player.read().await.id() => admire_self!(ctx),
+        _ if matches!(spec, LookSpecifier::At) => do_in_current_room!(ctx, |room| {
+            let lock = room.read().await;
+            // present players first…
+            for p in lock.players.values() {
+                if let Some(other) = p.upgrade() {
+                    let other = other.read().await;
+                    if other.id().contains(&target_lc) {
+                        tell_user!(ctx.writer, "Looks like '{}' to you…\n", other.id());
+                    }
+                }
+            }
+            // items & other stuff…
+            for i in lock.contents.items().values() {
+                if i.id().contains(&target_lc) {
+                    tell_user!(ctx.writer, "You see… '{}', clearly.\n", i.id());
+                }
+            }
+        }),
         _ => ()
     }
-
-    tell_user!(ctx.writer, "Looking {} {} …\n", spec, target);
 }
 
 /// The looking glass… used by e.g. 'look' command, etc.
@@ -124,4 +140,42 @@ pub(crate) async fn look_at_current_room(ctx: &mut CommandCtx<'_>) {
     } otherwise {
         tell_user!(ctx.writer, "You see… nothing much else than a wall of white text on a dark surface?\n");
     });
+}
+
+#[cfg(test)]
+mod cmd_look_tests {
+    use std::sync::Arc;
+    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
+    use crate::{async_client_for_tests, async_server_for_tests, item::{Item, inventory::{Container, ContainerType, Content}, key::Key}, player::Player, player_and_listener_for_tests, string::ansi::AntiAnsi, util::{Broadcast, ClientState, direction::Direction}, world::{World, area::Area, exit::*, room::Room}, world_for_tests};
+    use super::*;
+
+    #[tokio::test]
+    async fn at_single_item() {
+        let _ = env_logger::try_init();
+        log::info!("Preparing the stage …");
+        let w = world_for_tests!();
+        let (p, listener, addr, tx) = player_and_listener_for_tests!();
+        // put some item into room
+        // give player the right key...
+        {
+            let w = w.read().await;
+            let r = w.rooms.get("void").unwrap();
+            let mut lock = r.write().await;
+            let item = Item::Key(Key::new("abloy-key-2", false));
+            lock.try_insert(item).unwrap();// we trust the system… *crosses fingers*
+        }
+
+        let client_task = async_client_for_tests!(addr, "look", "look at me", "look at abloy");
+        let server_task = async_server_for_tests!(w, listener, tx, addr, p, 3);
+
+        // wait for the client task to finish and get the output…
+        let (_, client_out) = tokio::join!(server_task, client_task);
+        let output_string = client_out.unwrap();
+        let output_string = output_string.strip_ansi();
+
+        // assert that the output contains the description of BOTH rooms.
+        assert!(output_string.contains("[ani]"));
+        assert!(output_string.contains("yourself"));
+        assert!(output_string.contains("abloy"));
+    }
 }

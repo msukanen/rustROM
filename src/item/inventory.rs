@@ -97,6 +97,16 @@ impl Storage for Container {
         }
     }
 
+    fn get(&self, id: &str) -> Option<&Item> {
+        log::debug!("Attempting to get('{id}') from '{}'", self.id());
+        match self {
+            Self::Backpack(c) |
+            Self::PlayerInventory(c) |
+            Self::Room(c)
+                => c.get(id)
+        }
+    }
+
     fn contains_r(&self, id: &str) -> Result<String, String> {
         match self {
             Self::Backpack(c)|
@@ -122,6 +132,15 @@ impl Identity for Container {
             Self::PlayerInventory(c)|
             Self::Room(c)
                 => c.id()
+        }
+    }
+
+    fn title<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.title()
         }
     }
 }
