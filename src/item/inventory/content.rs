@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::{item::{Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
+use crate::{item::{Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, string::uuid_id::AsUuidId, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
 
 fn title_default() -> String { "container".into() }
 
@@ -39,7 +38,7 @@ impl From<ContainerType> for Content {
     fn from(value: ContainerType) -> Self {
         match value {
             ContainerType::PlayerInventory => {
-                let title = format!("content-pc-inv-{}", Uuid::new_v4());
+                let title = "content-pc-inv".uuided();
                 Self {
                     id: title.clone(),
                     title,
@@ -62,7 +61,7 @@ impl From<ContainerType> for Content {
                 }
             },
             ContainerType::Backpack => Self {
-                id: format!("content-backpack-{}", Uuid::new_v4()),
+                id: "content-backpack".uuided(),
                 // TODO: a bit more creativity for name/title…
                 title: "backpack".into(),
                 owner: Owner::default(),

@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::traits::{Description, Identity, Owned, owned::{Owner, OwnerError}};
+use crate::{string::uuid_id::AsUuidId, traits::{Description, Identity, Owned, owned::{Owner, OwnerError}}};
 
 // TODO: naming creativity!
 fn title_default() -> String { "melee weapon".into() }
@@ -40,7 +39,7 @@ impl MeleeInfo {
         self
     }
 
-    fn uuid() -> String { format!("weapon-melee-{}", Uuid::new_v4())}
+    fn uuid() -> String { "weapon-melee".uuided() }
 }
 
 impl Owned for MeleeInfo {

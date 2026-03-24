@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
-use crate::traits::{Description, Identity, Owned, owned::{Owner, OwnerError}};
+use crate::{string::uuid_id::AsUuidId, traits::{Description, Identity, Owned, owned::{Owner, OwnerError}}};
 
 // TODO: naming creativity!
 fn title_default() -> String { "ranged weapon of some sort".into() }
@@ -25,7 +24,7 @@ impl Identity for RangedInfo {
 impl Default for RangedInfo {
     fn default() -> Self {
         Self {
-            id: format!("weapon-ranged-{}", Uuid::new_v4()),
+            id: "weapon-ranged".uuided(),
             title: title_default(),
             owner: Owner::default(),
             description: desc_default(),
