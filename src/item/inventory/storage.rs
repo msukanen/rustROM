@@ -14,6 +14,7 @@ pub trait Storage {
     fn take_out(&mut self, id: &str) -> Result<Item, ItemError>;
     /// See if some `id` is contained within.
     fn contains(&self, id: &str) -> bool;
+    fn get(&self, id: &str) -> Option<&Item>;
     /// See if something *resembling* `id` is contained within.
     /// 
     /// Note: **much** slower than [`Storage::contains`].
