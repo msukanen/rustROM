@@ -5,16 +5,17 @@ pub mod boolean;
 pub mod exclaim;
 
 pub mod newline;
-pub(crate) use newline::LineEndingExt;
+pub use newline::LineEndingExt;
 
 pub mod slug;
-pub(crate) use slug::Sluggable;
+pub use slug::Sluggable;
 
 use std::collections::HashSet;
-pub(crate) type WordSet = HashSet<String>;
+pub type WordSet = HashSet<String>;
 
-pub(crate) mod unicode;
-pub(crate) mod piglatin;
-pub(crate) mod alpha;
-pub(crate) mod robust_parse;
-pub(crate) mod rx;
+pub mod unicode;
+pub mod piglatin;
+pub mod alpha;
+pub mod robust_parse;
+pub mod rx;
+pub mod ansi;

@@ -3,7 +3,7 @@
 //! See README.md ...
 //! 
 //! The `main()` is a monster, but it's a friendly monster ;-)
-use std::{collections::{HashMap, HashSet}, ops::Deref, process::exit, sync::Arc};
+use std::{collections::HashSet, ops::Deref, sync::Arc};
 use clap::Parser;
 use once_cell::sync::{Lazy, OnceCell};
 use tokio::{
@@ -22,6 +22,7 @@ mod string;
 mod util;
 mod cmd;
 mod item;
+mod test;
 
 use crate::{cmd::{CommandCtx, force::ForceSource, help::HELP_REGISTRY, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload, SystemBroadcastType}, help::Help}};
 use crate::player::{access::Access, LoadError, Player};

@@ -1,10 +1,13 @@
 /// Do something in current room of residence...
 /// 
-/// # Arguments
+/// # Usage
+/// `do_in_current_room!(ctx, |room|, {block} [, otherwise {block}])`
+/// 
+/// # Args
 /// - `$ctx`— [CommandCtx]
 /// - `|room|`— will hold on to found room.
 /// - `$block`— some block of code.
-/// - [otherwise] `$otherwise`— execute this block if 'room' is for some reason unavailable.
+/// - [otherwise `$otherwise`]— execute this block if `room` is for some reason unavailable.
 #[macro_export]
 macro_rules! do_in_current_room {
     ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {{
@@ -26,8 +29,7 @@ macro_rules! do_in_current_room {
     }};
 }
 
-/// Check Read-only field.
-/// NOTE: this macro has to be called from an async context!
+/// **[[ASYNC-only]]** print a global field's state to [Player][crate::Player].
 #[macro_export]
 macro_rules! check_ro_field {
     ($ctx:expr, $field:expr, $accessor:ident) => {{
