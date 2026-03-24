@@ -7,12 +7,14 @@ use crate::traits::{Description, Identity, Owned, owned::{Owner, OwnerError}};
 // TODO: naming creativity!.
 fn title_default() -> String { "a key".into() }
 
+/// It's a me, a key!
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Key {
+    /// ID of the key. Unlike with other items, keys generally are *not* tagged with UUID.
     id: String,
     #[serde(default)] owner: Owner,
     #[serde(default = "title_default")] title: String,
-    #[serde(default = "title_default")] description: String,
+    #[serde(default = "title_default")] description: String,// = title_default…
     #[serde(default)] pub one_time: bool,
 }
 
