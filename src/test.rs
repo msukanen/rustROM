@@ -10,10 +10,8 @@ macro_rules! async_client_for_tests {
             log::debug!("client_task: connected.");
             let mut reader = BufReader::new(reader);
             let mut buffer = String::new();
-            $(  // Send the cmd
-                writer.write_all(format!("{}\n", $cmd).as_bytes()).await.unwrap();
-            )*
-
+            // Send the cmd(s)…
+            $(writer.write_all(format!("{}\n", $cmd).as_bytes()).await.unwrap();)*
             // Now, read all the output until the server closes the connection.
             reader.read_to_string(&mut buffer).await.unwrap();
             log::debug!("client_tast: server response|→{}←|", buffer);
@@ -36,6 +34,9 @@ macro_rules! async_server_for_tests {
             let player_arc = $w.read().await.players_by_sockaddr.get(&client_addr).unwrap().clone();
             log::debug!("server_task: player_arc ok");
             player_arc.write().await.push_state(ClientState::Playing);
+            player_arc.write().await.location = "nowhere-at-all".into();
+            // we don't care about translocate result here!
+            let _ = crate::translocate(&$w, None, "void".into(), player_arc.clone()).await;
 
             for i in 0..$num_cmd {
                 line.clear();
