@@ -86,6 +86,9 @@ impl Identity for Channel {
             Self::Qa => "Q&A",
         }
     }
+
+    /// For channels, their ID is their title.
+    fn title<'a>(&'a self) -> &'a str { self.id() }
 }
 
 impl TryFrom<&str> for Channel {

@@ -29,11 +29,11 @@ pub struct Help {
 
 impl Description for Help {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
 impl Identity for Help {
     fn id<'a>(&'a self) -> &'a str { &self.id }
+    fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
 #[derive(Debug)]

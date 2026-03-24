@@ -3,20 +3,29 @@ use uuid::Uuid;
 
 use crate::traits::{owned::{Owner, OwnerError}, Identity, Owned};
 
+// TODO: naming creativity!
+fn title_default() -> String { "ranged weapon of some sort".into() }
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RangedInfo {
     id: String,
     #[serde(default)]
     owner: Owner,
+    #[serde(default = "title_default")]
+    title: String,
 }
 
-impl Identity for RangedInfo { fn id<'a>(&'a self) -> &'a str { &self.id }}
+impl Identity for RangedInfo {
+    fn id<'a>(&'a self) -> &'a str { &self.id }
+    fn title<'a>(&'a self) -> &'a str { &self.title }
+}
 
 // TODO: Default is very likely temporary - but we'll use it for testing for now.
 impl Default for RangedInfo {
     fn default() -> Self {
         Self {
             id: format!("weapon-ranged-{}", Uuid::new_v4()),
+            title: title_default(),
             owner: Owner::default(),
         }
     }

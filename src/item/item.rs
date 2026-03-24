@@ -37,6 +37,16 @@ impl Identity for ItemError {
             _ => unimplemented!("Attempt to retrieve ID of an unfound item…")
         }
     }
+
+    fn title<'a>(&'a self) -> &'a str {
+        match self {
+            Self::NoSpace(i)|
+            Self::NotContainer(i)|
+            Self::TooLarge(i)
+                => i.title(),
+            _ => unimplemented!("Attempt to retrieve title of a non-existent item…")
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -115,6 +125,14 @@ impl Identity for Item {
             Self::Key(k) => k.id(),
         }
     }
+
+    fn title<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Container(c) => c.title(),
+            Self::Weapon(w) => w.title(),
+            Self::Key(k) => k.title(),
+        }
+    }
 }
 
 #[cfg(feature = "localtest")]
@@ -123,15 +141,6 @@ impl Item {
         match self {
             Self::Weapon(w) => w.set_id(id),
             _ => unimplemented!("set_id() is defined only for Weapon.")
-        }
-    }
-}
-
-impl StorageIdentity for Item {
-    fn is_container(&self) -> bool {
-        match self {
-            Self::Container(_) => true,
-            _ => false
         }
     }
 }
@@ -213,4 +222,10 @@ macro_rules! force_item_to_player {
             log::error!("Could NOT force item to player '{}': {e}", $ctx.player.read().await.id());
         }
     }};
+}
+
+impl StorageIdentity for Item {
+    fn is_container(&self) -> bool {
+        matches!(self, Self::Container(_))
+    }
 }

@@ -179,11 +179,11 @@ impl Room {
 
 impl Description for Room {
     fn description(&self) -> &str { &self.description }
-    fn title(&self) -> &str { &self.title }
 }
 
 impl Identity for Room {
     fn id<'a>(&'a self) -> &'a str { &self.id }
+    fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
 /// Finds all rooms within a given distance of a starting room using BFS.
@@ -269,6 +269,9 @@ impl Storage for Room {
     fn is_empty(&self) -> bool {
         self.contents.is_empty()
     }
+
+    /// There is no temporary loaning from [Room]!
+    fn get(&self, _: &str) -> Option<&Item> { None }
 }
 
 #[async_trait]

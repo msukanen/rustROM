@@ -26,6 +26,13 @@ impl Identity for Weapon {
             Self::Ranged(r) => r.id(),
         }
     }
+
+    fn title<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Melee(m) => m.title(),
+            Self::Ranged(r) => r.title(),
+        }
+    }
 }
 
 impl Weapon {

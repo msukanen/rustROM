@@ -64,11 +64,11 @@ impl Area {
 
 impl Description for Area {
     fn description(&self) -> &str { &self.description }
-    fn title(&self) -> &str { &self.title }
 }
 
 impl Identity for Area {
     fn id(&self) -> &str { &self.id }
+    fn title(&self) -> &str { &self.title }
 }
 
 #[async_trait]

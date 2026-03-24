@@ -15,6 +15,10 @@ impl Identity for ForceSource {
             Self::System => "«system»",
         }
     }
+
+    fn title<'a>(&'a self) -> &'a str {
+        self.id()
+    }
 }
 
 #[async_trait]

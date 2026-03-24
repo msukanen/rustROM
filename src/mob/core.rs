@@ -15,11 +15,11 @@ pub struct MobCore {
 
 impl Description for MobCore {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
 impl Identity for MobCore {
     fn id<'a>(&'a self) -> &'a str { &self.name }
+    fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
 impl IsMob for MobCore {
