@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{help::HelpCommand, Command, CommandCtx}, rerun_with_help, string::boolean::BooleanCheckExt, tell_user, validate_builder};
+use crate::{cmd::{Command, CommandCtx, help::HelpCommand}, rerun_with_help, string::boolean::BooleanCheckExt, tell_user, util::AsSetting, validate_builder};
 
 pub struct AdminCommand;
 
@@ -25,6 +25,6 @@ impl Command for AdminCommand {
         let ed = g.hedit.as_mut().unwrap();
         ed.dirty = true;
         ed.entry.admin = ctx.args.is_true();
-        tell_user!(ctx.writer, "Admin flag is now {}.\n", if ed.entry.admin {"set"} else {"unset"});
+        tell_user!(ctx.writer, "Admin flag is now {}.\n", ed.entry.admin.as_state());
     }
 }
