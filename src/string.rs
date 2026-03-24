@@ -19,3 +19,4 @@ pub mod alpha;
 pub mod robust_parse;
 pub mod rx;
 pub mod ansi;
+pub mod uuid_id;
