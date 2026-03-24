@@ -352,12 +352,12 @@ impl IsMob for Player {
 
 impl Description for Player {
     fn description<'a>(&'a self) -> &'a str { &self.description }
-    /// For [Player], 'title' is the same as their name.
-    fn title<'a>(&'a self) -> &'a str { &self.name }
 }
 
 impl Identity for Player {
     fn id<'a>(&'a self) -> &'a str { &self.name }
+    /// For [Player], a title is the same as their name.
+    fn title<'a>(&'a self) -> &'a str { &self.name }
 }
 
 #[cfg(test)]

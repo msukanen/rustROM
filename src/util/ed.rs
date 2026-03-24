@@ -28,7 +28,7 @@ pub enum EdResult {
 
 impl From<ParseIntError> for EditorError { fn from(value: ParseIntError) -> Self { Self::ParseIntError(value)}}
 
-pub(crate) trait Editor {
+pub trait Editor {
     fn set_description(&mut self, desc: &str);
 }
 
