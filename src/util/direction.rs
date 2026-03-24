@@ -58,7 +58,7 @@ impl Direction {
         }
     }
 
-    pub fn from_standard_str(value: &str) -> Result<Self, &'static str> {
+    pub fn try_from_std(value: &str) -> Result<Self, &'static str> {
         let result = Self::try_from(value);
         match result {
             Ok(Self::Custom(_)) => Err("That is not a standard direction …"),

@@ -31,7 +31,7 @@ async fn validate_args<'a>(ctx: &mut CommandCtx<'a>) -> Option<(Direction, &'a s
         show_help!(ctx, "dig"; None);
     }
 
-    let dir = match Direction::from_standard_str(args[0]) {
+    let dir = match Direction::try_from_std(args[0]) {
         Ok(dir) => dir,
         Err(_) => {
             tell_user!(ctx.writer, "<c red>Error!</c> '{}' is not a valid direction.\n\n", args[0]);
