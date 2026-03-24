@@ -3,6 +3,6 @@
     "title": "RustROM room #2",
     "description": "Next to the root, perhaps.",
     "exits": {
-        "West": { "destination":"root", "state":"Open" }
+        "West": { "destination":"root",      "state": {"Open": {"key_id": null }}}
     }
 }

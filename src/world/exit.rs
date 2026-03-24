@@ -66,3 +66,19 @@ impl Exit {
         !matches!(self.state, ExitState::Open{..})
     }
 }
+
+#[cfg(test)]
+mod room_exit_tests {
+    use super::*;
+
+    #[test]
+    fn exit_serde_deser() {
+        let _ = env_logger::try_init();
+        let exit = Exit {
+            destination: "nowhere-much".into(),
+            state: ExitState::Open { key_id: None }
+        };
+        let json = serde_json::to_string_pretty(&exit).unwrap();
+        log::debug!("JSON: {json}");
+    }
+}

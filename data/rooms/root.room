@@ -5,11 +5,11 @@
   "exits": {
     "North": {
       "destination": "does-not-exist",
-      "state": "Open"
+      "state": {"Open": {"key_id": null }}
     },
     "East": {
       "destination": "not-so-root",
-      "state": "Open"
+      "state": {"Open": {"key_id": null }}
     }
   },
   "contents": {
