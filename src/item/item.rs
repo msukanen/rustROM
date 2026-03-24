@@ -2,9 +2,9 @@ use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{inventory::{storage::StorageIdentity, Container, Storage, StorageCapacity}, weapon::{Weapon, WeaponType}}, traits::{owned::OwnerError, Identity, Owned}};
+use crate::{item::{inventory::{Container, Storage, StorageCapacity, storage::StorageIdentity}, key::Key, weapon::{Weapon, WeaponType}}, traits::{Identity, Owned, owned::OwnerError}};
 
-pub(crate) type ItemMap = HashMap<String, Item>;
+pub type ItemMap = HashMap<String, Item>;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub enum ItemError {
@@ -43,12 +43,14 @@ impl Identity for ItemError {
 pub enum ItemType {
     Container,
     Weapon,
+    Key,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum Item {
     Container(Container),
     Weapon(Weapon),
+    Key(Key),
 }
 
 impl Item {
@@ -71,6 +73,7 @@ impl Item {
         }
     }
 
+    /// Re-ID the item.
     #[cfg(test)]
     pub(crate) fn re_id(mut self) -> Self {
         match &mut self {
@@ -109,6 +112,7 @@ impl Identity for Item {
         match self {
             Self::Container(c) => c.id(),
             Self::Weapon(w) => w.id(),
+            Self::Key(k) => k.id(),
         }
     }
 }
@@ -137,6 +141,7 @@ impl Owned for Item {
         match self {
             Self::Container(c) => c.owner(),
             Self::Weapon(w) => w.owner(),
+            Self::Key(k) => k.owner(),
         }
     }
 
@@ -144,6 +149,7 @@ impl Owned for Item {
         match self {
             Self::Container(c) => c.original_owner(),
             Self::Weapon(w) => w.original_owner(),
+            Self::Key(k) => k.original_owner(),
         }
     }
 
@@ -168,6 +174,7 @@ impl Owned for Item {
                 }
             },
             Self::Weapon(w) => w.set_owner(owner_id),
+            Self::Key(k) => k.set_owner(owner_id),
         }
     }
 
@@ -175,6 +182,7 @@ impl Owned for Item {
         match self {
             Self::Container(c) => c.set_original_owner(owner_id),
             Self::Weapon(w) => w.set_original_owner(owner_id),
+            Self::Key(k) => k.set_original_owner(owner_id),
         }
     }
 }

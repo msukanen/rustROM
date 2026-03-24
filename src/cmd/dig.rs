@@ -78,7 +78,8 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
         p.location.clone()
     };
     let mut room = Room::blank(Some(id));
-    room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open });
+    // by default we use None as key_id - install a lock later…
+    room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open {key_id: None} });
     let mut w = ctx.world.write().await;
     let lock;
 
@@ -87,7 +88,7 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
         room.parent_id = r.parent_id.clone();
         room.parent = r.parent.clone();
         lock = Arc::new(RwLock::new(room));
-        r.exits.insert(dir, Exit { destination: id.into(), state: ExitState::Open });
+        r.exits.insert(dir, Exit { destination: id.into(), state: ExitState::Open {key_id: None} });
         // we'll insert the room into World a bit later below…
     } else {
         log::error!("Player '{}' was in a non-existent room '{}'", ctx.player.read().await.id(), curr_id);

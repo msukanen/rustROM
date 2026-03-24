@@ -362,7 +362,7 @@ macro_rules! world_for_tests {
             let r = Arc::new(RwLock::new(Room::blank(Some("void"))));{
                 let mut room_lock = r.write().await;
                 room_lock.description = "Alpha".into();
-                room_lock.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: ExitState::Open });
+                room_lock.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: ExitState::Open{key_id:None} });
                 room_lock.parent_id = "area".into();
                 room_lock.parent = Arc::downgrade(&a);
             }
@@ -372,7 +372,7 @@ macro_rules! world_for_tests {
             let r = Arc::new(RwLock::new(Room::blank(Some("clearing"))));{
                 let mut room_lock = r.write().await;
                 room_lock.description = "Omega".to_string();
-                room_lock.exits.insert(Direction::West, Exit { destination: "void".into(), state: ExitState::Open });
+                room_lock.exits.insert(Direction::West, Exit { destination: "void".into(), state: ExitState::Open{key_id:None} });
                 room_lock.parent_id = "area".into();
                 room_lock.parent = Arc::downgrade(&a);
             }

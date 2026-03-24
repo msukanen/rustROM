@@ -1,4 +1,5 @@
-pub(crate) mod inventory;
-pub(crate) mod item;
-pub(crate) use item::{Item, ItemError, ItemMap};
-pub(super) mod weapon;
+pub mod inventory;
+pub mod item;
+pub use item::{Item, ItemError, ItemMap};
+pub mod weapon;
+pub mod key;

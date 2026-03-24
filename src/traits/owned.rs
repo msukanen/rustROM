@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-pub(crate) static UNSPECIFIED_OWNER: &str = "";
+pub static UNSPECIFIED_OWNER: &str = "";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub(crate) struct Owner {
+pub struct Owner {
     curr_id: String,
     orig_id: String,
 }
