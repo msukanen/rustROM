@@ -1,18 +1,19 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::traits::{owned::{Owner, OwnerError}, Identity, Owned};
+use crate::traits::{Description, Identity, Owned, owned::{Owner, OwnerError}};
 
 // TODO: naming creativity!
 fn title_default() -> String { "ranged weapon of some sort".into() }
+// TODO: description creativity!
+fn desc_default() -> String { "a melee weapon of some sort".into() }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RangedInfo {
     id: String,
-    #[serde(default)]
-    owner: Owner,
-    #[serde(default = "title_default")]
-    title: String,
+    #[serde(default)] owner: Owner,
+    #[serde(default = "title_default")] title: String,
+    #[serde(default = "desc_default")] description: String,
 }
 
 impl Identity for RangedInfo {
@@ -27,6 +28,7 @@ impl Default for RangedInfo {
             id: format!("weapon-ranged-{}", Uuid::new_v4()),
             title: title_default(),
             owner: Owner::default(),
+            description: desc_default(),
         }
     }
 }
@@ -36,4 +38,8 @@ impl Owned for RangedInfo {
     fn original_owner(&self) -> &str { self.owner.original_owner() }
     fn set_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_owner(owner_id) }
     fn set_original_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_original_owner(owner_id) }
+}
+
+impl Description for RangedInfo {
+    fn description<'a>(&'a self) -> &'a str { &self.description }
 }

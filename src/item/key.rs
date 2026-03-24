@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::traits::{Identity, Owned, owned::{Owner, OwnerError}};
+use crate::traits::{Description, Identity, Owned, owned::{Owner, OwnerError}};
 
 // TODO: naming creativity!.
 fn title_default() -> String { "a key".into() }
@@ -12,6 +12,7 @@ pub struct Key {
     id: String,
     #[serde(default)] owner: Owner,
     #[serde(default = "title_default")] title: String,
+    #[serde(default = "title_default")] description: String,
     #[serde(default)] pub one_time: bool,
 }
 
@@ -28,6 +29,7 @@ impl Key {
             one_time,
             owner: Owner::default(),
             title: title_default(),
+            description: title_default(),
         }
     }
 }
@@ -37,4 +39,8 @@ impl Owned for Key {
     fn original_owner(&self) -> &str { self.owner.original_owner() }
     fn set_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_owner(owner_id) }
     fn set_original_owner(&mut self, owner_id: &str) -> Result<(), OwnerError> { self.owner.set_original_owner(owner_id) }
+}
+
+impl Description for Key {
+    fn description<'a>(&'a self) -> &'a str { &self.description }
 }

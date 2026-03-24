@@ -1,18 +1,19 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::traits::{owned::{Owner, OwnerError}, Identity, Owned};
+use crate::traits::{Description, Identity, Owned, owned::{Owner, OwnerError}};
 
 // TODO: naming creativity!
-fn title_default() -> String { "melee weapon of some sort".into() }
+fn title_default() -> String { "melee weapon".into() }
+// TODO: description creativity!
+fn desc_default() -> String { "a melee weapon of some sort".into() }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MeleeInfo {
     id: String,
-    #[serde(default)]
-    owner: Owner,
-    #[serde(default = "title_default")]
-    title: String,
+    #[serde(default)] owner: Owner,
+    #[serde(default = "title_default")] title: String,
+    #[serde(default = "desc_default")] description: String,
 }
 
 impl Identity for MeleeInfo {
@@ -27,6 +28,7 @@ impl Default for MeleeInfo {
             id: Self::uuid(),
             owner: Owner::default(),
             title: title_default(),
+            description: desc_default(),
         }
     }
 }
@@ -53,4 +55,8 @@ impl MeleeInfo {
     pub(crate) fn set_id(&mut self, id: &str) {
         self.id = id.into();
     }
+}
+
+impl Description for MeleeInfo {
+    fn description<'a>(&'a self) -> &'a str { &self.description }
 }

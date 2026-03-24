@@ -5,7 +5,7 @@ use melee::MeleeInfo;
 mod ranged;
 use ranged::RangedInfo;
 
-use crate::traits::{owned::OwnerError, Identity, Owned};
+use crate::traits::{Description, Identity, Owned, owned::OwnerError};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum WeaponType {
@@ -31,6 +31,15 @@ impl Identity for Weapon {
         match self {
             Self::Melee(m) => m.title(),
             Self::Ranged(r) => r.title(),
+        }
+    }
+}
+
+impl Description for Weapon {
+    fn description<'a>(&'a self) -> &'a str {
+        match self {
+            Self::Melee(m) => m.description(),
+            Self::Ranged(r) => r.description(),
         }
     }
 }

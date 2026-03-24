@@ -5,12 +5,13 @@ use uuid::Uuid;
 
 use crate::{item::{Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
 
+fn title_default() -> String { "container".into() }
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
     id: String,
-    title: String,
-    #[serde(default)]
-    owner: Owner,
+    #[serde(default = "title_default")] title: String,
+    #[serde(default)] owner: Owner,
     max_capacity: usize,
     contents: ItemMap,
 }
