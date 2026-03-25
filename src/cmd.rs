@@ -40,6 +40,8 @@ mod cmd_alias;// special case of specialness…
 mod sync;
 mod shutdown;
 mod open;
+mod close;
+mod lock;
 
 /// Player locker.
 type PlayerLock = Arc<RwLock<Player>>;
@@ -78,14 +80,18 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
         return state;
     }
 
-    let (command, args) = {
+    // Special handing:
+    // - emotes between '*'s.
+    // - '?' in front routes the remainder via "help" command.
+    let (command, args) =
         if ctx.args.starts_with('*') && ctx.args.ends_with('*') {
             // Btw, let's start/end trim the *'d text:
             ("emote", ctx.args[1..ctx.args.len()-1].trim())
+        } else if ctx.args.starts_with('?') {
+            ("help", ctx.args[1..].trim())
         } else {
             ctx.args.split_once(' ').unwrap_or((ctx.args.trim(), ""))
-        }
-    };
+        };
     ctx.args = args;
     
     let table = match state {
