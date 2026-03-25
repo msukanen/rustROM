@@ -180,7 +180,7 @@ mod cmd_open_tests {
         let _ = env_logger::try_init();
         log::info!("Preparing the stage …");
         let w = world_for_tests!();
-        // close void's east exit
+        // close and lock void's east exit
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
