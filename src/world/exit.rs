@@ -1,10 +1,12 @@
 //! [Exit], a way out of e.g. a [Room].
+
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ExitState {
+    AlwaysOpen,
     Open { key_id: Option<String> },
     Closed { key_id: Option<String> },
     Locked { key_id: String }
@@ -14,7 +16,8 @@ impl Display for ExitState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", match self {
             Self::Closed{..} => "closed",
-            Self::Open{..} => "open",
+            Self::AlwaysOpen |
+            Self::Open{..}   => "open",
             Self::Locked{..} => "locked tight"
         })
     }
