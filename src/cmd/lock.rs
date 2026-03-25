@@ -39,6 +39,7 @@ impl Command for LockCommand {
                                         tell_user!(ctx.writer, "You lack the right key to lock this entrace.\n");
                                     } else {
                                         exit.state = ExitState::Locked { key_id };
+                                        log::debug!("Locked: '{:?}'", exit);
                                         tell_user!(ctx.writer, "You lock the entrance to '{}'.\n", exit.destination);
                                     }
                                 },
@@ -50,5 +51,56 @@ impl Command for LockCommand {
                 tell_user!(ctx.writer, "In theory, closing '{}' might work… if it was here, but it isn't.\n", dir);
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod cmd_lock_tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
+    use crate::{async_client_for_tests, async_server_for_tests, item::{Item, inventory::*, key::Key}, player::Player, player_and_listener_for_tests, string::ansi::AntiAnsi, util::{Broadcast, ClientState}, world::{World, area::Area, exit::*, room::Room}, world_for_tests};
+
+    #[tokio::test]
+    async fn lock_open_exit() {
+        let _ = env_logger::try_init();
+        log::info!("Preparing the stage …");
+        let w = world_for_tests!();
+        // assign key id for "void"'s lock
+        {
+            let mut lock = w.write().await;
+            if let Some(room) = lock.rooms.get_mut("void") {
+                room.write().await.set_exit_state(Direction::East, ExitState::Open { key_id: Some("abloy-key-2".into()) });
+            }
+        }
+
+        let (p, listener, addr, tx) = player_and_listener_for_tests!();
+        // give player the right key...
+        {
+            let item = Item::Key(Key::new("abloy-key-2", false));
+            let mut bag = Item::Container(Container::Backpack(Content::from(ContainerType::Backpack)));
+            bag.try_insert(item).unwrap(); // we trust the system… *crosses fingers*
+
+            let mut lock = p.write().await;
+            lock.inventory.try_insert(bag).unwrap();// we trust the system… *crosses fingers*
+        }
+        let client_task = async_client_for_tests!(addr,
+            "look",
+            "lock east",
+            "close east with abloy",
+            "goto east",
+            "open east",
+            "goto east"
+        );
+        let server_task = async_server_for_tests!(w, listener, tx, addr, p, 6);
+
+        // wait for the client task to finish and get the output…
+        let (_, client_out) = tokio::join!(server_task, client_task);
+        let output_string = client_out.unwrap();
+        let output_string = output_string.strip_ansi();
+
+        // assert that the output contains the description of BOTH rooms.
+        assert!(output_string.contains("Alpha"));
+        assert!(output_string.contains("Omega"));
     }
 }
