@@ -120,7 +120,17 @@ impl Storage for Container {
         match self {
             Self::Backpack(c)|
             Self::PlayerInventory(c)|
-            Self::Room(c) => c.is_empty()
+            Self::Room(c)
+                => c.is_empty()
+        }
+    }
+
+    fn contains_bp(&self, id: &str) -> bool {
+        match self {
+            Self::Backpack(c)|
+            Self::PlayerInventory(c)|
+            Self::Room(c)
+                => c.contains_bp(id)
         }
     }
 }
