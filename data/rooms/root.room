@@ -15,6 +15,7 @@
   "contents": {
     "Room": {
       "id": "content-room-root",
+      "bp_id": "",
       "owner": {
         "curr_id": "",
         "orig_id": ""
