@@ -1,0 +1,38 @@
+{
+  "name": "dummy",
+  "description": "Dummy!",
+  "passwd": "$argon2id$v=19$m=19456,t=2,p=1$rLx9tXRj33WYA87Wt8T2gA$lZMC3W+8Wvhvz67zQklcWpggfieo3EkkH0YV1uPCwhs",
+  "gender": "Indeterminate",
+  "access": "Dummy",
+  "location": "root",
+  "hp": {
+    "HP": {
+      "current": 100.0,
+      "max": 100.0
+    }
+  },
+  "mp": {
+    "MP": {
+      "current": 100.0,
+      "max": 100.0,
+      "drain": 0.0
+    }
+  },
+  "hedit": null,
+  "redit": null,
+  "listening_to": [],
+  "inventory": {
+    "PlayerInventory": {
+      "id": "content-pc-inv-4eed6e55-be2a-43bd-81c2-6d3dcc3ed2e4",
+      "bp_id": "content-pc-inv-4eed6e55-be2a-43bd-81c2-6d3dcc3ed2e4",
+      "title": "content-pc-inv-4eed6e55-be2a-43bd-81c2-6d3dcc3ed2e4",
+      "owner": {
+        "curr_id": "",
+        "orig_id": ""
+      },
+      "max_capacity": 64,
+      "contents": {}
+    }
+  },
+  "invis": false
+}
