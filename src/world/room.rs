@@ -272,6 +272,10 @@ impl Storage for Room {
 
     /// There is no temporary loaning from [Room]!
     fn get(&self, _: &str) -> Option<&Item> { None }
+
+    fn contains_bp(&self, id: &str) -> bool {
+        self.contents.contains_bp(id)
+    }
 }
 
 #[async_trait]
