@@ -1,6 +1,6 @@
 //! 'open' command.
 //! 
-//! 'Open' is used — surprise much? – to open e.g. doors…
+//! 'open' is used — surprise much? – to open e.g. doors…
 
 use async_trait::async_trait;
 
@@ -18,14 +18,15 @@ impl Command for OpenCommand {
             let dir = Direction::from(ctx.args);
             if let Some(exit) = r.exits.get_mut(&dir) {
                 match exit.state.clone() {
-                    ExitState::Open{..} => tell_user!(ctx.writer, "It's already open…\n"),
+                    ExitState::AlwaysOpen |
+                    ExitState::Open{..}   => tell_user!(ctx.writer, "It's already open…\n"),
                     ExitState::Closed{ key_id } => {
                         exit.state = ExitState::Open{ key_id };
                         tell_user!(ctx.writer, "You open the way to '{}'.\n", exit.destination);
                     },
                     ExitState::Locked { key_id } => {
                         let p = ctx.player.read().await;
-                        if p.inventory.contains(&key_id) {
+                        if p.inventory.contains_bp(&key_id) {
                             exit.state = ExitState::Open{ key_id: Some(key_id.clone()) };
                             if let Some(key) = p.inventory.get(&key_id) {
                                 tell_user!(ctx.writer, "You click the '{}' into the lock and the way to '{}' opens!\n", key.title(), exit.destination);
