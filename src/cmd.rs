@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::{net::tcp::OwnedWriteHalf, sync::{broadcast, RwLock}};
-use crate::{ClientState, cmd::{cmd_alias::CMD_ALIASES, goto::GotoCommand}, player::Player, tell_user_unk, util::{Broadcast, clientstate::EditorMode, direction::Direction}, world::SharedWorld};
+use crate::{ClientState, cmd::{cmd_alias::CMD_ALIASES, goto::GotoCommand}, player::Player, tell_user_unk, util::{Broadcast, clientstate::EditorMode, direction::{AsDirectionCardinal, Direction}}, world::SharedWorld};
 
 pub mod macros;
 //--- 'mod' all the commands ---
@@ -121,7 +121,7 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
             log::error!("Command alias '{command}' was mapped for '{cmd_alias}', but '{cmd_alias}' was NOT found?!");
             tell_user_unk!(ctx.writer);
         }
-    } else if let Some(dir) = Direction::as_cardinal(&command) {
+    } else if let Some(dir) = command.as_str().as_cardinal() {
         GotoCommand.exec({ctx.args = dir.as_str(); &mut ctx}).await;
     } else {
         tell_user_unk!(ctx.writer);

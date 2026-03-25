@@ -22,7 +22,7 @@ impl Display for Direction {
 }
 
 impl Direction {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             Self::Down => "down",
             Self::East => "east",
@@ -81,6 +81,10 @@ impl TryFrom<&str> for Direction {
     }
 }
 
+pub trait AsDirectionCardinal {
+    fn as_cardinal(&self) -> Option<Direction>;
+}
+
 impl Direction {
     /// `From<&str>`-like `from()` impl.
     /// 
@@ -94,7 +98,7 @@ impl Direction {
     // means (e.g. [show_help_if_needed!][`crate::show_help_if_needed!`])
     // has been called before [Direction::from]).
     //
-    pub(crate) fn from(value: &str) -> Self {
+    pub fn from(value: &str) -> Self {
         let lc = value.trim().to_lowercase();
         match lc.as_str() {
             "north"|"n"|"nor"|"norht"|"nort" => Self::North,
@@ -111,9 +115,15 @@ impl Direction {
         }
     }
 
-    pub(crate) fn as_cardinal(value: &str) -> Option<Self> {
-        match Direction::from(value) {
-            Self::Custom(_) => None,
+    pub fn as_cardinal(&self) -> Option<Direction> {
+        self.as_str().as_cardinal()
+    }
+}
+
+impl AsDirectionCardinal for &str {
+    fn as_cardinal(&self) -> Option<Direction> {
+        match Direction::from(self) {
+            Direction::Custom(_) => None,
             other => Some(other)
         }
     }
