@@ -19,6 +19,8 @@ pub trait Storage {
     /// 
     /// Note: **much** slower than [`Storage::contains`].
     fn contains_r(&self, id: &str) -> Result<String, String>;
+    /// See if some blueprint `id` is contained within.
+    fn contains_bp(&self, id: &str) -> bool;
     /// Get reference to the whole [ItemMap] within.
     fn items(&self) -> &ItemMap;
     /// Get mut reference to the whole [ItemMap] within.
