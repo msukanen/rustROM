@@ -150,13 +150,28 @@ impl Storage for Content {
     fn contains_r(&self, id: &str) -> Result<String, String> {
         // 'id' should be clean trimmed by callsite, but we can't quite trust that…
         let id = id.trim().to_lowercase();
-        let trim_id = id.as_str();
         for k in self.contents.keys() {
-            if k.contains(trim_id) {
+            if k.contains(&id) {
                 return Ok(k.clone());
             }
         }
         Err(format!("No key matching with '{id}' found."))
+    }
+
+    fn contains_bp(&self, id: &str) -> bool {
+        // 'id' should be clean trimmed by callsite, but we can't quite trust that…
+        let id = id.trim().to_lowercase();
+        for item in self.contents.values() {
+            if let Item::Container(c) = item {
+                if c.contains_bp(&id) {
+                    return true;
+                }
+            } else if item.bp_id() == id {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn is_empty(&self) -> bool {
@@ -171,6 +186,10 @@ impl Storage for Content {
         }
 
         for item in self.contents.values() {
+            if item.id() == id || item.bp_id() == id {
+                return Some(item);
+            }
+
             if let Item::Container(c) = item {
                 if let Some(exact) = c.get(id) {
                     return Some(exact);
