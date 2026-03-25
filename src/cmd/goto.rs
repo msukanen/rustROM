@@ -97,7 +97,7 @@ mod cmd_goto_tests {
         let output_string = client_out.unwrap();
         let output_string = output_string.strip_ansi();
 
-        // assert that the output contains the description of BOTH rooms.
+        // assert that destination is unreachable.
         assert!(output_string.contains("Alpha"));
         assert!(output_string.contains("the way to clearing is closed"));
     }

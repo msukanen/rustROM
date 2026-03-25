@@ -38,6 +38,7 @@ impl Command for CloseCommand {
                                         tell_user!(ctx.writer, "You lack the right key to lock this entrace, but you close it nonetheless.\n");
                                     } else {
                                         exit.state = ExitState::Locked { key_id };
+                                        log::debug!("'close with' locked {:?}", exit);
                                         tell_user!(ctx.writer, "You close and lock the entrance to '{}'.\n", exit.destination);
                                     }
                                 },
