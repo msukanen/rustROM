@@ -98,7 +98,6 @@ impl Storage for Container {
     }
 
     fn specs_of(&self, id: &str) -> Option<&Item> {
-        log::debug!("Attempting to get('{id}') from '{}'", self.id());
         match self {
             Self::Backpack(c) |
             Self::PlayerInventory(c) |

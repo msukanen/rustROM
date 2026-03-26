@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, equalize_opposite_exit_state, item::inventory::Storage, show_help_if_needed, string::rx::WHAT_WITH_ARG_RX, tell_user, traits::Identity, util::direction::Direction, world::exit::state::KEY_THAT_IS_NOT_A_KEY};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, equalize_opposite_exit_state, item::inventory::Storage, show_help_if_needed, string::rx::WHAT_WITH_ARG_RX, tell_user, traits::Identity, util::direction::Direction, world::{exit::state::KEY_THAT_IS_NOT_A_KEY, room}};
 
 pub struct OpenCommand;
 
@@ -24,9 +24,12 @@ impl Command for OpenCommand {
             (ctx.args, KEY_THAT_IS_NOT_A_KEY)
         };
 
+        let mut equalize = false;
+        let mut equalize_exit = None;
+        let mut r_id = None;
         do_in_current_room!(ctx, |room| {
             let mut r = room.write().await;
-            let r_id = r.id().to_string();
+            r_id = r.id().to_string().into();
             let dir = Direction::from(what);
             if let Some(exit) = r.exits.get_mut(&dir) {
                 if !exit.is_closed() {
@@ -34,13 +37,16 @@ impl Command for OpenCommand {
                     return ;
                 }
 
-                if !exit.state.open() {
+                if !exit.state.open() && !try_unlock {
                     tell_user!(ctx.writer, "It's not opening… Is it jammed?\n");
                     return ;
                 }
                 
-                if try_unlock {
-                    if let Some(key) = ctx.player.read().await.inventory.specs_of(with) {
+                if try_unlock && exit.key_id().contains(with) {
+                    log::debug!("Unlock attempt with '{with}…'");
+                    if let Some(key) = ctx.player.read().await.inventory.specs_of(exit.key_id()) {
+                        exit.state.force_unlock();
+                        exit.state.open();
                         tell_user!(ctx.writer, "You click the '{}' into the lock and the way to '{}' opens!\n", key.title(), exit.destination);
                     } else {
                         log::error!("The key for '{:?}' evaporated from RAM? WTF?!", exit);
@@ -51,9 +57,12 @@ impl Command for OpenCommand {
                     tell_user!(ctx.writer, "Unfortunately that way is locked and you don't seem to have the right key…\n");
                 }
 
-                equalize_opposite_exit_state!(ctx, r_id, exit);
+                equalize = true;
+                equalize_exit = exit.clone().into();
             }
         });
+
+        equalize_opposite_exit_state!(equalize, ctx, r_id, equalize_exit);
     }
 }
 
@@ -65,7 +74,7 @@ mod cmd_open_tests {
     use super::*;
 
     #[tokio::test]
-    async fn closed_exit() {
+    async fn cmd_open_closed() {
         let _ = env_logger::try_init();
         log::info!("Preparing the stage …");
         let w = world_for_tests!();
@@ -93,7 +102,7 @@ mod cmd_open_tests {
     }
 
     #[tokio::test]
-    async fn locked_exit() {
+    async fn cmd_open_locked() {
         let _ = env_logger::try_init();
         log::info!("Preparing the stage …");
         let w = world_for_tests!();
@@ -121,7 +130,7 @@ mod cmd_open_tests {
     }
 
     #[tokio::test]
-    async fn locked_exit_with_key() {
+    async fn cmd_open_locked_with_key() {
         let _ = env_logger::try_init();
         log::info!("Preparing the stage …");
         let w = world_for_tests!();
@@ -155,7 +164,7 @@ mod cmd_open_tests {
     }
 
     #[tokio::test]
-    async fn locked_exit_with_wrong_key() {
+    async fn cmd_open_locked_with_key_wrong() {
         let _ = env_logger::try_init();
         log::info!("Preparing the stage …");
         let w = world_for_tests!();
@@ -189,7 +198,7 @@ mod cmd_open_tests {
     }
 
     #[tokio::test]
-    async fn locked_exit_with_deepnest_key() {
+    async fn cmd_open_locked_with_key_deepnest() {
         let _ = env_logger::try_init();
         log::info!("Preparing the stage …");
         let w = world_for_tests!();
@@ -211,7 +220,7 @@ mod cmd_open_tests {
             let mut lock = p.write().await;
             lock.inventory.try_insert(bag).unwrap();// we trust the system… *crosses fingers*
         }
-        let client_task = async_client_for_tests!(addr, "look", "goto east", "open east", "goto east");
+        let client_task = async_client_for_tests!(addr, "look", "goto east", "open east with abloy", "goto east");
         let server_task = async_server_for_tests!(w, listener, tx, addr, p, 4);
 
         // wait for the client task to finish and get the output…

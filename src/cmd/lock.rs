@@ -20,15 +20,18 @@ impl Command for LockCommand {
             (ctx.args, KEY_THAT_IS_NOT_A_KEY)
         };
 
+        let mut equalize = false;
+        let mut equalize_exit = None;
+        let mut r_id = None;
         do_in_current_room!(ctx, |room| {
             let mut r = room.write().await;
-            let r_id = r.id().to_string();
+            r_id = r.id().to_string().into();
             let dir = Direction::from(what);
             if let Some(exit) = r.exits.get_mut(&dir) {
-                let mut state_changed = false;
                 match exit.state.lock_with(with) {
                     Ok(true) => {
-                            state_changed = true;
+                            equalize = true;
+                            equalize_exit = exit.clone().into();
                             tell_user!(ctx.writer, "You lock the entrance to '{}'.\n", exit.destination)
                         },
                     Ok(_) => if matches!(exit.state, ExitState::Closed { jam: Some(JamState::WholeExit(_)),.. }) {
@@ -42,14 +45,12 @@ impl Command for LockCommand {
                         KeyError::NotLockable => tell_user!(ctx.writer, "Uh, you have no clue how to lock that…\n"),
                     }
                 }
-
-                if state_changed {
-                    equalize_opposite_exit_state!(ctx, r_id, exit);
-                }
             } else {
                 tell_user!(ctx.writer, "In theory, closing '{}' might work… if it was here, but it isn't.\n", dir);
             }
         });
+
+        equalize_opposite_exit_state!(equalize, ctx, r_id, equalize_exit);
     }
 }
 

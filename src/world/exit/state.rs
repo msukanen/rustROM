@@ -138,6 +138,10 @@ impl ExitState {
         }
     }
 
+    pub fn force_unlock(&mut self) {
+        let _ = self.unlock_with(&self.key_id().to_string());
+    }
+
     /// Check whether the exit can be closed.
     pub fn can_close(&self) -> bool {
         !matches!(self, Self::AlwaysOpen)
@@ -159,24 +163,29 @@ impl ExitState {
 /// Equalize state of the opposite end of `$exit`.
 /// 
 /// # Args
+/// - `$equalize`— actually equalize?
 /// - `$ctx`…
 /// - `$r_id`— current [Room][crate::world::room::Room] ID.
 /// - `$exit`— [Exit][crate::world::exit::Exit] which state to clone.
 #[macro_export]
 macro_rules! equalize_opposite_exit_state {
-    ($ctx:ident, $r_id:ident, $exit:ident) => {{
-        let mut wlock = $ctx.world.write().await;
-        if let Some(oroom) = wlock.rooms.get_mut(&$exit.destination) {
-            let mut orlock = oroom.write().await;
-            for oexit in orlock.exits.values_mut() {
-                if oexit.state == crate::world::exit::state::ExitState::AlwaysOpen {
-                    continue;
-                }
+    ($equalize:ident, $ctx:ident, $r_id:ident, $exit:ident) => {
+        if $equalize && $exit.is_some() && $r_id.is_some() {
+            let exit = $exit.unwrap();
+            let r_id = $r_id.unwrap();
+            let mut wlock = $ctx.world.write().await;
+            if let Some(oroom) = wlock.rooms.get_mut(&exit.destination) {
+                let mut orlock = oroom.write().await;
+                for oexit in orlock.exits.values_mut() {
+                    if oexit.state == crate::world::exit::state::ExitState::AlwaysOpen {
+                        continue;
+                    }
 
-                if oexit.destination == $r_id {
-                    oexit.state = $exit.state.clone()
+                    if oexit.destination == r_id {
+                        oexit.state = exit.state.clone()
+                    }
                 }
             }
         }
-    }};
+    };
 }

@@ -178,9 +178,10 @@ impl Storage for Content {
         self.contents.is_empty()
     }
 
+    /// Get specs of `id`, if such an [Item] is contained within.
+    /// 
+    /// `id` is checked against both [Identity::id] and [BlueprintID::bp_id].
     fn specs_of(&self, id: &str) -> Option<&Item> {
-        log::debug!("Attempting to get('{id}') from '{}'", self.id());
-
         if let Some(exact) = self.contents.get(id) {
             return Some(exact);
         }

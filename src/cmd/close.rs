@@ -24,10 +24,13 @@ impl Command for CloseCommand {
             (ctx.args, KEY_THAT_IS_NOT_A_KEY)
         };
 
+        let mut equalize = false;
+        let mut equalize_exit = None;
+        let mut r_id = None;
         do_in_current_room!(ctx, |room| {
             let mut r = room.write().await;
+            r_id = r.id().to_string().into();
             let dir = Direction::from(what);
-            let r_id = r.id().to_string();
             if let Some(exit) = r.exits.get_mut(&dir) {
                 if exit.is_closed() && !try_lock {
                     tell_user!(ctx.writer, "It's already closed.\n");
@@ -54,10 +57,13 @@ impl Command for CloseCommand {
                     tell_user!(ctx.writer, "You close the way to '{}'.\n", exit.destination);
                 }
 
-                equalize_opposite_exit_state!(ctx, r_id, exit);
+                equalize = true;
+                equalize_exit = exit.clone().into();
             } else {
                 tell_user!(ctx.writer, "In theory, closing '{}' might work… if it was here, but it isn't.\n", dir);
             }
         });
+
+        equalize_opposite_exit_state!(equalize, ctx, r_id, equalize_exit);
     }
 }
