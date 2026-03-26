@@ -178,7 +178,7 @@ impl Storage for Content {
         self.contents.is_empty()
     }
 
-    fn get(&self, id: &str) -> Option<&Item> {
+    fn specs_of(&self, id: &str) -> Option<&Item> {
         log::debug!("Attempting to get('{id}') from '{}'", self.id());
 
         if let Some(exact) = self.contents.get(id) {
@@ -191,7 +191,7 @@ impl Storage for Content {
             }
 
             if let Item::Container(c) = item {
-                if let Some(exact) = c.get(id) {
+                if let Some(exact) = c.specs_of(id) {
                     return Some(exact);
                 }
             }
