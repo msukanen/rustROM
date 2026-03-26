@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{Command, CommandCtx, redit::ReditCommand, translocate::translocate}, show_help, tell_user, traits::Identity, util::direction::Direction, validate_builder, world::{exit::{Exit, ExitState}, room::Room}};
+use crate::{cmd::{Command, CommandCtx, redit::ReditCommand, translocate::translocate}, show_help, tell_user, traits::Identity, util::direction::Direction, validate_builder, world::{exit::{Exit, state::ExitState}, room::Room}};
 
 pub struct DigCommand;
 

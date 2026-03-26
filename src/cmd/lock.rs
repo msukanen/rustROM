@@ -1,14 +1,8 @@
 //! Lock something or other…
 
 use async_trait::async_trait;
-use lazy_static::lazy_static;
-use regex::Regex;
 
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::inventory::Storage, show_help_if_needed, tell_user, util::direction::Direction, world::exit::ExitState};
-
-lazy_static! {
-    static ref CLOSE_WITH_RX: Regex = Regex::new(r#"\s*(?P<what>.+)\s+with\s+(?P<with>.+)"#).unwrap();
-}
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, equalize_opposite_exit_state, show_help_if_needed, string::rx::WHAT_WITH_ARG_RX, tell_user, traits::Identity, util::direction::Direction, world::exit::{KeyError, jam::JamState, state::{ExitState, KEY_THAT_IS_NOT_A_KEY}}};
 
 pub struct LockCommand;
 
@@ -17,35 +11,40 @@ impl Command for LockCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         show_help_if_needed!(ctx, "lock");
 
-        let (what, with) = if let Some(caps) = CLOSE_WITH_RX.captures(ctx.args) {
-            (caps.name("what").unwrap().as_str().trim(), Some(caps.name("with").unwrap().as_str().trim()))
+        let (what, with) = if let Some(caps) = WHAT_WITH_ARG_RX.captures(ctx.args) {
+            (
+                caps.name("what").unwrap().as_str(),
+                caps.name("with").unwrap().as_str()
+            )
         } else {
-            (ctx.args, None)
+            (ctx.args, KEY_THAT_IS_NOT_A_KEY)
         };
 
         do_in_current_room!(ctx, |room| {
             let mut r = room.write().await;
+            let r_id = r.id().to_string();
             let dir = Direction::from(what);
             if let Some(exit) = r.exits.get_mut(&dir) {
-                match (exit.state.clone(), with) {
-                    (ExitState::AlwaysOpen,..) => tell_user!(ctx.writer, "Uh, you have no clue how to close that and even less how to lock it…\n"),
-                    (ExitState::Locked {..},..) => tell_user!(ctx.writer, "It's already locked…\n"),
-                    (ExitState::Open {..},..) => tell_user!(ctx.writer, "No point to lock it yet. Close it first?\n"),
-                    (ExitState::Closed {key_id}, with) => {
-                        match (key_id, with) {
-                            (Some(key_id), Some(with)) => {
-                                    // does player have the right key?
-                                    if !key_id.contains(&with.to_lowercase()) || !ctx.player.read().await.inventory.contains_bp(&key_id) {
-                                        tell_user!(ctx.writer, "You lack the right key to lock this entrace.\n");
-                                    } else {
-                                        exit.state = ExitState::Locked { key_id };
-                                        log::debug!("Locked: '{:?}'", exit);
-                                        tell_user!(ctx.writer, "You lock the entrance to '{}'.\n", exit.destination);
-                                    }
-                                },
-                            _ => tell_user!(ctx.writer, "You don't seem to find any locking mechanism…\n"),
-                        }
-                    },
+                let mut state_changed = false;
+                match exit.state.lock_with(with) {
+                    Ok(true) => {
+                            state_changed = true;
+                            tell_user!(ctx.writer, "You lock the entrance to '{}'.\n", exit.destination)
+                        },
+                    Ok(_) => if matches!(exit.state, ExitState::Closed { jam: Some(JamState::WholeExit(_)),.. }) {
+                            tell_user!(ctx.writer, "Uhm, well – the door is stuck, but so is the lock… No can do.\n");
+                        } else {
+                            tell_user!(ctx.writer, "It's already locked…\n");
+                        },
+                    Err(e) => match e {
+                        KeyError::IncorrectKey => tell_user!(ctx.writer, "You lack the right key to lock this entrace.\n"),
+                        KeyError::Jammed => tell_user!(ctx.writer, "Ah bugger, the lock's jammed!\n"),
+                        KeyError::NotLockable => tell_user!(ctx.writer, "Uh, you have no clue how to lock that…\n"),
+                    }
+                }
+
+                if state_changed {
+                    equalize_opposite_exit_state!(ctx, r_id, exit);
                 }
             } else {
                 tell_user!(ctx.writer, "In theory, closing '{}' might work… if it was here, but it isn't.\n", dir);

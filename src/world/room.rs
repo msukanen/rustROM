@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area, exit::{Exit, ExitState}}};
+use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area, exit::{Exit, state::ExitState}}};
 
 pub(crate) static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 /// Max number of items in a [Room], whether on ground or otherwise.
@@ -271,7 +271,7 @@ impl Storage for Room {
     }
 
     /// There is no temporary loaning from [Room]!
-    fn get(&self, _: &str) -> Option<&Item> { None }
+    fn specs_of(&self, _: &str) -> Option<&Item> { None }
 
     fn contains_bp(&self, id: &str) -> bool {
         self.contents.contains_bp(id)

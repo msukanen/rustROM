@@ -363,7 +363,7 @@ macro_rules! world_for_tests {
                 let mut room_lock = r.write().await;
                 room_lock.title = "Alpha".into();
                 room_lock.description = "Alpha is the very, well, alpha of everything not omega.".into();
-                room_lock.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: ExitState::Open{key_id:None} });
+                room_lock.exits.insert(Direction::East, Exit { destination: "clearing".into(), state: crate::world::exit::state::ExitState::Open{key_id:None} });
                 room_lock.parent_id = "area".into();
                 room_lock.parent = Arc::downgrade(&a);
             }
@@ -374,7 +374,7 @@ macro_rules! world_for_tests {
                 let mut room_lock = r.write().await;
                 room_lock.title = "Omega".to_string();
                 room_lock.description = "End of the road? Mayhap. But a nice clearing nonetheless!".into();
-                room_lock.exits.insert(Direction::West, Exit { destination: "void".into(), state: ExitState::Open{key_id:None} });
+                room_lock.exits.insert(Direction::West, Exit { destination: "void".into(), state: crate::world::exit::state::ExitState::Open{key_id:None} });
                 room_lock.parent_id = "area".into();
                 room_lock.parent = Arc::downgrade(&a);
             }

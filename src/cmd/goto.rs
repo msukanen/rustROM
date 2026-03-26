@@ -46,7 +46,7 @@ impl Command for GotoCommand {
 mod cmd_goto_tests {
     use std::sync::Arc;
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
-    use crate::{async_client_for_tests, async_server_for_tests, player::Player, player_and_listener_for_tests, string::ansi::AntiAnsi, util::{Broadcast, ClientState}, world::{World, area::Area, exit::*, room::Room}, world_for_tests};
+    use crate::{async_client_for_tests, async_server_for_tests, player::Player, player_and_listener_for_tests, string::ansi::AntiAnsi, util::{Broadcast, ClientState}, world::{World, area::Area, exit::{state::ExitState, *}, room::Room}, world_for_tests};
     use super::*;
 
     #[tokio::test]
@@ -84,7 +84,7 @@ mod cmd_goto_tests {
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
-                room.write().await.set_exit_state(Direction::East, ExitState::Closed{key_id:None});
+                room.write().await.set_exit_state(Direction::East, ExitState::Closed{key_id:None,jam:None});
             }
         }
 

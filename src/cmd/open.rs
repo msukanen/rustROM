@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::inventory::Storage, show_help_if_needed, tell_user, traits::Identity, util::direction::Direction, world::exit::ExitState};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, equalize_opposite_exit_state, item::inventory::Storage, show_help_if_needed, string::rx::WHAT_WITH_ARG_RX, tell_user, traits::Identity, util::direction::Direction, world::exit::state::KEY_THAT_IS_NOT_A_KEY};
 
 pub struct OpenCommand;
 
@@ -12,33 +12,46 @@ pub struct OpenCommand;
 impl Command for OpenCommand {
     async fn exec(&self, ctx: &mut CommandCtx<'_>) {
         show_help_if_needed!(ctx, "open");
+      
+        let mut try_unlock = false;
+        let (what, with) = if let Some(caps) = WHAT_WITH_ARG_RX.captures(ctx.args) {
+            try_unlock = true;
+            (
+                caps.name("what").unwrap().as_str(),
+                caps.name("with").unwrap().as_str()
+            )
+        } else {
+            (ctx.args, KEY_THAT_IS_NOT_A_KEY)
+        };
 
         do_in_current_room!(ctx, |room| {
             let mut r = room.write().await;
-            let dir = Direction::from(ctx.args);
+            let r_id = r.id().to_string();
+            let dir = Direction::from(what);
             if let Some(exit) = r.exits.get_mut(&dir) {
-                match exit.state.clone() {
-                    ExitState::AlwaysOpen |
-                    ExitState::Open{..}   => tell_user!(ctx.writer, "It's already open…\n"),
-                    ExitState::Closed{ key_id } => {
-                        exit.state = ExitState::Open{ key_id };
-                        tell_user!(ctx.writer, "You open the way to '{}'.\n", exit.destination);
-                    },
-                    ExitState::Locked { key_id } => {
-                        let p = ctx.player.read().await;
-                        if p.inventory.contains_bp(&key_id) {
-                            exit.state = ExitState::Open{ key_id: Some(key_id.clone()) };
-                            if let Some(key) = p.inventory.get(&key_id) {
-                                tell_user!(ctx.writer, "You click the '{}' into the lock and the way to '{}' opens!\n", key.title(), exit.destination);
-                            } else {
-                                log::error!("The key '{key_id}' evaporated between .contains() and .get()?! WTF?!");
-                                tell_user!(ctx.writer, "There seems to be a hole in your pocket. You can almost swear you had the right key just a moment ago…\n");
-                            }
-                        } else {
-                            tell_user!(ctx.writer, "Unfortunately that way is locked and you don't seem to have the right key…\n");
-                        }
-                    }
+                if !exit.is_closed() {
+                    tell_user!(ctx.writer, "It's already open…\n");
+                    return ;
                 }
+
+                if !exit.state.open() {
+                    tell_user!(ctx.writer, "It's not opening… Is it jammed?\n");
+                    return ;
+                }
+                
+                if try_unlock {
+                    if let Some(key) = ctx.player.read().await.inventory.specs_of(with) {
+                        tell_user!(ctx.writer, "You click the '{}' into the lock and the way to '{}' opens!\n", key.title(), exit.destination);
+                    } else {
+                        log::error!("The key for '{:?}' evaporated from RAM? WTF?!", exit);
+                        tell_user!(ctx.writer, "There seems to be a hole in your pocket. You can almost swear you had the right key just a moment ago…\n");
+                        // opening succeeded, however, so we will keep forging ahead…
+                    }
+                } else {
+                    tell_user!(ctx.writer, "Unfortunately that way is locked and you don't seem to have the right key…\n");
+                }
+
+                equalize_opposite_exit_state!(ctx, r_id, exit);
             }
         });
     }
@@ -48,7 +61,7 @@ impl Command for OpenCommand {
 mod cmd_open_tests {
     use std::sync::Arc;
     use tokio::{io::{AsyncBufReadExt, AsyncReadExt, BufReader, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::{broadcast, RwLock}};
-    use crate::{async_client_for_tests, async_server_for_tests, item::{Item, inventory::{Container, ContainerType, Content}, key::Key}, player::Player, player_and_listener_for_tests, string::ansi::AntiAnsi, util::{Broadcast, ClientState}, world::{World, area::Area, exit::*, room::Room}, world_for_tests};
+    use crate::{async_client_for_tests, async_server_for_tests, item::{Item, inventory::{Container, ContainerType, Content}, key::Key}, player::Player, player_and_listener_for_tests, string::ansi::AntiAnsi, util::{Broadcast, ClientState}, world::{World, area::Area, exit::{state::ExitState, *}, room::Room}, world_for_tests};
     use super::*;
 
     #[tokio::test]
@@ -60,7 +73,7 @@ mod cmd_open_tests {
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
-                room.write().await.set_exit_state(Direction::East, ExitState::Closed {key_id: None} );
+                room.write().await.set_exit_state(Direction::East, ExitState::Closed {key_id: None, jam: None} );
             }
         }
 
@@ -88,7 +101,7 @@ mod cmd_open_tests {
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
-                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into() });
+                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into(), jam: None });
             }
         }
 
@@ -116,7 +129,7 @@ mod cmd_open_tests {
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
-                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into() });
+                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into(), jam: None });
             }
         }
 
@@ -150,7 +163,7 @@ mod cmd_open_tests {
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
-                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into() });
+                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into(), jam: None });
             }
         }
 
@@ -184,7 +197,7 @@ mod cmd_open_tests {
         {
             let mut lock = w.write().await;
             if let Some(room) = lock.rooms.get_mut("void") {
-                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into() });
+                room.write().await.set_exit_state(Direction::East, ExitState::Locked { key_id: "abloy-key-2".into(), jam: None });
             }
         }
 
