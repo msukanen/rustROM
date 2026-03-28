@@ -56,7 +56,7 @@ impl Display for OwnerError {
     }
 }
 
-pub(crate) trait Owned {
+pub trait Owned {
     /// Get current owner ID.
     fn owner(&self) -> &str;
     /// Get original owner ID.

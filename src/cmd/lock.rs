@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, equalize_opposite_exit_state, show_help_if_needed, string::rx::WHAT_WITH_ARG_RX, tell_user, traits::Identity, util::direction::Direction, world::exit::{KeyError, jam::JamState, state::{ExitState, KEY_THAT_IS_NOT_A_KEY}}};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, equalize_opposite_exit_state, show_help_if_needed, string::rx::WHAT_WITH_ARG_RX, tell_user, traits::IdentityQuery, util::direction::Direction, world::exit::{KeyError, jam::JamState, state::{ExitState, KEY_THAT_IS_NOT_A_KEY}}};
 
 pub struct LockCommand;
 

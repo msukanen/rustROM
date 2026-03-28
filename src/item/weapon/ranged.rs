@@ -1,13 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{item::BlueprintID, string::uuid_id::AsUuidId, traits::{Description, Identity, Owned, owned::{Owner, OwnerError}}};
+use crate::{item::{BlueprintID, blueprint::RANGED_BP_ID}, string::uuid_id::AsUuidId, traits::{Description, IdentityQuery, Owned, owned::{Owner, OwnerError}}};
 
 // TODO: naming creativity!
 fn title_default() -> String { "ranged weapon of some sort".into() }
 // TODO: description creativity!
 fn desc_default() -> String { "a melee weapon of some sort".into() }
-
-const RANGED_BP_ID: &'static str = "weapon-ranged";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RangedInfo {
@@ -18,7 +16,7 @@ pub struct RangedInfo {
     #[serde(default = "desc_default")] description: String,
 }
 
-impl Identity for RangedInfo {
+impl IdentityQuery for RangedInfo {
     fn id<'a>(&'a self) -> &'a str { &self.id }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }

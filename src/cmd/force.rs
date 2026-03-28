@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help, show_help_if_needed, tell_user, traits::Identity, util::Broadcast, validate_admin};
+use crate::{cmd::{Command, CommandCtx}, show_help, show_help_if_needed, tell_user, traits::IdentityQuery, util::Broadcast, validate_admin};
 
 pub struct ForceCommand;
 #[derive(Debug, Clone)]
@@ -8,7 +8,7 @@ pub enum ForceSource {
     System
 }
 
-impl Identity for ForceSource {
+impl IdentityQuery for ForceSource {
     fn id<'a>(&'a self) -> &'a str {
         match self {
             Self::Admin { id, .. } => &id,

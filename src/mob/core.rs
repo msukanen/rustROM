@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{mob::{CombatStat, stat::StatValue}, traits::{Description, Identity, mob::IsMob}};
+use crate::{mob::{CombatStat, stat::StatValue}, traits::{Description, IdentityQuery, mob::IsMob}};
 
 /// Core struct for mobs of all sorts.
 #[derive(Debug, Deserialize, Serialize)]
@@ -17,7 +17,7 @@ impl Description for MobCore {
     fn description<'a>(&'a self) -> &'a str { &self.description }
 }
 
-impl Identity for MobCore {
+impl IdentityQuery for MobCore {
     fn id<'a>(&'a self) -> &'a str { &self.name }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }

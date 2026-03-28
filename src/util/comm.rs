@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{cmd::{force::ForceSource, say::Subtype}, player::{Access, Player}, traits::Identity, world::{room::find_nearby_rooms, SharedWorld}};
+use crate::{cmd::{force::ForceSource, say::Subtype}, player::{Access, Player}, traits::IdentityQuery, world::{room::find_nearby_rooms, SharedWorld}};
 
 /// Various global channel types.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize, Serialize)]
@@ -75,7 +75,7 @@ impl Channel {
     }
 }
 
-impl Identity for Channel {
+impl IdentityQuery for Channel {
     fn id<'a>(&'a self) -> &'a str {
         match self {
             Self::Admin => "admin",

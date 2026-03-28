@@ -1,3 +1,4 @@
+//! Various macros… for various uses…
 /// Do something in current room of residence...
 /// 
 /// # Usage
@@ -11,20 +12,31 @@
 #[macro_export]
 macro_rules! do_in_current_room {
     ($ctx:ident, |$room:ident| {$($block:tt)*} otherwise {$($otherwise:tt)*}) => {{
+        let mut emergency_translocate_ = false;
         if let Some($room) = $ctx.world.read().await.rooms.get(&$ctx.player.read().await.location) {
             $($block)*
         } else {
-            //TODO: safe transfer!
+            emergency_translocate_= true;
             $($otherwise)*
+        }
+
+        // If the |room| was not found…
+        if emergency_translocate_{
+            let _ = crate::cmd::translocate($ctx.world, None, "root".into(), $ctx.player.clone());
         }
     }};
 
     ($ctx:ident, |$room:ident| {$($block:tt)*}) => {{
         let room_name = $ctx.player.read().await.location.clone();// ← to avoid borrow issues…
+        let mut emergency_translocate_ = true;
         if let Some($room) = $ctx.world.read().await.rooms.get(&room_name) {
+            emergency_translocate_ = false;
             $($block)*
-        } else {
-            //TODO: safe transfer!
+        }
+        
+        // If the |room| was not found…
+        if emergency_translocate_{
+            let _ = crate::cmd::translocate($ctx.world, None, "root".into(), $ctx.player.clone());
         }
     }};
 }

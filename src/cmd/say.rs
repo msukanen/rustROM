@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use async_trait::async_trait;
-use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::Identity, util::Broadcast};
+use crate::{cmd::{ask::AskCommand, Command, CommandCtx}, show_help_if_needed, tell_user, traits::IdentityQuery, util::Broadcast};
 
 /// Say, Exclaim, Ask, etc. subtypes.
 #[derive(Debug, Clone, PartialEq, Eq)]

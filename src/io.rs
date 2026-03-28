@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use futures::{stream, StreamExt};
 use tokio::{sync::RwLock, time::{self}};
-use crate::{item::ItemError, player::Player, string::WordSet, traits::{save::DoesSave, Identity}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld, AUTOSAVE_QUEUE_INTERVAL};
+use crate::{item::ItemError, player::Player, string::WordSet, traits::{save::DoesSave, IdentityQuery}, util::badname::{load_bad_names, BAD_NAMES_FILEPATH}, world::SharedWorld, AUTOSAVE_QUEUE_INTERVAL};
 
 const LOGOUT_QUEUE_INTERVAL: u64 = 1; // once per second, about.
 pub(crate) const DEFAULT_AUTOSAVE_QUEUE_INTERVAL: u64 = 300; // once per 5 minutes, about.

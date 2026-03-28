@@ -4,7 +4,7 @@ pub(crate) mod storage;
 pub(crate) use storage::{Storage, StorageCapacity};
 pub(crate) mod content;
 pub(crate) use content::Content;
-use crate::{item::{BlueprintID, ItemError, inventory::storage::StorageIdentity, item::Item}, traits::{Identity, Owned, owned::{OwnerError, UNSPECIFIED_OWNER}}};
+use crate::{item::{BlueprintID, ItemError, inventory::storage::StorageIdentity, item::Item}, traits::{IdentityQuery, Owned, owned::{OwnerError, UNSPECIFIED_OWNER}}};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum ContainerType {
@@ -134,7 +134,7 @@ impl Storage for Container {
     }
 }
 
-impl Identity for Container {
+impl IdentityQuery for Container {
     fn id<'a>(&'a self) -> &'a str {
         match self {
             Self::Backpack(c)|

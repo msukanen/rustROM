@@ -46,7 +46,7 @@ mod area_serialization {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use tokio::sync::RwLock;
 
-    use crate::{traits::{Identity, save::DoesSave}, world::area::AREA_PATH};
+    use crate::{traits::{IdentityQuery, save::DoesSave}, world::area::AREA_PATH};
 
     use super::Area;
 

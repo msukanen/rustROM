@@ -4,7 +4,7 @@ mod describe;
 pub(crate) use describe::Description;
 
 mod identity;
-pub(crate) use identity::Identity;
+pub(crate) use identity::IdentityQuery;
 
 pub(crate) mod owned;
 pub(crate) use owned::Owned;

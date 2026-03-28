@@ -24,7 +24,7 @@ mod cmd;
 mod item;
 mod test;
 
-use crate::{cmd::{CommandCtx, force::ForceSource, help::HELP_REGISTRY, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, Identity, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload, SystemBroadcastType}, help::Help}};
+use crate::{cmd::{CommandCtx, force::ForceSource, help::HELP_REGISTRY, translocate::translocate}, io::DEFAULT_AUTOSAVE_QUEUE_INTERVAL, string::WordSet, traits::{Description, IdentityQuery, mob::IsMob}, util::{Broadcast, ClientState, comm::{IsRecipient, MessagePayload, SystemBroadcastType}, help::Help}};
 use crate::player::{access::Access, LoadError, Player};
 use crate::string::{prompt::PromptType, sanitize::Sanitizer};
 use crate::traits::save::DoesSave;

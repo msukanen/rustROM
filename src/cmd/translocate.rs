@@ -1,9 +1,11 @@
 //! Translocation, teleportation, moving-without-moving…
+//! 
+//! In a way this is one of the "core" functionality tools (alongside the associated command itself).
 use std::{fmt::Display, sync::Arc};
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::Identity, validate_admin, world::{room::Room, SharedWorld}};
+use crate::{cmd::{look::LookCommand, Command, CommandCtx}, player::Player, show_help, tell_user, traits::IdentityQuery, validate_admin, world::{room::Room, SharedWorld}};
 
 pub struct TranslocateCommand;
 
@@ -57,16 +59,10 @@ impl Command for TranslocateCommand {
             _ => {
                 let other = ctx.world.read().await.find_player(who);
                 if let Some(found) = other {
-                        log::info!("Translocating other player, '{}'", found.read().await.id());
-                        let source = found.read().await.location.clone();
-                        let _ = translocate(ctx.world, Some(source), where_to.into(), found.clone()).await;
-/* TODO: convert this into "scry" command for later:
-                        let you = ctx.player.clone();
-                         ctx.player = found.clone();
-                        let look = LookCommand;
-                        look.exec({ctx.args = ""; ctx}).await;
-                        ctx.player = you;
-*/              } else {
+                    log::info!("Translocating other player, '{}'", found.read().await.id());
+                    let source = found.read().await.location.clone();
+                    let _ = translocate(ctx.world, Some(source), where_to.into(), found.clone()).await;
+                } else {
                     tell_user!(ctx.writer, "Could not locate '{}'", who);
                 }
             }
@@ -135,7 +131,7 @@ pub(crate) async fn translocate(
             return Ok(Some(TranslocationError::NoMoveRequired));
         }
         
-        let w = world.write().await;
+        let w = world.read().await;
         if let Some(r) = w.rooms.get(&source) {
             r.write().await.remove_player(&player).await;
         } else {

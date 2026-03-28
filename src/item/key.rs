@@ -2,12 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::BlueprintID, traits::{Description, Identity, Owned, owned::{Owner, OwnerError}}};
+use crate::{item::BlueprintID, traits::{Description, IdentityQuery, Owned, owned::{Owner, OwnerError}}};
 
 // TODO: naming creativity!.
 fn title_default() -> String { "a key".into() }
-
-const KEY_BP_ID: &'static str = "some-key";
 
 /// It's a me, a key!
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -20,19 +18,26 @@ pub struct Key {
     #[serde(default)] pub one_time: bool,
 }
 
-impl Identity for Key {
+impl IdentityQuery for Key {
     fn id<'a>(&'a self) -> &'a str { &self.id }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }
 
 impl Key {
-    #[cfg(test)]
-    pub fn new(id: &str, one_time: bool) -> Self {
+    /// Create a new [Key].
+    /// 
+    /// Unsurprisingly, [keys][Key] are used for (un)locking (un)lockable things.
+    /// Each lock is (or should be…) keyed to specific [BP#ID][BlueprintID].
+    /// 
+    /// # Args
+    /// - `id_stem`— ID-stem from which UUID loaded ID and the [Key]'s [BP#ID][BlueprintID] will be derived from.
+    /// - `one_time` use [Key]?
+    pub fn new(id_stem: &str, one_time: bool) -> Self {
         use crate::string::uuid_id::AsUuidId;
 
         Self {
-            id: id.uuided(),
-            bp_id: id.into(),
+            id: id_stem.uuided(),
+            bp_id: id_stem.into(),
             one_time,
             owner: Owner::default(),
             title: title_default(),

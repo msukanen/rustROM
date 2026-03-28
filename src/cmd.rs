@@ -14,6 +14,7 @@ mod look;
 mod dig;
 mod dmg;
 pub(crate) mod translocate;
+pub(crate) use translocate::translocate;
 mod goto;
 pub(crate) mod help;
 mod r#return;
@@ -121,7 +122,7 @@ pub async fn parse_and_execute<'a>(mut ctx: CommandCtx<'_>) -> ClientState {
             log::error!("Command alias '{command}' was mapped for '{cmd_alias}', but '{cmd_alias}' was NOT found?!");
             tell_user_unk!(ctx.writer);
         }
-    } else if let Some(dir) = command.as_str().as_cardinal() {
+    } else if let Some(dir) = command.as_cardinal() {
         GotoCommand.exec({ctx.args = dir.as_str(); &mut ctx}).await;
     } else {
         tell_user_unk!(ctx.writer);

@@ -1,6 +1,6 @@
 //! Emote something.
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, traits::Identity, util::Broadcast};
+use crate::{cmd::{Command, CommandCtx}, show_help_if_needed, tell_user, traits::IdentityQuery, util::Broadcast};
 
 pub struct EmoteCommand;
 

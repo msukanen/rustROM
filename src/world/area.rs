@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use tokio::{fs, sync::RwLock};
 
-use crate::{DATA_PATH, traits::{Description, Identity, save::{DoesSave, SaveError}, tickable::Tickable}, world::{World, room::Room}};
+use crate::{DATA_PATH, traits::{Description, IdentityQuery, save::{DoesSave, SaveError}, tickable::Tickable}, world::{World, room::Room}};
 
 pub(crate) static AREA_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/areas", *DATA_PATH)));
 const DEFAULT_TICK_MODULO: u8 = 10;// normally an Area acts once every 10th tick.
@@ -66,7 +66,7 @@ impl Description for Area {
     fn description(&self) -> &str { &self.description }
 }
 
-impl Identity for Area {
+impl IdentityQuery for Area {
     fn id(&self) -> &str { &self.id }
     fn title(&self) -> &str { &self.title }
 }

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, force_item_to_player, item::{inventory::Storage, Item, ItemError}, show_help, tell_user, traits::Identity};
+use crate::{cmd::{Command, CommandCtx}, force_item_to_player, item::{inventory::Storage, Item, ItemError}, show_help, tell_user, traits::IdentityQuery};
 
 pub struct PutCommand;
 

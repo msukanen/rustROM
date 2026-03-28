@@ -1,5 +1,5 @@
 
-pub trait Identity {
+pub trait IdentityQuery {
     /// ID of the entity.
     fn id<'a>(&'a self) -> &'a str;
     /// Title/name of the entity.

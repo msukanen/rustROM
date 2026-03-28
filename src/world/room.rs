@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::RwLock;
 
-use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, Identity, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area, exit::{Exit, state::ExitState}}};
+use crate::{DATA_PATH, item::{Item, ItemError, inventory::{Container, ContainerType, Storage, StorageCapacity}}, player::Player, traits::{Description, IdentityQuery, save::{DoesSave, SaveError}}, util::{Editor, direction::Direction}, world::{SharedWorld, area::Area, exit::{Exit, state::ExitState}}};
 
 pub(crate) static ROOM_PATH: Lazy<Arc<String>> = Lazy::new(|| Arc::new(format!("{}/rooms", *DATA_PATH)));
 /// Max number of items in a [Room], whether on ground or otherwise.
@@ -181,7 +181,7 @@ impl Description for Room {
     fn description(&self) -> &str { &self.description }
 }
 
-impl Identity for Room {
+impl IdentityQuery for Room {
     fn id<'a>(&'a self) -> &'a str { &self.id }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }

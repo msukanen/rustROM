@@ -8,6 +8,8 @@ pub mod state;
 pub mod jam;
 use state::*;
 
+use crate::world::exit::jam::JamState;
+
 /// All sorts of key related errors…
 #[derive(Debug, Clone, Copy)]
 pub enum KeyError {
@@ -60,21 +62,15 @@ impl Default for ExitState {
     }
 }
 
-impl Exit {
-    /// Check if exit is closed.
-    pub fn is_closed(&self) -> bool {
-        self.state.is_closed()
-    }
-
-    /// Check if the exit can be closed.
-    pub fn can_close(&self) -> bool {
-        self.state.can_close()
-    }
-
-    /// Get exit's key ID (or a fake one…).
-    pub fn key_id(&self) -> &str {
-        self.state.key_id()
-    }
+impl ExitStateQuery for Exit {
+    fn can_close(&self) -> bool { self.state.can_close()}
+    fn is_closed(&self) -> bool { self.state.is_closed()}
+    fn can_lock(&self) -> bool { self.state.can_lock()}
+    fn can_open(&self) -> bool { self.state.can_open()}
+    fn is_jammed(&self) -> Option<JamState> { self.state.is_jammed()}
+    fn is_locked(&self) -> bool { self.state.is_locked()}
+    fn is_open(&self) -> bool { self.state.is_open()}
+    fn key_id(&self) -> &str { self.state.key_id()}
 }
 
 #[cfg(test)]

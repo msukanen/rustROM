@@ -2,7 +2,7 @@
 use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx, hedit::title}, do_in_current_room, item::inventory::Storage, tell_user, traits::{Description, Identity}};
+use crate::{cmd::{Command, CommandCtx, hedit::title}, do_in_current_room, item::inventory::Storage, tell_user, traits::{Description, IdentityQuery}};
 
 pub struct LookCommand;
 

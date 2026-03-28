@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{translocate::translocate, Command, CommandCtx}, cmd_exec, do_in_current_room, show_help_if_needed, tell_user, traits::Identity, util::direction::Direction};
+use crate::{cmd::{Command, CommandCtx, translocate::translocate}, cmd_exec, do_in_current_room, show_help_if_needed, tell_user, traits::IdentityQuery, util::direction::Direction, world::exit::state::ExitStateQuery};
 
 pub struct GotoCommand;
 

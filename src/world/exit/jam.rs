@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 // No jam here though, berry or otherwise.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum JammingMethod {
-
+    Sabotaged,
+    Barred,
+    Welded,
+    Vault
 }
 
 /// State of jam.

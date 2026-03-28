@@ -4,7 +4,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::{RwLock, RwLockWriteGuard};
 
-use crate::{cmd::{Command, CommandCtx}, tell_user, traits::{Identity, save::DoesSave}, validate_builder, world::room::Room};
+use crate::{cmd::{Command, CommandCtx}, tell_user, traits::{IdentityQuery, save::DoesSave}, validate_builder, world::room::Room};
 
 pub struct SaveCommand;
 

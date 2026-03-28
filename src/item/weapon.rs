@@ -5,7 +5,7 @@ use melee::MeleeInfo;
 mod ranged;
 use ranged::RangedInfo;
 
-use crate::{item::BlueprintID, traits::{Description, Identity, Owned, owned::OwnerError}};
+use crate::{item::BlueprintID, traits::{Description, IdentityQuery, Owned, owned::OwnerError}};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub enum WeaponType {
@@ -19,7 +19,7 @@ pub enum Weapon {
     Ranged(RangedInfo,)
 }
 
-impl Identity for Weapon {
+impl IdentityQuery for Weapon {
     fn id<'a>(&'a self) -> &'a str {
         match self {
             Self::Melee(m) => m.id(),

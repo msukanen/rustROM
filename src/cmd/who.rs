@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 
-use crate::{cmd::{Command, CommandCtx}, tell_user, traits::{Identity, mob::IsMob}};
+use crate::{cmd::{Command, CommandCtx}, tell_user, traits::{IdentityQuery, mob::IsMob}};
 pub struct WhoCommand;
 
 #[async_trait]

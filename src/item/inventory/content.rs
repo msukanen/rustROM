@@ -2,11 +2,9 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{BlueprintID, Item, ItemError, ItemMap, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, string::uuid_id::AsUuidId, traits::{Identity, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
+use crate::{item::{BlueprintID, Item, ItemError, ItemMap, blueprint::BACKPACK_BP_ID, inventory::{ContainerType, Storage, StorageCapacity, storage::StorageIdentity}}, player::pc::MAX_ITEMS_PLAYER_INVENTORY, string::uuid_id::AsUuidId, traits::{IdentityQuery, Owned, owned::{Owner, OwnerError}}, world::room::MAX_ITEMS_IN_ROOM};
 
 fn title_default() -> String { "container".into() }
-
-const BACKPACK_BP_ID: &'static str = "backpack";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Content {
@@ -32,7 +30,7 @@ impl StorageCapacity for Content {
     }
 }
 
-impl Identity for Content {
+impl IdentityQuery for Content {
     fn id<'a>(&'a self) -> &'a str { &self.id }
     fn title<'a>(&'a self) -> &'a str { &self.title }
 }

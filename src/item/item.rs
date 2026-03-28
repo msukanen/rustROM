@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{item::{BlueprintID, inventory::{Container, Storage, StorageCapacity, storage::StorageIdentity}, key::Key, weapon::{Weapon, WeaponType}}, traits::{Identity, Owned, owned::OwnerError}};
+use crate::{item::{BlueprintID, inventory::{Container, Storage, StorageCapacity, storage::StorageIdentity}, key::Key, tool::Tool, weapon::{Weapon, WeaponType}}, traits::{IdentityQuery, Owned, owned::OwnerError}};
 
 pub type ItemMap = HashMap<String, Item>;
 
@@ -27,7 +27,7 @@ impl Display for ItemError {
     }
 }
 
-impl Identity for ItemError {
+impl IdentityQuery for ItemError {
     fn id<'a>(&'a self) -> &'a str {
         match self {
             Self::NoSpace(i)|
@@ -53,6 +53,7 @@ impl Identity for ItemError {
 pub enum ItemType {
     Container,
     Weapon,
+    Tool,
     Key,
 }
 
@@ -60,6 +61,7 @@ pub enum ItemType {
 pub enum Item {
     Container(Container),
     Weapon(Weapon),
+    Tool(Tool),
     Key(Key),
 }
 
@@ -117,12 +119,13 @@ impl StorageCapacity for Item {
     }
 }
 
-impl Identity for Item {
+impl IdentityQuery for Item {
     fn id<'a>(&'a self) -> &'a str {
         match self {
             Self::Container(c) => c.id(),
             Self::Weapon(w) => w.id(),
             Self::Key(k) => k.id(),
+            Self::Tool(t) => t.id(),
         }
     }
 
@@ -131,6 +134,7 @@ impl Identity for Item {
             Self::Container(c) => c.title(),
             Self::Weapon(w) => w.title(),
             Self::Key(k) => k.title(),
+            Self::Tool(t) => t.title(),
         }
     }
 }
@@ -151,6 +155,7 @@ impl Owned for Item {
             Self::Container(c) => c.owner(),
             Self::Weapon(w) => w.owner(),
             Self::Key(k) => k.owner(),
+            Self::Tool(t) => t.owner(),
         }
     }
 
@@ -159,6 +164,7 @@ impl Owned for Item {
             Self::Container(c) => c.original_owner(),
             Self::Weapon(w) => w.original_owner(),
             Self::Key(k) => k.original_owner(),
+            Self::Tool(t) => t.original_owner(),
         }
     }
 
@@ -184,6 +190,7 @@ impl Owned for Item {
             },
             Self::Weapon(w) => w.set_owner(owner_id),
             Self::Key(k) => k.set_owner(owner_id),
+            Self::Tool(t) => t.set_owner(owner_id),
         }
     }
 
@@ -192,6 +199,7 @@ impl Owned for Item {
             Self::Container(c) => c.set_original_owner(owner_id),
             Self::Weapon(w) => w.set_original_owner(owner_id),
             Self::Key(k) => k.set_original_owner(owner_id),
+            Self::Tool(t) => t.set_original_owner(owner_id),
         }
     }
 }
@@ -236,6 +244,7 @@ impl BlueprintID for Item {
             Self::Container(c) => c.bp_id(),
             Self::Key(k) => k.bp_id(),
             Self::Weapon(w) => w.bp_id(),
+            Self::Tool(t) => t.bp_id(),
         }
     }
 }

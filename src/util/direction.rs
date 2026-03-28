@@ -3,6 +3,10 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
+pub enum DirectionError {
+    CannotDeductOpposite,
+}
+
 /// Various directions, obviously.
 #[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Clone)]
 pub enum Direction {
@@ -34,12 +38,12 @@ impl Direction {
             Self::SouthWest => "southwest",
             Self::Up => "up",
             Self::West => "west",
-            _ => unimplemented!("Direction::Custom cannot be &'static str, sorreh!")
+            Self::Custom(_) => unimplemented!("DEV! Do not try 'as_str()' a Custom direction…"),
         }
     }
 
-    pub fn opposite(&self) -> Self {
-        match self {
+    pub fn opposite(&self) -> Result<Self, DirectionError> {
+        Ok(match self {
             Self::Down => Self::Up,
             Self::East => Self::West,
             Self::North => Self::South,
@@ -53,11 +57,13 @@ impl Direction {
             Self::Custom(x) => {
                 // TODO: somehow figure out the opposite for the given 'x' ...
                 log::warn!("Custom Direction::Custom({x}) - cannot deduce an opposite for…");
-                Self::Custom(x.clone())
+                return Err(DirectionError::CannotDeductOpposite);
+//                Self::Custom(x.clone())
             }
-        }
+        })
     }
 
+    /// Try if we get a "standard" (a.k.a. cardinal) [Direction] out of the given `value`.
     pub fn try_from_std(value: &str) -> Result<Self, &'static str> {
         let result = Self::try_from(value);
         match result {
@@ -70,7 +76,7 @@ impl Direction {
 impl TryFrom<&str> for Direction {
     type Error = &'static str;
 
-    /// Try convert the given `value` into a suitable [Direction] enum.
+    /// Try convert the given `value` into suitable [Direction].
     /// 
     /// Note: we accommodate for a few very common typos (and some abbreviations).
     fn try_from(value: &str) -> Result<Self, Self::Error> {
@@ -81,7 +87,9 @@ impl TryFrom<&str> for Direction {
     }
 }
 
+/// A trait for anything that could (even theoretically) represent cardinal [Direction].
 pub trait AsDirectionCardinal {
+    /// Get `self` as a cardinal [Direction], if possible.
     fn as_cardinal(&self) -> Option<Direction>;
 }
 
@@ -127,4 +135,14 @@ impl AsDirectionCardinal for &str {
             other => Some(other)
         }
     }
+}
+
+// A converter for convenience…
+impl AsDirectionCardinal for &String {
+    fn as_cardinal(&self) -> Option<Direction> { self.as_str().as_cardinal() }
+}
+
+// A converter for convenience…
+impl AsDirectionCardinal for String {
+    fn as_cardinal(&self) -> Option<Direction> { self.as_str().as_cardinal() }
 }

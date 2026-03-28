@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::{inventory::Storage, ItemError}, show_help_if_needed, tell_user, traits::Identity};
+use crate::{cmd::{Command, CommandCtx}, do_in_current_room, item::{inventory::Storage, ItemError}, show_help_if_needed, tell_user, traits::IdentityQuery};
 #[cfg(feature = "localtest")]
 use crate::item::{weapon::WeaponType, Item};
 

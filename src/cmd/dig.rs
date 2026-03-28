@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use crate::{cmd::{Command, CommandCtx, redit::ReditCommand, translocate::translocate}, show_help, tell_user, traits::Identity, util::direction::Direction, validate_builder, world::{exit::{Exit, state::ExitState}, room::Room}};
+use crate::{cmd::{Command, CommandCtx, redit::ReditCommand, translocate::translocate}, show_help, tell_user, traits::IdentityQuery, util::direction::Direction, validate_builder, world::{exit::{Exit, state::ExitState}, room::Room}};
 
 pub struct DigCommand;
 
@@ -79,7 +79,12 @@ async fn create_and_link_room(ctx: &mut CommandCtx<'_>, dir: Direction, id: &str
     };
     let mut room = Room::blank(Some(id));
     // by default we use None as key_id - install a lock later…
-    room.exits.insert(dir.opposite(), Exit { destination: curr_id.clone(), state: ExitState::Open {key_id: None} });
+    if let Ok(opp) = dir.opposite() {
+        room.exits.insert(opp, Exit { destination: curr_id.clone(), state: ExitState::Open {key_id: None} });
+        tell_user!(ctx.writer, "FYI, don't forget to install a lock, if/when needed (or plausible to even have).\n");
+    } else {
+        tell_user!(ctx.writer, "Source exit '{:?}' doesn't have a clear opposite.\n = you have to craft return direction manually!\n", dir);
+    }
     let mut w = ctx.world.write().await;
     let lock;
 
